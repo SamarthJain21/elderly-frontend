@@ -111,3 +111,41 @@ export interface LogEntry {
 }
 
 export const MOOD_EMOJI: Record<Mood, string> = { great: '😄', good: '😊', okay: '😐', low: '😟', bad: '😢' }
+
+export type Mode = 'autonomous' | 'elder_confirm' | 'caretaker_approve' | 'blocked'
+export type ToolName = 'order_food' | 'order_medicine' | 'book_ride' | 'notify_volunteer' | 'send_message_to_caretaker' | 'set_reminder'
+
+export interface ToolRule {
+  mode: Mode
+  limitMinor: number | null
+}
+
+export interface AutonomyRules {
+  currency: 'INR' | 'THB' | 'SGD'
+  tools: Record<ToolName, ToolRule>
+  trustedVolunteersOnly: boolean
+}
+
+export type SharingTier = 'alerts_only' | 'daily_summary' | 'full_access'
+
+export interface EmergencyContact {
+  name: string
+  phone: string
+  relationship: string
+}
+
+export interface Profile {
+  name: string
+  phone: string
+  language: Language
+  sharingTier: SharingTier
+  emergencyContacts: EmergencyContact[]
+}
+
+export interface Approval {
+  id: string
+  actionId: string
+  elderId: string
+  status: 'pending' | 'approved' | 'declined'
+  elderRequestText: string
+}

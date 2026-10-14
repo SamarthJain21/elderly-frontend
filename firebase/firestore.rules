@@ -133,7 +133,7 @@ service cloud.firestore {
     }
 
     function validMode(m) {
-      return m in ['autonomous', 'elder_confirm', 'caretaker_approve'];
+      return m in ['autonomous', 'elder_confirm', 'caretaker_approve', 'blocked'];
     }
 
     function validRules(r) {

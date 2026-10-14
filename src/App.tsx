@@ -6,6 +6,9 @@ import { CaretakerIndex, CaretakerLayout } from './pages/caretaker/CaretakerLayo
 import { AddElderPage } from './pages/caretaker/AddElderPage'
 import { AssessmentPage } from './pages/caretaker/AssessmentPage'
 import { ElderOverviewPage } from './pages/caretaker/ElderOverviewPage'
+import { ElderShell } from './pages/caretaker/ElderShell'
+import { RulesPage } from './pages/caretaker/RulesPage'
+import { ProfilePage } from './pages/caretaker/ProfilePage'
 import { ElderHome } from './pages/elder/ElderHome'
 import { ElderChat } from './pages/elder/ElderChat'
 
@@ -21,7 +24,11 @@ export default function App() {
       <Route path="/caretaker" element={<RequireRole role="caretaker"><CaretakerLayout /></RequireRole>}>
         <Route index element={<CaretakerIndex />} />
         <Route path="add" element={<AddElderPage />} />
-        <Route path="elders/:elderId" element={<ElderOverviewPage />} />
+        <Route path="elders/:elderId" element={<ElderShell />}>
+          <Route index element={<ElderOverviewPage />} />
+          <Route path="rules" element={<RulesPage />} />
+          <Route path="profile" element={<ProfilePage />} />
+        </Route>
         <Route path="elders/:elderId/assessment" element={<AssessmentPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />

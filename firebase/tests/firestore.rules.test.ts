@@ -175,6 +175,8 @@ describe('autonomy rules and volunteers', () => {
   it('caretaker can update rules with valid values', async () => {
     const next = { ...validRules, tools: { ...validRules.tools, order_food: { mode: 'caretaker_approve', limitMinor: 0 } } }
     await assertSucceeds(setDoc(doc(as(CARETAKER), 'rules', ELDER), next))
+    const blocked = { ...validRules, tools: { ...validRules.tools, book_ride: { mode: 'blocked', limitMinor: 0 } } }
+    await assertSucceeds(setDoc(doc(as(CARETAKER), 'rules', ELDER), blocked))
   })
 
   it('rejects float limits, bad modes, unknown tools and elder edits', async () => {

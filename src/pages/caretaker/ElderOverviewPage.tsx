@@ -1,12 +1,14 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link } from 'react-router'
+import { useElder } from './elderContext'
+import { ApprovalsInbox } from './ApprovalsInbox'
 import {
   Alert, Box, Button, CircularProgress, IconButton, MenuItem, TextField, ToggleButton, ToggleButtonGroup, Typography,
 } from '@mui/material'
 import { api } from '../../lib/api'
 import { useApi } from '../../lib/useApi'
-import { ALL_DAYS, DAY_LABEL, type Day, REMINDER_ICON, type ElderProfile, type Reminder } from '../../lib/types'
-import { Avatar, Card, Chip, Eyebrow, Pill, SectionTitle } from '../../components/ui'
+import { ALL_DAYS, DAY_LABEL, type Day, REMINDER_ICON, type Reminder } from '../../lib/types'
+import { Card, Chip, Eyebrow, Pill, SectionTitle } from '../../components/ui'
 import { tokens } from '../../theme'
 import { CheckInSection } from './CheckInSection'
 
@@ -96,13 +98,10 @@ function AddReminderForm({ elderId, onAdded }: { elderId: string; onAdded: () =>
 }
 
 export function ElderOverviewPage() {
-  const { elderId = '' } = useParams()
-  const { data: elder, error } = useApi<ElderProfile>(`/elders/${elderId}`)
-  const reminders = useApi<Reminder[]>(elder?.assessment ? `/elders/${elderId}/reminders` : null)
+  const { elder } = useElder()
+  const elderId = elder.elderId
+  const reminders = useApi<Reminder[]>(elder.assessment ? `/elders/${elderId}/reminders` : null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
-
-  if (error !== null) return <Alert severity="error">{error}</Alert>
-  if (elder === null) return <CircularProgress />
   const a = elder.assessment
 
   const remove = async (id: string) => {
@@ -117,15 +116,7 @@ export function ElderOverviewPage() {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-        <Avatar name={elder.name} size={56} />
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="h3" component="h1" sx={{ fontSize: 30 }}>{elder.name}</Typography>
-          <Typography sx={{ color: tokens.muted }}>{elder.phone}</Typography>
-        </Box>
-        {a !== null && <Button variant="outlined" component={Link} to={`/caretaker/elders/${elderId}/assessment`}>Edit assessment</Button>}
-      </Box>
-
+      <ApprovalsInbox elderId={elderId} />
       {a === null ? (
         <Card sx={{ mt: 3, bgcolor: tokens.amberSoft, borderColor: 'transparent' }}>
           <Typography variant="h4" component="h2" sx={{ fontSize: 22, mb: 0.5 }}>Set up {elder.name}'s routine</Typography>
