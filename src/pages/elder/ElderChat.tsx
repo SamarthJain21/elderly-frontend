@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { Alert, Box, Button, ButtonBase, InputBase, Typography } from '@mui/material'
+import { Alert, Box, Button, ButtonBase, InputBase, Menu, MenuItem, Typography } from '@mui/material'
 import { useAuth } from '../../auth/AuthContext'
 import { useChat } from '../../lib/useChat'
 import type { ChatMessage, ElderProfile, Mood } from '../../lib/types'
 import { useApi } from '../../lib/useApi'
-import { canListen, speak, stopSpeaking, useHasVoice, useListen } from '../../lib/speech'
+import { canListen, saveVoiceURI, savedVoiceURI, speak, stopSpeaking, useListen, useVoices } from '../../lib/speech'
 import { Pill } from '../../components/ui'
 import { tokens } from '../../theme'
 
@@ -71,7 +71,18 @@ export function ElderChat() {
   const endRef = useRef<HTMLDivElement>(null)
   const profile = useApi<ElderProfile>(elderId && `/elders/${elderId}`)
   const lang = profile.data?.language ?? 'en-US'
-  const hasVoice = useHasVoice(lang)
+  const voices = useVoices(lang)
+  const hasVoice = voices.length > 0
+  const [voiceMenu, setVoiceMenu] = useState<HTMLElement | null>(null)
+  const [, rerender] = useState(0) // the choice lives in localStorage, keyed by language
+  const savedURI = savedVoiceURI(lang)
+  const activeVoice = voices.find((v) => v.voiceURI === savedURI) ?? voices[0]
+  const chooseVoice = (v: SpeechSynthesisVoice) => {
+    saveVoiceURI(lang, v.voiceURI)
+    rerender((n) => n + 1)
+    setVoiceMenu(null)
+    speak(lang.startsWith('hi') ? 'नमस्ते, मैं Elderly हूँ।' : lang.startsWith('th') ? 'สวัสดีค่ะ ฉันชื่อ Elderly' : "Hello, I'm Elderly.", lang)
+  }
   const [voiceOn, setVoiceOn] = useState(readVoicePref)
   const [params, setParams] = useSearchParams()
   const checkinParam = params.get('checkin')
@@ -149,6 +160,21 @@ export function ElderChat() {
         <Typography sx={{ fontFamily: 'Fraunces, serif', fontSize: 20, fontWeight: 650 }}>Elderly</Typography>
         <Box sx={{ minWidth: 64, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1 }}>
           {checkin?.status === 'in_progress' && <Pill tone="warn">Check-in</Pill>}
+          {voices.length > 1 && (
+            <ButtonBase onClick={(e) => setVoiceMenu(e.currentTarget)} aria-label="Choose voice" aria-haspopup="menu"
+              sx={{ border: `1px solid ${tokens.line}`, bgcolor: tokens.white, borderRadius: '12px', width: 46, height: 46, fontSize: 20 }}>
+              🗣️
+            </ButtonBase>
+          )}
+          <Menu anchorEl={voiceMenu} open={voiceMenu !== null} onClose={() => setVoiceMenu(null)}
+            slotProps={{ paper: { sx: { maxHeight: 360 } } }}>
+            {voices.map((v) => (
+              <MenuItem key={v.voiceURI} selected={v.voiceURI === activeVoice?.voiceURI} onClick={() => chooseVoice(v)} sx={{ fontSize: 17 }}>
+                {v.name}
+                <Box component="span" sx={{ ml: 1, color: tokens.muted, fontSize: 13 }}>{v.lang}</Box>
+              </MenuItem>
+            ))}
+          </Menu>
           {hasVoice && (
             <ButtonBase onClick={toggleVoice} aria-label={voiceOn ? 'Turn voice off' : 'Turn voice on'} aria-pressed={voiceOn}
               sx={{ border: `1px solid ${tokens.line}`, bgcolor: tokens.white, borderRadius: '12px', width: 46, height: 46, fontSize: 20 }}>

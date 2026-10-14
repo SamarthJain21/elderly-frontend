@@ -115,16 +115,33 @@ function score(v: SpeechSynthesisVoice): number {
   return i === -1 ? 1 : 100 - i * 10
 }
 
-function pickVoice(lang: string): SpeechSynthesisVoice | undefined {
-  const base = lang.split('-')[0].toLowerCase()
+/** Usable voices for `lang`, best first: exact locale beats same language (en-US over en-GB), then quality. */
+export function voicesFor(lang: string): SpeechSynthesisVoice[] {
+  if (!canSpeak) return []
+  const want = lang.toLowerCase()
+  const base = want.split('-')[0]
   const norm = (v: SpeechSynthesisVoice) => v.lang.replace('_', '-').toLowerCase()
-  const candidates = window.speechSynthesis.getVoices()
-    .filter((v) => norm(v) === lang.toLowerCase() || norm(v).startsWith(`${base}-`) || norm(v) === base)
+  return window.speechSynthesis.getVoices()
+    .filter((v) => norm(v) === want || norm(v).startsWith(`${base}-`) || norm(v) === base)
     .filter((v) => score(v) >= 0)
-  // Exact locale beats same language (en-US over en-GB), then by quality.
-  return candidates.sort((a, b) =>
-    Number(norm(b) === lang.toLowerCase()) - Number(norm(a) === lang.toLowerCase()) || score(b) - score(a),
-  )[0]
+    .sort((a, b) => Number(norm(b) === want) - Number(norm(a) === want) || score(b) - score(a))
+}
+
+// Chosen voice is per device (voices differ by device) and per language.
+const prefKey = (lang: string) => `elderly.voiceURI.${lang}`
+
+export function savedVoiceURI(lang: string): string | null {
+  try { return localStorage.getItem(prefKey(lang)) } catch { return null }
+}
+
+export function saveVoiceURI(lang: string, uri: string): void {
+  try { localStorage.setItem(prefKey(lang), uri) } catch { /* private mode: not remembered */ }
+}
+
+function pickVoice(lang: string): SpeechSynthesisVoice | undefined {
+  const voices = voicesFor(lang)
+  const saved = savedVoiceURI(lang)
+  return voices.find((v) => v.voiceURI === saved) ?? voices[0]
 }
 
 /**
@@ -160,12 +177,12 @@ export function speak(text: string, lang: string): boolean {
   return true
 }
 
-/** Voices load asynchronously in Chrome; resolves true once a voice for `lang` is available. */
-export function useHasVoice(lang: string): boolean {
-  const [has, setHas] = useState(() => canSpeak && pickVoice(lang) !== undefined)
+/** Voices for `lang`, kept up to date — Chrome loads them asynchronously. */
+export function useVoices(lang: string): SpeechSynthesisVoice[] {
+  const [voices, setVoices] = useState(() => voicesFor(lang))
   useEffect(() => {
     if (!canSpeak) return
-    const check = () => setHas(pickVoice(lang) !== undefined)
+    const check = () => setVoices(voicesFor(lang))
     window.speechSynthesis.addEventListener('voiceschanged', check)
     // Voices may have loaded between first render and now, in which case no event will come.
     const id = window.setTimeout(check, 0)
@@ -174,7 +191,7 @@ export function useHasVoice(lang: string): boolean {
       window.speechSynthesis.removeEventListener('voiceschanged', check)
     }
   }, [lang])
-  return has
+  return voices
 }
 
 export function stopSpeaking(): void {
