@@ -12,6 +12,7 @@ import { ProfilePage } from './pages/caretaker/ProfilePage'
 import { FamilyChatPage } from './pages/caretaker/FamilyChatPage'
 import { ElderHome } from './pages/elder/ElderHome'
 import { ElderChat } from './pages/elder/ElderChat'
+import { ElderFamily } from './pages/elder/ElderFamily'
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
       <Route path="/elder" element={<RequireRole role="elder"><Outlet /></RequireRole>}>
         <Route index element={<ElderHome />} />
         <Route path="chat" element={<ElderChat />} />
+        <Route path="family" element={<ElderFamily />} />
       </Route>
       <Route path="/caretaker" element={<RequireRole role="caretaker"><CaretakerLayout /></RequireRole>}>
         <Route index element={<CaretakerIndex />} />

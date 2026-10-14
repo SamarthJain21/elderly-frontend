@@ -1,67 +1,16 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { Alert, Box, Button, ButtonBase, InputBase, Menu, MenuItem, Typography } from '@mui/material'
+import { Alert, Box, ButtonBase, Typography } from '@mui/material'
 import { useAuth } from '../../auth/AuthContext'
 import { useChat } from '../../lib/useChat'
-import type { ChatMessage, ElderProfile, FamilyMessage, Mood } from '../../lib/types'
+import type { ChatMessage, ElderProfile, Mood } from '../../lib/types'
 import { useApi } from '../../lib/useApi'
-import { canListen, saveVoiceURI, savedVoiceURI, speak, stopSpeaking, useListen, useVoices } from '../../lib/speech'
+import { stopSpeaking } from '../../lib/speech'
 import { Pill } from '../../components/ui'
 import { ActionCardView } from '../../components/ActionCardView'
+import { Bubble, ChatHeader, Composer, QuickReplies } from './chatKit'
+import { familySeenAt, useSpeakNewest, useVoice } from './chatHooks'
 import { tokens } from '../../theme'
-
-// Mirrors the prototype's .msg / .msg.me / .msg.agent bubbles.
-function Bubble({ m, onAnswer, disabled }: { m: ChatMessage; onAnswer?: (id: string, approve: boolean) => void; disabled?: boolean }) {
-  const mine = m.sender === 'elder'
-  return (
-    <Box sx={{
-      fontSize: 21, lineHeight: 1.35, px: '18px', py: '14px', borderRadius: '24px', maxWidth: '92%', my: 1.5,
-      width: 'fit-content', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere',
-      ...(mine
-        ? { bgcolor: tokens.ink, color: tokens.white, ml: 'auto', borderBottomRightRadius: '8px' }
-        : { bgcolor: tokens.accentSoft, color: tokens.ink, borderBottomLeftRadius: '8px' }),
-    }}>
-      {!mine && (
-        <Box component="span" sx={{ display: 'block', fontSize: 13, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', opacity: 0.65, mb: 0.5 }}>
-          Elderly
-        </Box>
-      )}
-      {m.text}
-      {m.action !== null && m.action !== undefined && (
-        <ActionCardView card={m.action} disabled={disabled}
-          onAnswer={onAnswer && m.action ? (approve) => onAnswer(m.action!.id, approve) : undefined} />
-      )}
-    </Box>
-  )
-}
-
-// Family thread bubbles: caretaker = plum (prototype .msg.emma), elder's reply = ink with "to Emma".
-function FamilyBubble({ m, caretakerName }: { m: FamilyMessage; caretakerName: string }) {
-  const mine = m.sender === 'elder'
-  return (
-    <Box sx={{
-      fontSize: 21, lineHeight: 1.35, px: '18px', py: '14px', borderRadius: '24px', maxWidth: '92%', my: 1.5,
-      width: 'fit-content', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere',
-      ...(mine
-        ? { bgcolor: tokens.ink, color: tokens.white, ml: 'auto', borderBottomRightRadius: '8px' }
-        : { bgcolor: tokens.plumSoft, color: tokens.ink, borderBottomLeftRadius: '8px' }),
-    }}>
-      {!mine && (
-        <Box component="span" sx={{ display: 'block', fontSize: 13, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', opacity: 0.65, mb: 0.5 }}>
-          {m.senderName}
-        </Box>
-      )}
-      {m.text}
-      {mine && (
-        <Box component="span" sx={{ display: 'block', fontSize: 13, opacity: 0.75, mt: 0.5, textAlign: 'right' }}>
-          to {caretakerName}{m.viaAgent ? ' · via Elderly' : ''}
-        </Box>
-      )}
-    </Box>
-  )
-}
-
-type ThreadItem = { kind: 'agent'; m: ChatMessage } | { kind: 'family'; m: FamilyMessage }
 
 function Typing() {
   return (
@@ -77,46 +26,28 @@ function Typing() {
   )
 }
 
-const STARTERS = ['Good morning! 👋', 'I feel a bit lonely', 'What should I eat today?']
-
-const VOICE_KEY = 'elderly.voice'
-function readVoicePref(): boolean {
-  try { return localStorage.getItem(VOICE_KEY) !== 'off' } catch { return true }
-}
-function writeVoicePref(on: boolean): void {
-  try { localStorage.setItem(VOICE_KEY, on ? 'on' : 'off') } catch { /* private mode: keep in memory only */ }
-}
-
-function MicIcon() {
+function AgentBubble({ m, disabled, onAnswer }: { m: ChatMessage; disabled: boolean; onAnswer: (id: string, approve: boolean) => void }) {
+  const mine = m.sender === 'elder'
   return (
-    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-      <rect x="9" y="3" width="6" height="11" rx="3" />
-      <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
-    </svg>
+    <Bubble mine={mine} label={mine ? undefined : 'Elderly'}>
+      {m.text}
+      {m.action != null && <ActionCardView card={m.action} disabled={disabled} onAnswer={(approve) => onAnswer(m.action!.id, approve)} />}
+    </Bubble>
   )
 }
 
+const STARTERS = ['Good morning! 👋', 'I feel a bit lonely', 'What should I eat today?']
+
+/** The elder's conversation with Elderly (the agent). Family messages live on their own screen. */
 export function ElderChat() {
   const { state } = useAuth()
   const elderId = state.status === 'ready' ? state.me.uid : null
-  const { messages, family, status, typing, error, checkin, send, startCheckIn, confirm, sendFamily } = useChat(elderId)
-  const [text, setText] = useState('')
-  const endRef = useRef<HTMLDivElement>(null)
+  const { messages, family, status, typing, error, checkin, send, startCheckIn, confirm } = useChat(elderId)
   const profile = useApi<ElderProfile>(elderId && `/elders/${elderId}`)
   const lang = profile.data?.language ?? 'en-US'
-  const voices = useVoices(lang)
-  const hasVoice = voices.length > 0
-  const [voiceMenu, setVoiceMenu] = useState<HTMLElement | null>(null)
-  const [, rerender] = useState(0) // the choice lives in localStorage, keyed by language
-  const savedURI = savedVoiceURI(lang)
-  const activeVoice = voices.find((v) => v.voiceURI === savedURI) ?? voices[0]
-  const chooseVoice = (v: SpeechSynthesisVoice) => {
-    saveVoiceURI(lang, v.voiceURI)
-    rerender((n) => n + 1)
-    setVoiceMenu(null)
-    speak(lang.startsWith('hi') ? 'नमस्ते, मैं Elderly हूँ।' : lang.startsWith('th') ? 'สวัสดีค่ะ ฉันชื่อ Elderly' : "Hello, I'm Elderly.", lang)
-  }
-  const [voiceOn, setVoiceOn] = useState(readVoicePref)
+  const voice = useVoice(lang)
+  const endRef = useRef<HTMLDivElement>(null)
+  const [listening, setListening] = useState<ReactNode>(null)
   const [params, setParams] = useSearchParams()
   const checkinParam = params.get('checkin')
 
@@ -131,193 +62,65 @@ export function ElderChat() {
     setParams({}, { replace: true }) // consume, so a refresh doesn't restart it
   }, [checkinParam, status, checkin, startCheckIn, setParams])
 
-  // One thread: agent conversation and family messages, in time order.
-  const thread: ThreadItem[] = [
-    ...messages.map((m) => ({ kind: 'agent' as const, m })),
-    ...family.map((m) => ({ kind: 'family' as const, m })),
-  ].sort((a, b) => a.m.createdAt.localeCompare(b.m.createdAt))
-  const lastItem = thread.at(-1)
-  const lastCaretaker = family.findLast((m) => m.sender === 'caretaker')
-  const caretakerName = lastCaretaker?.senderName ?? 'family'
-
-  // A family message is "open" while it's the newest thing in the thread; then replies go to them,
-  // not to the agent. The elder can dismiss it to talk to Elderly instead.
-  const [dismissedId, setDismissedId] = useState<string | null>(null)
-  const replyingTo = lastItem?.kind === 'family' && lastItem.m.sender === 'caretaker' && lastItem.m.id !== dismissedId
-    ? lastItem.m : null
-
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-  }, [thread.length, typing])
+  }, [messages.length, typing, listening])
 
-  const lastAgent = lastItem?.kind === 'agent' ? lastItem.m : undefined
-  const suggestions = replyingTo !== null
-    ? replyingTo.quickReplies
-    : typing ? [] : lastItem === undefined ? STARTERS : lastAgent?.sender === 'agent' ? lastAgent.quickReplies : []
-  const canSend = status === 'open' && (replyingTo !== null || !typing)
+  const last = messages.at(-1)
+  useSpeakNewest(last?.id ?? null, last?.sender === 'agent' ? last.text : null, status === 'open', voice.on && voice.hasVoice, lang)
 
-  // Plain functions: useListen keeps the latest onFinal in a ref, so stable identities aren't needed.
-  const deliver = (value: string): boolean =>
-    replyingTo !== null ? sendFamily(value, 'family_reply') : send(value)
+  // A family message arriving while they talk to Elderly: point them to it, don't mix it in.
+  const newestFamily = family.findLast((m) => m.sender === 'caretaker')
+  const unreadFamily = elderId !== null && newestFamily !== undefined && newestFamily.createdAt > familySeenAt(elderId)
+    ? newestFamily : null
 
-  const submit = (value: string) => {
+  const canSend = status === 'open' && !typing
+  const suggestions = typing ? [] : last === undefined ? STARTERS : last.sender === 'agent' ? last.quickReplies : []
+  const onSend = (text: string) => {
     stopSpeaking()
-    if (canSend && deliver(value)) setText('')
+    return send(text)
   }
-
-  // Spoken words go straight out; if we can't send right now, leave them in the box.
-  const onHeard = (said: string) => {
-    if (canSend && deliver(said)) return
-    setText(said)
-  }
-  const mic = useListen(lang, onHeard)
-
-  // Arrived from the big mic on the home screen: start listening right away.
-  const listenParam = params.get('listen')
-  useEffect(() => {
-    if (listenParam === null || status !== 'open') return
-    if (canListen && canSend) mic.start()
-    setParams({}, { replace: true })
-  }, [listenParam, status, canSend, mic, setParams])
-
-  // Read new agent replies and family messages aloud — but not the history loaded on connect.
-  const spokenRef = useRef<string | null | undefined>(undefined)
-  useEffect(() => {
-    const lastId = lastItem?.m.id ?? null
-    if (spokenRef.current === undefined) {
-      if (status === 'open') spokenRef.current = lastId
-      return
-    }
-    if (lastItem === undefined || lastItem.m.id === spokenRef.current) return
-    spokenRef.current = lastItem.m.id
-    if (!voiceOn || !hasVoice) return
-    if (lastItem.kind === 'agent' && lastItem.m.sender === 'agent') speak(lastItem.m.text, lang)
-    if (lastItem.kind === 'family' && lastItem.m.sender === 'caretaker') speak(`${lastItem.m.senderName}: ${lastItem.m.text}`, lang)
-  }, [lastItem, status, voiceOn, hasVoice, lang])
-
-  useEffect(() => stopSpeaking, [])
-
-  const toggleVoice = () => {
-    const next = !voiceOn
-    setVoiceOn(next)
-    writeVoicePref(next)
-    if (!next) stopSpeaking()
-  }
-  const onSubmit = (e: FormEvent) => {
-    e.preventDefault()
-    submit(text)
-  }
+  const clearListenParam = useCallback(() => setParams({}, { replace: true }), [setParams])
 
   return (
     <Box sx={{ height: '100dvh', display: 'flex', flexDirection: 'column', maxWidth: 640, mx: 'auto', bgcolor: tokens.paper }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1.25, borderBottom: `1px solid ${tokens.line}`, flex: 'none' }}>
-        <Button component={Link} to="/elder" sx={{ fontSize: 20, color: tokens.ink, px: 0.5 }}>‹ Back</Button>
-        <Typography sx={{ fontFamily: 'Fraunces, serif', fontSize: 20, fontWeight: 650 }}>Elderly</Typography>
-        <Box sx={{ minWidth: 64, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1 }}>
-          {checkin?.status === 'in_progress' && <Pill tone="warn">Check-in</Pill>}
-          {voices.length > 1 && (
-            <ButtonBase onClick={(e) => setVoiceMenu(e.currentTarget)} aria-label="Choose voice" aria-haspopup="menu"
-              sx={{ border: `1px solid ${tokens.line}`, bgcolor: tokens.white, borderRadius: '12px', width: 46, height: 46, fontSize: 20 }}>
-              🗣️
-            </ButtonBase>
-          )}
-          <Menu anchorEl={voiceMenu} open={voiceMenu !== null} onClose={() => setVoiceMenu(null)}
-            slotProps={{ paper: { sx: { maxHeight: 360 } } }}>
-            {voices.map((v) => (
-              <MenuItem key={v.voiceURI} selected={v.voiceURI === activeVoice?.voiceURI} onClick={() => chooseVoice(v)} sx={{ fontSize: 17 }}>
-                {v.name}
-                <Box component="span" sx={{ ml: 1, color: tokens.muted, fontSize: 13 }}>{v.lang}</Box>
-              </MenuItem>
-            ))}
-          </Menu>
-          {hasVoice && (
-            <ButtonBase onClick={toggleVoice} aria-label={voiceOn ? 'Turn voice off' : 'Turn voice on'} aria-pressed={voiceOn}
-              sx={{ border: `1px solid ${tokens.line}`, bgcolor: tokens.white, borderRadius: '12px', width: 46, height: 46, fontSize: 20 }}>
-              {voiceOn ? '🔊' : '🔇'}
-            </ButtonBase>
-          )}
-        </Box>
-      </Box>
+      <ChatHeader title="Elderly" lang={lang} voice={voice}
+        right={checkin?.status === 'in_progress' && <Pill tone="warn">Check-in</Pill>} />
 
       {status === 'reconnecting' && <Alert severity="warning" sx={{ borderRadius: 0 }}>Connecting again…</Alert>}
       {status === 'denied' && <Alert severity="error" sx={{ borderRadius: 0 }}>Please sign in again.</Alert>}
+      {unreadFamily !== null && (
+        <ButtonBase component={Link} to="/elder/family" sx={{
+          display: 'flex', justifyContent: 'space-between', px: 2, py: 1.25, bgcolor: tokens.plumSoft, color: tokens.plum,
+          fontSize: 18, fontWeight: 700, flex: 'none',
+        }}>
+          💌 New message from {unreadFamily.senderName}
+          <Box component="span">Open ›</Box>
+        </ButtonBase>
+      )}
 
       <Box sx={{ flex: 1, overflowY: 'auto', px: 2.5, py: 1 }} aria-live="polite">
-        {status === 'connecting' && thread.length === 0 && (
+        {status === 'connecting' && messages.length === 0 && (
           <Typography sx={{ color: tokens.muted, fontSize: 18, mt: 2 }}>Connecting…</Typography>
         )}
-        {status === 'open' && thread.length === 0 && (
+        {status === 'open' && messages.length === 0 && (
           <Typography sx={{ fontSize: 21, color: tokens.ink2, mt: 2 }}>
             Hello! I'm here whenever you want to talk. Type below or tap one of these.
           </Typography>
         )}
-        {thread.map((item) => item.kind === 'agent'
-          ? <Bubble key={item.m.id} m={item.m} disabled={status !== 'open' || typing} onAnswer={(id, approve) => { stopSpeaking(); confirm(id, approve) }} />
-          : <FamilyBubble key={item.m.id} m={item.m} caretakerName={item.m.sender === 'caretaker' ? item.m.senderName : caretakerName} />)}
+        {messages.map((m) => (
+          <AgentBubble key={m.id} m={m} disabled={status !== 'open' || typing} onAnswer={(id, approve) => { stopSpeaking(); confirm(id, approve) }} />
+        ))}
         {typing && <Typing />}
-        {mic.listening && (
-          <Box sx={{ fontSize: 21, lineHeight: 1.35, px: '18px', py: '14px', borderRadius: '24px', borderBottomRightRadius: '8px', maxWidth: '92%', my: 1.5, ml: 'auto', width: 'fit-content', border: `2px dashed ${tokens.line}`, color: tokens.ink2 }}>
-            {mic.interim || 'Listening…'}
-          </Box>
-        )}
+        {listening}
         {error !== null && <Alert severity="warning" sx={{ my: 1.5, fontSize: 17 }}>{error}</Alert>}
-        {mic.error !== null && <Alert severity="warning" sx={{ my: 1.5, fontSize: 17 }}>{mic.error}</Alert>}
-
-        {suggestions.length > 0 && (
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1, mb: 1 }}>
-            {suggestions.map((q) => (
-              <ButtonBase key={q} disabled={!canSend} onClick={() => submit(q)} sx={{
-                border: `2px solid ${tokens.line}`, bgcolor: tokens.white, borderRadius: 999, px: 2, py: 1.25,
-                fontSize: 18, fontWeight: 700, '&:hover': { borderColor: tokens.ink2 }, '&.Mui-disabled': { opacity: 0.5 },
-              }}>
-                {q}
-              </ButtonBase>
-            ))}
-          </Box>
-        )}
+        <QuickReplies options={suggestions} disabled={!canSend} onPick={(q) => onSend(q)} />
         <div ref={endRef} />
       </Box>
 
-      {replyingTo !== null && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1, bgcolor: tokens.plumSoft, color: tokens.plum, fontWeight: 700, fontSize: 17, flex: 'none' }}>
-          <Box sx={{ flex: 1 }}>Replying to {replyingTo.senderName}</Box>
-          <ButtonBase onClick={() => setDismissedId(replyingTo.id)} aria-label="Talk to Elderly instead"
-            sx={{ borderRadius: '10px', px: 1.25, py: 0.5, bgcolor: tokens.white, color: tokens.plum, fontWeight: 700, fontSize: 15 }}>
-            Talk to Elderly instead
-          </ButtonBase>
-        </Box>
-      )}
-      <Box component="form" onSubmit={onSubmit} sx={{ display: 'flex', gap: 1, p: 1.5, borderTop: `1px solid ${tokens.line}`, flex: 'none', bgcolor: tokens.paper, alignItems: 'center' }}>
-        {canListen && (
-          <ButtonBase
-            onClick={mic.listening ? mic.stop : mic.start}
-            disabled={!canSend && !mic.listening}
-            aria-label={mic.listening ? 'Stop and send' : 'Speak'}
-            sx={{
-              width: 58, height: 58, borderRadius: '50%', flex: 'none', color: tokens.white,
-              bgcolor: mic.listening ? tokens.sos : tokens.accent,
-              animation: mic.listening ? 'micPulse 1.4s infinite' : 'none',
-              '@keyframes micPulse': {
-                '0%': { boxShadow: '0 0 0 0 rgba(194,54,43,.45)' },
-                '70%': { boxShadow: '0 0 0 18px rgba(194,54,43,0)' },
-                '100%': { boxShadow: '0 0 0 0 rgba(194,54,43,0)' },
-              },
-              '&.Mui-disabled': { opacity: 0.5 },
-            }}
-          >
-            <MicIcon />
-          </ButtonBase>
-        )}
-        <InputBase
-          value={text} onChange={(e) => setText(e.target.value)}
-          placeholder={replyingTo !== null ? `Reply to ${replyingTo.senderName}…` : 'Type a message…'}
-          inputProps={{ maxLength: 1000, 'aria-label': 'Message' }}
-          sx={{ flex: 1, fontSize: 20, px: 2, py: 1, border: `2px solid ${tokens.line}`, borderRadius: '18px', bgcolor: tokens.white }}
-        />
-        <Button type="submit" variant="contained" disabled={!canSend || text.trim() === ''} sx={{ fontSize: 19, px: 2.5, borderRadius: '18px' }}>
-          Send
-        </Button>
-      </Box>
+      <Composer lang={lang} canSend={canSend} placeholder="Talk to Elderly…" onSend={onSend}
+        autoListen={params.get('listen') !== null && status === 'open'} onAutoListenUsed={clearListenParam}
+        listeningBubble={setListening} />
     </Box>
   )
 }

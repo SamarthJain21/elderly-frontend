@@ -5,7 +5,8 @@ import { canListen } from '../../lib/speech'
 import { TopBar } from '../../components/TopBar'
 import { useAuth } from '../../auth/AuthContext'
 import { useApi } from '../../lib/useApi'
-import { REMINDER_ICON, type ElderProfile, type TodayCheckIn, type TodayReminders } from '../../lib/types'
+import { REMINDER_ICON, type ElderProfile, type FamilyMessage, type TodayCheckIn, type TodayReminders } from '../../lib/types'
+import { familySeenAt } from './chatHooks'
 import { CheckInCard } from './CheckInCard'
 import { tokens } from '../../theme'
 
@@ -35,6 +36,10 @@ export function ElderHome() {
   const assessed = profile.data?.assessment != null
   const today = useApi<TodayReminders>(elderId && assessed ? `/elders/${elderId}/reminders/today` : null)
   const checkin = useApi<TodayCheckIn>(elderId && assessed ? `/elders/${elderId}/checkins/today` : null)
+  const family = useApi<FamilyMessage[]>(elderId && `/elders/${elderId}/family?limit=30`)
+  const seen = elderId ? familySeenAt(elderId) : ''
+  const unread = (family.data ?? []).filter((m) => m.sender === 'caretaker' && m.createdAt > seen)
+  const familyName = [...(family.data ?? [])].reverse().find((m) => m.sender === 'caretaker')?.senderName
   const tz = today.data?.timezone ?? null
   const now = useClock(tz)
 
@@ -74,6 +79,25 @@ export function ElderHome() {
               </Typography>
               <Button component={Link} to="/elder/chat" sx={{ mt: 0.5, fontSize: 16, color: tokens.ink2 }}>or type a message</Button>
             </Box>
+
+            <ButtonBase component={Link} to="/elder/family" sx={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 2, p: 2, mb: 2.5, borderRadius: '24px',
+              border: `2px solid ${unread.length > 0 ? tokens.plum : tokens.line}`, bgcolor: unread.length > 0 ? tokens.plumSoft : tokens.white,
+              textAlign: 'left',
+            }}>
+              <Box sx={{ fontSize: 34 }}>💌</Box>
+              <Box sx={{ flex: 1 }}>
+                <Typography sx={{ fontSize: 20, fontWeight: 700 }}>Messages from family</Typography>
+                <Typography sx={{ fontSize: 16, color: tokens.ink2 }}>
+                  {unread.length > 0 ? `${unread.length} new from ${unread.at(-1)?.senderName}` : familyName ? `Talk to ${familyName}` : 'Send your family a message'}
+                </Typography>
+              </Box>
+              {unread.length > 0 && (
+                <Box sx={{ minWidth: 32, height: 32, px: 1, borderRadius: 999, bgcolor: tokens.sos, color: tokens.white, display: 'grid', placeItems: 'center', fontWeight: 700 }}>
+                  {unread.length}
+                </Box>
+              )}
+            </ButtonBase>
 
             {!assessed ? (
               <Box sx={{ bgcolor: tokens.blueSoft, color: tokens.blue, borderRadius: '20px', p: '16px 18px', fontSize: 19, fontWeight: 700 }}>
