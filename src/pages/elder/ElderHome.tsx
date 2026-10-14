@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Alert, Box, CircularProgress, Typography } from '@mui/material'
+import { Link } from 'react-router'
+import { Alert, Box, ButtonBase, CircularProgress, Typography } from '@mui/material'
 import { TopBar } from '../../components/TopBar'
 import { useAuth } from '../../auth/AuthContext'
 import { useApi } from '../../lib/useApi'
@@ -50,6 +51,16 @@ export function ElderHome() {
             <Typography variant="h1" sx={{ fontSize: 34, lineHeight: 1.1, mt: 0.75, mb: 2 }}>
               {now ? greeting(now) : 'Hello'}, {firstName}
             </Typography>
+
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', my: 2.5 }}>
+              <ButtonBase component={Link} to="/elder/chat" aria-label="Talk to Elderly" sx={{
+                width: 148, height: 148, borderRadius: '50%', bgcolor: tokens.accent, color: tokens.white,
+                boxShadow: '0 14px 34px -8px rgba(30,107,87,.55)', fontSize: 56,
+              }}>
+                💬
+              </ButtonBase>
+              <Typography sx={{ fontSize: 19, fontWeight: 700, mt: 1.75 }}>Talk to Elderly</Typography>
+            </Box>
 
             {!assessed ? (
               <Box sx={{ bgcolor: tokens.blueSoft, color: tokens.blue, borderRadius: '20px', p: '16px 18px', fontSize: 19, fontWeight: 700 }}>

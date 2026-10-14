@@ -52,6 +52,7 @@ async function seed(tier: 'alerts_only' | 'daily_summary' | 'full_access' = 'dai
     await setDoc(doc(db, 'actions', 'a1'), { elderId: ELDER, status: 'pending' })
     await setDoc(doc(db, 'approvals', 'ap1'), { elderId: ELDER, status: 'pending' })
     await setDoc(doc(db, 'rules', ELDER), validRules)
+    await setDoc(doc(db, 'elders', ELDER, 'messages', 'm1'), { sender: 'elder', text: 'hi' })
   })
 }
 
@@ -134,6 +135,23 @@ describe('sharing tiers', () => {
     await assertSucceeds(updateDoc(doc(as(CARETAKER), 'logs', 'alert1'), { ack: true }))
     await assertFails(updateDoc(doc(as(CARETAKER), 'logs', 'alert1'), { kind: 'ok' }))
     await assertFails(setDoc(doc(as(ELDER), 'check_ins', 'c2'), { elderId: ELDER, mood: 'great' }))
+  })
+})
+
+describe('chat messages', () => {
+  it('elder reads own chat; nobody writes it from the client', async () => {
+    await seed('alerts_only')
+    await assertSucceeds(getDoc(doc(as(ELDER), 'elders', ELDER, 'messages', 'm1')))
+    await assertFails(setDoc(doc(as(ELDER), 'elders', ELDER, 'messages', 'm2'), { sender: 'agent', text: 'fake' }))
+    await assertFails(getDoc(doc(as(OTHER_ELDER), 'elders', ELDER, 'messages', 'm1')))
+  })
+
+  it('caretaker reads chat only at full_access', async () => {
+    await seed('daily_summary')
+    await assertFails(getDoc(doc(as(CARETAKER), 'elders', ELDER, 'messages', 'm1')))
+    await seed('full_access')
+    await assertSucceeds(getDoc(doc(as(CARETAKER), 'elders', ELDER, 'messages', 'm1')))
+    await assertFails(getDoc(doc(as(STRANGER), 'elders', ELDER, 'messages', 'm1')))
   })
 })
 

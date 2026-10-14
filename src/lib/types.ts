@@ -62,3 +62,12 @@ export interface TodayReminders {
 }
 
 export const REMINDER_ICON: Record<ReminderKind, string> = { medication: '💊', appointment: '📅', custom: '⏰' }
+
+export interface ChatMessage {
+  id: string
+  sender: 'elder' | 'agent'
+  text: string
+  quickReplies: string[]
+  createdAt: string
+  actedBy: string | null
+}

@@ -63,6 +63,11 @@ service cloud.firestore {
         && request.resource.data.sharingTier in ['alerts_only', 'daily_summary', 'full_access'];
     }
 
+    // Chat with the agent. Conversations are the most private data: full_access caretakers only.
+    match /elders/{elderId}/messages/{msgId} {
+      allow read: if isElder(elderId) || caretakerTierAtLeast(elderId, 'full_access');
+    }
+
     // ---------- wellness data (tiered) ----------
 
     match /check_ins/{id} {

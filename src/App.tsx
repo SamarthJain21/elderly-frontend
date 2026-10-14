@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router'
+import { Navigate, Outlet, Route, Routes } from 'react-router'
 import { RequireRole } from './auth/RequireRole'
 import { LoginPage } from './pages/LoginPage'
 import { OnboardingPage } from './pages/OnboardingPage'
@@ -7,13 +7,17 @@ import { AddElderPage } from './pages/caretaker/AddElderPage'
 import { AssessmentPage } from './pages/caretaker/AssessmentPage'
 import { ElderOverviewPage } from './pages/caretaker/ElderOverviewPage'
 import { ElderHome } from './pages/elder/ElderHome'
+import { ElderChat } from './pages/elder/ElderChat'
 
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/onboarding" element={<OnboardingPage />} />
-      <Route path="/elder/*" element={<RequireRole role="elder"><ElderHome /></RequireRole>} />
+      <Route path="/elder" element={<RequireRole role="elder"><Outlet /></RequireRole>}>
+        <Route index element={<ElderHome />} />
+        <Route path="chat" element={<ElderChat />} />
+      </Route>
       <Route path="/caretaker" element={<RequireRole role="caretaker"><CaretakerLayout /></RequireRole>}>
         <Route index element={<CaretakerIndex />} />
         <Route path="add" element={<AddElderPage />} />

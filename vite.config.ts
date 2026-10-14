@@ -10,6 +10,7 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
+        ws: true, // /api/ws/{elderId} -> ws://localhost:8000/ws/{elderId}
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
