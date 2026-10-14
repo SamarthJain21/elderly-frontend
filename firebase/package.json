@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "firebase emulators:exec --only firestore --project demo-elderly \"vitest run\"",
+    "test": "PATH=\"${JAVA_HOME:-/opt/homebrew/opt/openjdk@21}/bin:$PATH\" firebase emulators:exec --only firestore --project demo-elderly \"vitest run\"",
     "deploy:rules": "firebase deploy --only firestore:rules --project elderly-3e18c"
   },
   "devDependencies": {
