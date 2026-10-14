@@ -1,0 +1,146 @@
+rules_version = '2';
+
+// Client access only. The backend uses the Admin SDK, which bypasses these rules,
+// so every collection is read-only for clients unless a write is listed below.
+// Anything not matched is denied.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- helpers ----------
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function role() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function elder(elderId) {
+      return get(/databases/$(database)/documents/elders/$(elderId)).data;
+    }
+
+    function isElder(elderId) {
+      return signedIn() && request.auth.uid == elderId;
+    }
+
+    function isCaretakerOf(elderId) {
+      return signedIn()
+        && role() == 'caretaker'
+        && request.auth.uid in elder(elderId).caretakerIds;
+    }
+
+    // Tier ladder: alerts_only < daily_summary < full_access.
+    function caretakerTierAtLeast(elderId, minTier) {
+      let tier = elder(elderId).sharingTier;
+      return isCaretakerOf(elderId) && (
+        minTier == 'alerts_only'
+        || (minTier == 'daily_summary' && tier in ['daily_summary', 'full_access'])
+        || (minTier == 'full_access' && tier == 'full_access')
+      );
+    }
+
+    function onlyChanges(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+
+    // ---------- identity ----------
+
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /caretakers/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /elders/{elderId} {
+      allow read: if isElder(elderId) || isCaretakerOf(elderId);
+      // Caretakers edit the profile, never membership or identity fields.
+      allow update: if isCaretakerOf(elderId)
+        && onlyChanges(['name', 'phone', 'language', 'medicationSchedule',
+                        'emergencyContacts', 'sharingTier'])
+        && request.resource.data.sharingTier in ['alerts_only', 'daily_summary', 'full_access'];
+    }
+
+    // ---------- wellness data (tiered) ----------
+
+    match /check_ins/{id} {
+      allow read: if isElder(resource.data.elderId)
+        || caretakerTierAtLeast(resource.data.elderId, 'daily_summary');
+    }
+
+    // Raw transcripts live apart from check_ins because rules can't hide single fields.
+    match /check_in_transcripts/{id} {
+      allow read: if isElder(resource.data.elderId)
+        || caretakerTierAtLeast(resource.data.elderId, 'full_access');
+    }
+
+    match /logs/{id} {
+      allow read: if isElder(resource.data.elderId)
+        || caretakerTierAtLeast(resource.data.elderId, 'daily_summary')
+        || (isCaretakerOf(resource.data.elderId) && resource.data.kind == 'alert');
+      // Caretakers may only acknowledge.
+      allow update: if isCaretakerOf(resource.data.elderId)
+        && onlyChanges(['ack'])
+        && request.resource.data.ack is bool;
+    }
+
+    // ---------- agent actions (all tiers: approvals can't wait on sharing level) ----------
+
+    match /actions/{id} {
+      allow read: if isElder(resource.data.elderId) || isCaretakerOf(resource.data.elderId);
+    }
+
+    // Approve/decline goes through the backend so it can execute or cancel the action.
+    match /approvals/{id} {
+      allow read: if isCaretakerOf(resource.data.elderId);
+    }
+
+    match /requests/{id} {
+      allow read: if isCaretakerOf(resource.data.elderId);
+    }
+
+    // ---------- caretaker-managed config ----------
+
+    match /volunteers/{volId} {
+      allow read, delete: if isCaretakerOf(resource.data.elderId);
+      allow create: if isCaretakerOf(request.resource.data.elderId)
+        && request.resource.data.addedBy == request.auth.uid
+        && validVolunteer(request.resource.data);
+      allow update: if isCaretakerOf(resource.data.elderId)
+        && request.resource.data.elderId == resource.data.elderId
+        && request.resource.data.addedBy == resource.data.addedBy
+        && validVolunteer(request.resource.data);
+    }
+
+    function validVolunteer(v) {
+      return v.name is string && v.name.size() > 0
+        && v.phone is string
+        && v.trusted is bool
+        && v.skills is list;
+    }
+
+    match /rules/{elderId} {
+      allow read: if isElder(elderId) || isCaretakerOf(elderId);
+      allow create, update: if isCaretakerOf(elderId) && validRules(request.resource.data);
+    }
+
+    function validMode(m) {
+      return m in ['autonomous', 'elder_confirm', 'caretaker_approve'];
+    }
+
+    function validRules(r) {
+      let t = r.tools;
+      return r.currency in ['INR', 'SGD', 'THB']
+        && t is map
+        // Unknown tools rejected; emergency/weather/questions are fixed in code.
+        && t.keys().hasOnly(['order_food', 'order_medicine', 'book_ride', 'notify_volunteer',
+                             'send_message_to_caretaker', 'set_reminder'])
+        && t.keys().hasAll(['order_food', 'order_medicine', 'book_ride'])
+        && validMode(t.order_food.mode) && t.order_food.limitMinor is int && t.order_food.limitMinor >= 0
+        && validMode(t.order_medicine.mode) && t.order_medicine.limitMinor is int && t.order_medicine.limitMinor >= 0
+        && validMode(t.book_ride.mode) && t.book_ride.limitMinor is int && t.book_ride.limitMinor >= 0;
+    }
+  }
+}

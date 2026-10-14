@@ -1,0 +1,16 @@
+{
+  "name": "elderly-firebase",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "firebase emulators:exec --only firestore --project demo-elderly \"vitest run\"",
+    "deploy:rules": "firebase deploy --only firestore:rules --project elderly-3e18c"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "firebase": "^12.19.0",
+    "firebase-tools": "^15.33.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.4"
+  }
+}

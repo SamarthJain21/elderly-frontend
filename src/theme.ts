@@ -1,6 +1,6 @@
 import { createTheme } from '@mui/material/styles'
 
-// Hearth design tokens — source of truth is :root in resources/index.html.
+// Elderly design tokens — source of truth is :root in resources/index.html.
 export const tokens = {
   bg: '#F5EFE6',
   paper: '#FFFCF7',

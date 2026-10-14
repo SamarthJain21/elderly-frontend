@@ -13,7 +13,7 @@ export function Brand({ size = 22 }: { size?: number }) {
       >
         ♥
       </Box>
-      Hearth
+      Elderly
     </Box>
   )
 }
