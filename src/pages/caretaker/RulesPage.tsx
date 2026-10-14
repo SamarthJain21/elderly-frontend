@@ -92,7 +92,7 @@ function RulesForm({ elderId, firstName, initial }: { elderId: string; firstName
   }
 
   return (
-    <Box sx={{ display: 'grid', gap: 2, mt: 2 }}>
+    <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr)', gap: 2, mt: 2 }}>
       <Typography sx={{ color: tokens.ink2 }}>
         Decide what Elderly may do when {firstName} asks. Spending limits are per order, in {currency}.
       </Typography>

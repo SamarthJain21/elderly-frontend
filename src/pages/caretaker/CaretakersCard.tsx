@@ -39,9 +39,9 @@ export function CaretakersCard({ elderId, firstName }: { elderId: string; firstN
       {list.data?.map((c) => (
         <Box key={c.uid} sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
           <Avatar name={c.name || c.email} size={34} />
-          <Box>
+          <Box sx={{ minWidth: 0 }}>
             <Typography sx={{ fontWeight: 700 }}>{c.name}</Typography>
-            <Typography sx={{ fontSize: 13, color: tokens.muted }}>{c.email}</Typography>
+            <Typography sx={{ fontSize: 13, color: tokens.muted, overflowWrap: 'anywhere' }}>{c.email}</Typography>
           </Box>
         </Box>
       ))}

@@ -73,7 +73,7 @@ function ProfileForm({ elderId, initial }: { elderId: string; initial: Profile }
   }
 
   return (
-    <Box sx={{ display: 'grid', gap: 2, mt: 2, maxWidth: 720 }}>
+    <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr)', gap: 2, mt: 2, maxWidth: 720 }}>
       <Card sx={{ display: 'grid', gap: 2 }}>
         <Eyebrow>About them</Eyebrow>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>

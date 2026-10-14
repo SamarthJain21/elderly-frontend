@@ -21,10 +21,12 @@ export function CaretakerLayout() {
   return (
     <>
       <TopBar />
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '248px minmax(0,1fr)' }, minHeight: 'calc(100dvh - 61px)' }}>
+      {/* minmax(0,1fr), not 1fr: a grid column won't shrink below its content's min width, so the
+          horizontal elder list on phones would otherwise widen the whole page and scroll it sideways. */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', md: '248px minmax(0,1fr)' }, minHeight: 'calc(100dvh - 61px)' }}>
         <Box component="nav" sx={{
           borderRight: { md: `1px solid ${tokens.line}` }, borderBottom: { xs: `1px solid ${tokens.line}`, md: 0 },
-          p: { xs: 1.5, md: '22px 14px' }, bgcolor: tokens.paper,
+          p: { xs: 1.5, md: '22px 14px' }, bgcolor: tokens.paper, minWidth: 0,
         }}>
           <Box sx={{ display: { xs: 'none', md: 'block' }, px: 1.25, pb: 1.5 }}><Eyebrow>People you care for</Eyebrow></Box>
           <Box sx={{ display: 'flex', flexDirection: { xs: 'row', md: 'column' }, gap: 0.5, overflowX: 'auto' }}>

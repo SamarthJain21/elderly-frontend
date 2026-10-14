@@ -111,7 +111,7 @@ function AssessmentForm({ elder }: { elder: ElderProfile }) {
         {STEPS.map((s) => <Step key={s}><StepLabel>{s}</StepLabel></Step>)}
       </Stepper>
 
-      <Card sx={{ display: 'grid', gap: 2.5 }}>
+      <Card sx={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr)', gap: 2.5 }}>
         {step === 0 && (
           <>
             <TextField select label="Where they live" value={a.timezone} onChange={(e) => set({ timezone: e.target.value })}>
