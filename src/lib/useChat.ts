@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { auth } from './firebase'
-import type { ChatMessage } from './types'
+import type { ChatMessage, Mood, TodayCheckIn } from './types'
 
 export type ChatStatus = 'connecting' | 'open' | 'reconnecting' | 'denied'
 
@@ -8,6 +8,7 @@ type ServerFrame =
   | { type: 'history'; messages: ChatMessage[] }
   | { type: 'message'; message: ChatMessage }
   | { type: 'typing' }
+  | { type: 'checkin'; checkin: TodayCheckIn | null }
   | { type: 'error'; message: string }
 
 const MAX_BACKOFF_MS = 15_000
@@ -23,6 +24,8 @@ export function useChat(elderId: string | null) {
   const [status, setStatus] = useState<ChatStatus>('connecting')
   const [typing, setTyping] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // undefined = not received yet; null = check-ins not set up (no assessment)
+  const [checkin, setCheckin] = useState<TodayCheckIn | null | undefined>(undefined)
   const wsRef = useRef<WebSocket | null>(null)
 
   useEffect(() => {
@@ -56,6 +59,9 @@ export function useChat(elderId: string | null) {
           case 'typing':
             setTyping(true)
             setError(null)
+            break
+          case 'checkin':
+            setCheckin(frame.checkin)
             break
           case 'error':
             setTyping(false)
@@ -100,5 +106,13 @@ export function useChat(elderId: string | null) {
     return true
   }, [])
 
-  return { messages, status, typing, error, send }
+  const startCheckIn = useCallback((mood: Mood | null): boolean => {
+    const ws = wsRef.current
+    if (ws === null || ws.readyState !== WebSocket.OPEN) return false
+    ws.send(JSON.stringify({ type: 'start_checkin', mood }))
+    setError(null)
+    return true
+  }, [])
+
+  return { messages, status, typing, error, checkin, send, startCheckIn }
 }

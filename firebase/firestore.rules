@@ -81,12 +81,13 @@ service cloud.firestore {
         || caretakerTierAtLeast(resource.data.elderId, 'full_access');
     }
 
-    match /logs/{id} {
-      allow read: if isElder(resource.data.elderId)
-        || caretakerTierAtLeast(resource.data.elderId, 'daily_summary')
-        || (isCaretakerOf(resource.data.elderId) && resource.data.kind == 'alert');
+    // Activity log lives under the elder (newest-first queries need no composite index).
+    match /elders/{elderId}/logs/{id} {
+      allow read: if isElder(elderId)
+        || caretakerTierAtLeast(elderId, 'daily_summary')
+        || (isCaretakerOf(elderId) && resource.data.kind == 'alert');
       // Caretakers may only acknowledge.
-      allow update: if isCaretakerOf(resource.data.elderId)
+      allow update: if isCaretakerOf(elderId)
         && onlyChanges(['ack'])
         && request.resource.data.ack is bool;
     }

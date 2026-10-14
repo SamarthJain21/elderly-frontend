@@ -4,7 +4,8 @@ import { Alert, Box, ButtonBase, CircularProgress, Typography } from '@mui/mater
 import { TopBar } from '../../components/TopBar'
 import { useAuth } from '../../auth/AuthContext'
 import { useApi } from '../../lib/useApi'
-import { REMINDER_ICON, type ElderProfile, type TodayReminders } from '../../lib/types'
+import { REMINDER_ICON, type ElderProfile, type TodayCheckIn, type TodayReminders } from '../../lib/types'
+import { CheckInCard } from './CheckInCard'
 import { tokens } from '../../theme'
 
 /** "HH:MM" right now in the elder's timezone — the device clock may be set elsewhere. */
@@ -32,6 +33,7 @@ export function ElderHome() {
   const profile = useApi<ElderProfile>(elderId && `/elders/${elderId}`)
   const assessed = profile.data?.assessment != null
   const today = useApi<TodayReminders>(elderId && assessed ? `/elders/${elderId}/reminders/today` : null)
+  const checkin = useApi<TodayCheckIn>(elderId && assessed ? `/elders/${elderId}/checkins/today` : null)
   const tz = today.data?.timezone ?? null
   const now = useClock(tz)
 
@@ -51,6 +53,8 @@ export function ElderHome() {
             <Typography variant="h1" sx={{ fontSize: 34, lineHeight: 1.1, mt: 0.75, mb: 2 }}>
               {now ? greeting(now) : 'Hello'}, {firstName}
             </Typography>
+
+            {checkin.data !== null && <CheckInCard today={checkin.data} now={now} />}
 
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', my: 2.5 }}>
               <ButtonBase component={Link} to="/elder/chat" aria-label="Talk to Elderly" sx={{

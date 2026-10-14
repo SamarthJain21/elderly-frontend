@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { Alert, Box, Button, ButtonBase, InputBase, Typography } from '@mui/material'
 import { useAuth } from '../../auth/AuthContext'
 import { useChat } from '../../lib/useChat'
-import type { ChatMessage } from '../../lib/types'
+import type { ChatMessage, Mood } from '../../lib/types'
+import { Pill } from '../../components/ui'
 import { tokens } from '../../theme'
 
 // Mirrors the prototype's .msg / .msg.me / .msg.agent bubbles.
@@ -46,9 +47,22 @@ const STARTERS = ['Good morning! 👋', 'I feel a bit lonely', 'What should I ea
 export function ElderChat() {
   const { state } = useAuth()
   const elderId = state.status === 'ready' ? state.me.uid : null
-  const { messages, status, typing, error, send } = useChat(elderId)
+  const { messages, status, typing, error, checkin, send, startCheckIn } = useChat(elderId)
   const [text, setText] = useState('')
   const endRef = useRef<HTMLDivElement>(null)
+  const [params, setParams] = useSearchParams()
+  const checkinParam = params.get('checkin')
+
+  // Arrived from a mood face on the home screen: start today's check-in once the socket is ready.
+  useEffect(() => {
+    if (checkinParam === null || status !== 'open' || checkin === undefined) return
+    const startable = checkin !== null && (checkin.status === 'due' || checkin.status === 'missed')
+    if (startable) {
+      const mood = (['good', 'okay', 'low'] as const).find((m) => m === checkinParam)
+      startCheckIn((mood ?? null) as Mood | null)
+    }
+    setParams({}, { replace: true }) // consume, so a refresh doesn't restart it
+  }, [checkinParam, status, checkin, startCheckIn, setParams])
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
@@ -71,7 +85,9 @@ export function ElderChat() {
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1.25, borderBottom: `1px solid ${tokens.line}`, flex: 'none' }}>
         <Button component={Link} to="/elder" sx={{ fontSize: 20, color: tokens.ink, px: 0.5 }}>‹ Back</Button>
         <Typography sx={{ fontFamily: 'Fraunces, serif', fontSize: 20, fontWeight: 650 }}>Elderly</Typography>
-        <Box sx={{ width: 64 }} />
+        <Box sx={{ minWidth: 64, display: 'flex', justifyContent: 'flex-end' }}>
+          {checkin?.status === 'in_progress' && <Pill tone="warn">Check-in</Pill>}
+        </Box>
       </Box>
 
       {status === 'reconnecting' && <Alert severity="warning" sx={{ borderRadius: 0 }}>Connecting again…</Alert>}

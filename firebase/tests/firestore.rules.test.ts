@@ -47,8 +47,8 @@ async function seed(tier: 'alerts_only' | 'daily_summary' | 'full_access' = 'dai
     await setDoc(doc(db, 'elders', OTHER_ELDER), { name: 'Ann', caretakerIds: [STRANGER], sharingTier: 'full_access' })
     await setDoc(doc(db, 'check_ins', 'c1'), { elderId: ELDER, mood: 'good' })
     await setDoc(doc(db, 'check_in_transcripts', 'c1'), { elderId: ELDER, rawTranscript: '...' })
-    await setDoc(doc(db, 'logs', 'ok1'), { elderId: ELDER, kind: 'ok', ack: false })
-    await setDoc(doc(db, 'logs', 'alert1'), { elderId: ELDER, kind: 'alert', ack: false })
+    await setDoc(doc(db, 'elders', ELDER, 'logs', 'ok1'), { kind: 'ok', ack: false })
+    await setDoc(doc(db, 'elders', ELDER, 'logs', 'alert1'), { kind: 'alert', ack: false })
     await setDoc(doc(db, 'actions', 'a1'), { elderId: ELDER, status: 'pending' })
     await setDoc(doc(db, 'approvals', 'ap1'), { elderId: ELDER, status: 'pending' })
     await setDoc(doc(db, 'rules', ELDER), validRules)
@@ -99,8 +99,8 @@ describe('sharing tiers', () => {
   it('alerts_only: caretaker sees alert logs only', async () => {
     await seed('alerts_only')
     const db = as(CARETAKER)
-    await assertSucceeds(getDoc(doc(db, 'logs', 'alert1')))
-    await assertFails(getDoc(doc(db, 'logs', 'ok1')))
+    await assertSucceeds(getDoc(doc(db, 'elders', ELDER, 'logs', 'alert1')))
+    await assertFails(getDoc(doc(db, 'elders', ELDER, 'logs', 'ok1')))
     await assertFails(getDoc(doc(db, 'check_ins', 'c1')))
     await assertFails(getDoc(doc(db, 'check_in_transcripts', 'c1')))
   })
@@ -109,7 +109,7 @@ describe('sharing tiers', () => {
     await seed('daily_summary')
     const db = as(CARETAKER)
     await assertSucceeds(getDoc(doc(db, 'check_ins', 'c1')))
-    await assertSucceeds(getDoc(doc(db, 'logs', 'ok1')))
+    await assertSucceeds(getDoc(doc(db, 'elders', ELDER, 'logs', 'ok1')))
     await assertFails(getDoc(doc(db, 'check_in_transcripts', 'c1')))
   })
 
@@ -127,13 +127,13 @@ describe('sharing tiers', () => {
   it('a caretaker of a different elder sees nothing, even with full_access there', async () => {
     await seed('full_access')
     await assertFails(getDoc(doc(as(STRANGER), 'check_ins', 'c1')))
-    await assertFails(getDoc(doc(as(STRANGER), 'logs', 'alert1')))
+    await assertFails(getDoc(doc(as(STRANGER), 'elders', ELDER, 'logs', 'alert1')))
   })
 
   it('caretaker can ack a log but not rewrite it; clients cannot write check-ins', async () => {
     await seed()
-    await assertSucceeds(updateDoc(doc(as(CARETAKER), 'logs', 'alert1'), { ack: true }))
-    await assertFails(updateDoc(doc(as(CARETAKER), 'logs', 'alert1'), { kind: 'ok' }))
+    await assertSucceeds(updateDoc(doc(as(CARETAKER), 'elders', ELDER, 'logs', 'alert1'), { ack: true }))
+    await assertFails(updateDoc(doc(as(CARETAKER), 'elders', ELDER, 'logs', 'alert1'), { kind: 'ok' }))
     await assertFails(setDoc(doc(as(ELDER), 'check_ins', 'c2'), { elderId: ELDER, mood: 'great' }))
   })
 })

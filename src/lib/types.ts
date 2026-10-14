@@ -71,3 +71,42 @@ export interface ChatMessage {
   createdAt: string
   actedBy: string | null
 }
+
+export type Mood = 'great' | 'good' | 'okay' | 'low' | 'bad'
+export type CheckInStatus = 'not_today' | 'upcoming' | 'due' | 'in_progress' | 'done' | 'missed'
+
+export interface CheckIn {
+  id: string
+  elderId: string
+  date: string
+  status: 'in_progress' | 'done'
+  mood: Mood | null
+  sleepQuality: 'well' | 'okay' | 'poorly' | null
+  sleepHours: number | null
+  meals: string | null
+  medicationTaken: boolean | null
+  anomalies: string[]
+  escalateFlag: boolean
+  needsMedication: boolean
+  startedAt: string
+  completedAt: string | null
+}
+
+export interface TodayCheckIn {
+  status: CheckInStatus
+  date: string
+  time: string
+  checkIn: CheckIn | null
+}
+
+export interface LogEntry {
+  id: string
+  timestamp: string
+  actor: 'agent' | 'elder' | 'caretaker' | 'system'
+  message: string
+  kind: 'ok' | 'warn' | 'alert'
+  ack: boolean
+  checkInId: string | null
+}
+
+export const MOOD_EMOJI: Record<Mood, string> = { great: '😄', good: '😊', okay: '😐', low: '😟', bad: '😢' }

@@ -8,6 +8,7 @@ import { useApi } from '../../lib/useApi'
 import { ALL_DAYS, DAY_LABEL, type Day, REMINDER_ICON, type ElderProfile, type Reminder } from '../../lib/types'
 import { Avatar, Card, Chip, Eyebrow, Pill, SectionTitle } from '../../components/ui'
 import { tokens } from '../../theme'
+import { CheckInSection } from './CheckInSection'
 
 function daysLabel(days: Day[]): string {
   if (days.length === 7) return 'Every day'
@@ -159,6 +160,8 @@ export function ElderOverviewPage() {
           {a.healthNotes !== '' && (
             <Box sx={{ mt: 2 }}><Pill tone="info">ℹ️ {a.healthNotes}</Pill></Box>
           )}
+
+          <CheckInSection elderId={elderId} />
 
           <SectionTitle>Reminders</SectionTitle>
           <Card>
