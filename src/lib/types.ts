@@ -73,7 +73,7 @@ export interface ChatMessage {
   action: ActionCard | null
 }
 
-export type ActionStatus = 'awaiting_elder' | 'awaiting_caretaker' | 'done' | 'declined' | 'cancelled' | 'blocked' | 'failed'
+export type ActionStatus = 'awaiting_elder' | 'awaiting_caretaker' | 'done' | 'handed_off' | 'declined' | 'cancelled' | 'blocked' | 'failed'
 
 export interface ActionCard {
   id: string
@@ -85,6 +85,11 @@ export interface ActionCard {
   provider: string | null
   eta: string | null
   orderId: string | null
+  deliverTo: string | null
+  bookingUrl: string | null
+  bookingLabel: string | null
+  demo: boolean
+  estimate: boolean
 }
 
 export interface Quote {
@@ -93,6 +98,8 @@ export interface Quote {
   amountMinor: number
   currency: 'INR' | 'THB' | 'SGD'
   eta: string
+  estimate: boolean
+  demo: boolean
 }
 
 export interface Action {
@@ -103,6 +110,8 @@ export interface Action {
   status: ActionStatus
   quote: Quote | null
   orderId: string | null
+  deliverTo: string | null
+  bookingUrl: string | null
   requestText: string
   createdAt: string
 }
@@ -163,6 +172,17 @@ export interface AutonomyRules {
 
 export type SharingTier = 'alerts_only' | 'daily_summary' | 'full_access'
 
+export interface Address {
+  line1: string
+  line2: string
+  landmark: string
+  city: string
+  postcode: string
+  lat: number | null
+  lng: number | null
+  precision: 'address' | 'street' | 'city' | null
+}
+
 export interface EmergencyContact {
   name: string
   phone: string
@@ -174,7 +194,7 @@ export interface Profile {
   phone: string
   language: Language
   sharingTier: SharingTier
-  city: string
+  address: Address | null
   emergencyContacts: EmergencyContact[]
 }
 

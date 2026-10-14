@@ -58,6 +58,8 @@ export function ApprovalsInbox({ elderId, firstName }: { elderId: string; firstN
             <Typography sx={{ fontSize: 13, color: tokens.ink2 }}>
               {a.requestText ? `${firstName} said “${a.requestText}”` : ''}
               {a.quote ? ` · ${a.quote.provider}` : ''}
+              {a.quote?.demo ? ' · demo order' : ''}
+              {a.quote?.estimate ? ' · fare estimate' : ''}
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 1 }}>

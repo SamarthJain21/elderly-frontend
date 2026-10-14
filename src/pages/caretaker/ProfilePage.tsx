@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Alert, Box, Button, ButtonBase, CircularProgress, IconButton, MenuItem, Snackbar, TextField, Typography } from '@mui/material'
 import { api } from '../../lib/api'
 import { useApi } from '../../lib/useApi'
-import type { EmergencyContact, Language, Profile, SharingTier } from '../../lib/types'
+import type { Address, EmergencyContact, Language, Profile, SharingTier } from '../../lib/types'
 import { Card, Eyebrow } from '../../components/ui'
 import { useElder } from './elderContext'
 import { useCaretaker } from './caretakerContext'
@@ -36,6 +36,9 @@ function ProfileForm({ elderId, initial }: { elderId: string; initial: Profile }
   const [saved, setSaved] = useState(false)
   const [busy, setBusy] = useState(false)
 
+  const addr: Address = p.address ?? { line1: '', line2: '', landmark: '', city: '', postcode: '', lat: null, lng: null, precision: null }
+  const setAddr = (patch: Partial<Address>) => setP({ ...p, address: { ...addr, ...patch } })
+
   const setContact = (i: number, patch: Partial<EmergencyContact>) =>
     setP({ ...p, emergencyContacts: p.emergencyContacts.map((c, j) => (j === i ? { ...c, ...patch } : c)) })
 
@@ -45,11 +48,18 @@ function ProfileForm({ elderId, initial }: { elderId: string; initial: Profile }
       setError('Each emergency contact needs a name and phone number.')
       return
     }
+    const address = p.address === null || (addr.line1.trim() === '' && addr.city.trim() === '')
+      ? null
+      : { ...addr, line1: addr.line1.trim(), city: addr.city.trim() }
+    if (address !== null && (address.line1 === '' || address.city === '')) {
+      setError('The address needs at least a street and a town or city.')
+      return
+    }
     setError(null)
     setBusy(true)
     try {
       setP(await api<Profile>(`/elders/${elderId}/profile`, {
-        method: 'PUT', body: JSON.stringify({ ...p, name: p.name.trim(), phone: p.phone.trim(), emergencyContacts: contacts }),
+        method: 'PUT', body: JSON.stringify({ ...p, name: p.name.trim(), phone: p.phone.trim(), address, emergencyContacts: contacts }),
       }))
       setSaved(true)
       reloadElder()
@@ -69,11 +79,28 @@ function ProfileForm({ elderId, initial }: { elderId: string; initial: Profile }
           <TextField label="Name" required value={p.name} onChange={(e) => setP({ ...p, name: e.target.value })} />
           <TextField label="Phone" required type="tel" value={p.phone} onChange={(e) => setP({ ...p, phone: e.target.value })} />
         </Box>
-        <TextField label="Town or city" placeholder="Pune" value={p.city} onChange={(e) => setP({ ...p, city: e.target.value })}
-          helperText="Used for weather and heat warnings." />
         <TextField select label="Language Elderly speaks with them" value={p.language} onChange={(e) => setP({ ...p, language: e.target.value as Language })}>
           {LANGUAGES.map((l) => <MenuItem key={l.value} value={l.value}>{l.label}</MenuItem>)}
         </TextField>
+      </Card>
+
+      <Card sx={{ display: 'grid', gap: 2 }}>
+        <Eyebrow>Home address</Eyebrow>
+        <Typography sx={{ fontSize: 13, color: tokens.muted, mt: -1 }}>For deliveries, ride pickup and local weather.</Typography>
+        <TextField label="House / flat, street" value={addr.line1} onChange={(e) => setAddr({ line1: e.target.value })} />
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+          <TextField label="Area (optional)" value={addr.line2} onChange={(e) => setAddr({ line2: e.target.value })} />
+          <TextField label="Landmark (optional)" placeholder="Near the temple" value={addr.landmark} onChange={(e) => setAddr({ landmark: e.target.value })} />
+          <TextField label="Town or city" value={addr.city} onChange={(e) => setAddr({ city: e.target.value })} />
+          <TextField label="PIN / postcode" value={addr.postcode} onChange={(e) => setAddr({ postcode: e.target.value })} />
+        </Box>
+        {p.address !== null && (p.address.precision === null || p.address.precision === 'city') && p.address.line1 !== '' && (
+          <Alert severity="warning">
+            {p.address.precision === 'city'
+              ? "We could only find the town on the map, not the street — rides will pick up from the phone's location instead."
+              : "We couldn't find this address on the map, so ride pickup won't be prefilled. Check the street and city."}
+          </Alert>
+        )}
       </Card>
 
       <Card sx={{ display: 'grid', gap: 1.5 }}>
