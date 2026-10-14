@@ -104,10 +104,27 @@ export function useListen(lang: string, onFinal: (text: string) => void) {
   return { listening, interim, error, start, stop }
 }
 
+// macOS ships joke/character voices under en-US; never use them for an elder companion.
+const NOVELTY = /albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|jester|junior|kathy|organ|pipe organ|princess|ralph|superstar|trinoids|whisper|wobble|zarvox|fred|grandma|grandpa|rocko|shelley|sandy|eddy|flo|reed/i
+// Natural-sounding voices, best first. Google voices are Chrome's network voices.
+const PREFERRED = [/^google/i, /natural|neural|premium|enhanced/i, /samantha|ava|allison|susan|zoe|karen|moira|tessa|serena|daniel/i, /lekha|kanya|narisa/i, /microsoft (aria|jenny|guy|swara|madhur|premwadee|niwat)/i]
+
+function score(v: SpeechSynthesisVoice): number {
+  if (NOVELTY.test(v.name)) return -1
+  const i = PREFERRED.findIndex((re) => re.test(v.name))
+  return i === -1 ? 1 : 100 - i * 10
+}
+
 function pickVoice(lang: string): SpeechSynthesisVoice | undefined {
-  const voices = window.speechSynthesis.getVoices()
-  const base = lang.split('-')[0]
-  return voices.find((v) => v.lang === lang) ?? voices.find((v) => v.lang.replace('_', '-').startsWith(base))
+  const base = lang.split('-')[0].toLowerCase()
+  const norm = (v: SpeechSynthesisVoice) => v.lang.replace('_', '-').toLowerCase()
+  const candidates = window.speechSynthesis.getVoices()
+    .filter((v) => norm(v) === lang.toLowerCase() || norm(v).startsWith(`${base}-`) || norm(v) === base)
+    .filter((v) => score(v) >= 0)
+  // Exact locale beats same language (en-US over en-GB), then by quality.
+  return candidates.sort((a, b) =>
+    Number(norm(b) === lang.toLowerCase()) - Number(norm(a) === lang.toLowerCase()) || score(b) - score(a),
+  )[0]
 }
 
 /**
@@ -115,17 +132,31 @@ function pickVoice(lang: string): SpeechSynthesisVoice | undefined {
  * Returns false (and stays silent) if the device has no voice for that language —
  * an English voice reading Thai or Hindi is worse than silence.
  */
+// Chrome garbage-collects in-flight utterances (speech stops or never starts) unless referenced.
+let current: SpeechSynthesisUtterance | null = null
+
 export function speak(text: string, lang: string): boolean {
   if (!canSpeak) return false
   const voice = pickVoice(lang)
   if (voice === undefined) return false
   const synth = window.speechSynthesis
-  synth.cancel()
   const u = new SpeechSynthesisUtterance(text)
   u.lang = lang
   u.rate = 0.85
   u.voice = voice
-  synth.speak(u)
+  u.onend = () => { if (current === u) current = null }
+  current = u
+  const go = () => {
+    synth.resume() // Chrome can get stuck "paused" after a cancel
+    synth.speak(u)
+  }
+  // Chrome drops a speak() issued in the same tick as cancel(); only cancel when needed, then wait.
+  if (synth.speaking || synth.pending) {
+    synth.cancel()
+    window.setTimeout(go, 80)
+  } else {
+    go()
+  }
   return true
 }
 
@@ -136,11 +167,18 @@ export function useHasVoice(lang: string): boolean {
     if (!canSpeak) return
     const check = () => setHas(pickVoice(lang) !== undefined)
     window.speechSynthesis.addEventListener('voiceschanged', check)
-    return () => window.speechSynthesis.removeEventListener('voiceschanged', check)
+    // Voices may have loaded between first render and now, in which case no event will come.
+    const id = window.setTimeout(check, 0)
+    return () => {
+      window.clearTimeout(id)
+      window.speechSynthesis.removeEventListener('voiceschanged', check)
+    }
   }, [lang])
   return has
 }
 
 export function stopSpeaking(): void {
-  if (canSpeak) window.speechSynthesis.cancel()
+  if (!canSpeak) return
+  current = null
+  window.speechSynthesis.cancel()
 }
