@@ -86,6 +86,7 @@ export interface CheckIn {
   meals: string | null
   medicationTaken: boolean | null
   anomalies: string[]
+  urgent: string[]
   escalateFlag: boolean
   needsMedication: boolean
   startedAt: string

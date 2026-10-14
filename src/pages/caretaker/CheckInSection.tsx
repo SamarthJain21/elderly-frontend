@@ -59,7 +59,7 @@ export function CheckInSection({ elderId }: { elderId: string }) {
             </Box>
             {t.checkIn !== null && <Facts c={t.checkIn} />}
             {t.checkIn !== null && t.checkIn.anomalies.length > 0 && (
-              <Alert severity="warning" sx={{ mt: 2 }}>{t.checkIn.anomalies.join(' · ')}</Alert>
+              <Alert severity={t.checkIn.urgent.length > 0 ? 'error' : 'warning'} sx={{ mt: 2 }}>{t.checkIn.anomalies.join(' · ')}</Alert>
             )}
           </>
         )}
