@@ -180,7 +180,7 @@ describe('actions and approvals', () => {
   })
 })
 
-describe('autonomy rules and volunteers', () => {
+describe('autonomy rules and contacts', () => {
   beforeEach(() => seed())
 
   it('caretaker can update rules with valid values', async () => {
@@ -199,11 +199,17 @@ describe('autonomy rules and volunteers', () => {
     await assertFails(setDoc(doc(as(STRANGER), 'rules', ELDER), validRules))
   })
 
-  it('caretaker adds volunteers only for their elder, stamped as themselves', async () => {
-    const vol = { elderId: ELDER, name: 'Asha', phone: '+91 1', skills: ['shopping'], trusted: true, addedBy: CARETAKER }
-    await assertSucceeds(setDoc(doc(as(CARETAKER), 'volunteers', 'v1'), vol))
-    await assertFails(setDoc(doc(as(CARETAKER), 'volunteers', 'v2'), { ...vol, addedBy: STRANGER }))
-    await assertFails(setDoc(doc(as(STRANGER), 'volunteers', 'v3'), { ...vol, addedBy: STRANGER }))
-    await assertFails(getDoc(doc(as(ELDER), 'volunteers', 'v1')))
+  it('contacts are readable by their caretakers only, and never written from the client', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'elders', ELDER, 'contacts', 'v1'), { name: 'Asha', phone: '+91 1', kind: 'volunteer', trusted: true })
+    })
+    await assertSucceeds(getDoc(doc(as(CARETAKER), 'elders', ELDER, 'contacts', 'v1')))
+    await assertFails(getDoc(doc(as(STRANGER), 'elders', ELDER, 'contacts', 'v1')))
+    await assertFails(getDoc(doc(as(ELDER), 'elders', ELDER, 'contacts', 'v1')))
+    await assertFails(setDoc(doc(as(CARETAKER), 'elders', ELDER, 'contacts', 'v2'), { name: 'x', phone: '1' }))
+  })
+
+  it('invites are never readable from the client', async () => {
+    await assertFails(getDoc(doc(as(CARETAKER), 'invites', 'someone@example.com')))
   })
 })

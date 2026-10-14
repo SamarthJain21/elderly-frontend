@@ -9,6 +9,7 @@ import { tokens } from '../../theme'
 
 const ICON: Record<string, string> = {
   order_food: '🍲', order_medicine: '💊', book_ride: '🚕', set_reminder: '⏰', send_message_to_caretaker: '💬',
+  notify_volunteer: '🙋',
 }
 
 function describe(a: Action): string {

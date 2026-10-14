@@ -5,6 +5,7 @@ import { tokens } from '../theme'
 
 const ICON: Record<string, string> = {
   order_food: '🍲', order_medicine: '💊', book_ride: '🚕', set_reminder: '⏰', send_message_to_caretaker: '💬',
+  notify_volunteer: '🙋', call_contact: '📞',
 }
 
 const STATUS: Record<ActionStatus, { tone: 'ok' | 'warn' | 'bad' | 'info' | 'plum'; label: string }> = {
@@ -24,7 +25,7 @@ export function ActionCardView({ card, onAnswer, disabled }: {
   onAnswer?: (approve: boolean) => void
   disabled?: boolean
 }) {
-  const st = STATUS[card.status]
+  const st = card.tool === 'call_contact' && card.status === 'handed_off' ? { tone: 'ok' as const, label: 'Tap to call' } : STATUS[card.status]
   return (
     <Box sx={{ bgcolor: tokens.white, border: `2px solid ${tokens.line}`, borderRadius: '20px', p: 2, mt: 1.25, maxWidth: 420 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 1 }}>
@@ -45,7 +46,7 @@ export function ActionCardView({ card, onAnswer, disabled }: {
       )}
       {card.deliverTo !== null && <Typography sx={{ fontSize: 15, color: tokens.ink2, mt: 0.5 }}>📍 {card.deliverTo}</Typography>}
       {card.status === 'handed_off' && card.bookingUrl !== null && (
-        <Button component="a" href={card.bookingUrl} target="_blank" rel="noopener noreferrer" variant="contained" fullWidth
+        <Button component="a" href={card.bookingUrl} target={card.bookingUrl.startsWith('tel:') ? undefined : '_blank'} rel="noopener noreferrer" variant="contained" fullWidth
           sx={{ mt: 1.75, minHeight: 60, fontSize: 20, borderRadius: '18px' }}>
           {card.bookingLabel ?? 'Open to book'}
         </Button>

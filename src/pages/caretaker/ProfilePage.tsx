@@ -6,6 +6,7 @@ import type { Address, EmergencyContact, Language, Profile, SharingTier } from '
 import { Card, Eyebrow } from '../../components/ui'
 import { useElder } from './elderContext'
 import { useCaretaker } from './caretakerContext'
+import { CaretakersCard } from './CaretakersCard'
 import { tokens } from '../../theme'
 
 const LANGUAGES: { value: Language; label: string }[] = [
@@ -146,6 +147,8 @@ function ProfileForm({ elderId, initial }: { elderId: string; initial: Profile }
       <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
         <Button variant="contained" size="large" disabled={busy || p.name.trim() === ''} onClick={() => void save()}>Save profile</Button>
       </Box>
+
+      <CaretakersCard elderId={elderId} firstName={p.name.split(' ')[0] ?? p.name} />
       <Snackbar open={saved} autoHideDuration={2500} onClose={() => setSaved(false)} message="Profile saved" />
     </Box>
   )

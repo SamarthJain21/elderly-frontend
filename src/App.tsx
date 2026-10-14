@@ -10,6 +10,7 @@ import { ElderShell } from './pages/caretaker/ElderShell'
 import { RulesPage } from './pages/caretaker/RulesPage'
 import { ProfilePage } from './pages/caretaker/ProfilePage'
 import { FamilyChatPage } from './pages/caretaker/FamilyChatPage'
+import { ContactsPage } from './pages/caretaker/ContactsPage'
 import { ElderHome } from './pages/elder/ElderHome'
 import { ElderChat } from './pages/elder/ElderChat'
 import { ElderFamily } from './pages/elder/ElderFamily'
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="elders/:elderId" element={<ElderShell />}>
           <Route index element={<ElderOverviewPage />} />
           <Route path="chat" element={<FamilyChatPage />} />
+          <Route path="contacts" element={<ContactsPage />} />
           <Route path="rules" element={<RulesPage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>

@@ -9,6 +9,7 @@ import { tokens } from '../../theme'
 const TABS = [
   { to: '', label: 'Overview', end: true },
   { to: 'chat', label: 'Chat', end: false },
+  { to: 'contacts', label: 'Contacts', end: false },
   { to: 'rules', label: 'Rules & limits', end: false },
   { to: 'profile', label: 'Profile', end: false },
 ]

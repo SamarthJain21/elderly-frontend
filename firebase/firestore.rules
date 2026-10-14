@@ -106,28 +106,14 @@ service cloud.firestore {
       allow read: if isElder(elderId) || isCaretakerOf(elderId);
     }
 
-    match /requests/{id} {
-      allow read: if isCaretakerOf(resource.data.elderId);
+    // Contacts (family, neighbours, volunteers) and help requests: caretakers only — phone numbers
+    // of third parties shouldn't reach the elder's device. Writes go through the API.
+    match /elders/{elderId}/contacts/{id} {
+      allow read: if isCaretakerOf(elderId);
     }
 
-    // ---------- caretaker-managed config ----------
-
-    match /volunteers/{volId} {
-      allow read, delete: if isCaretakerOf(resource.data.elderId);
-      allow create: if isCaretakerOf(request.resource.data.elderId)
-        && request.resource.data.addedBy == request.auth.uid
-        && validVolunteer(request.resource.data);
-      allow update: if isCaretakerOf(resource.data.elderId)
-        && request.resource.data.elderId == resource.data.elderId
-        && request.resource.data.addedBy == resource.data.addedBy
-        && validVolunteer(request.resource.data);
-    }
-
-    function validVolunteer(v) {
-      return v.name is string && v.name.size() > 0
-        && v.phone is string
-        && v.trusted is bool
-        && v.skills is list;
+    match /elders/{elderId}/requests/{id} {
+      allow read: if isCaretakerOf(elderId);
     }
 
     match /rules/{elderId} {

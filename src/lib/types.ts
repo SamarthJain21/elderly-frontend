@@ -209,3 +209,38 @@ export interface FamilyMessage {
   viaAgent: boolean
   createdAt: string
 }
+
+export type ContactKind = 'family' | 'friend' | 'neighbour' | 'volunteer' | 'doctor'
+
+export interface ContactIn {
+  name: string
+  phone: string
+  kind: ContactKind
+  relationship: string
+  skills: string[]
+  trusted: boolean
+  email: string
+}
+
+export interface Contact extends ContactIn {
+  id: string
+  rating: number | null
+}
+
+export interface HelpRequest {
+  id: string
+  skill: string
+  title: string
+  description: string
+  preferredTime: string
+  volunteerName: string | null
+  status: 'open' | 'notified' | 'confirmed' | 'done' | 'cancelled'
+  notifiedVia: ('sms' | 'log')[]
+  createdAt: string
+}
+
+export interface CaretakerInfo {
+  uid: string
+  name: string
+  email: string
+}
