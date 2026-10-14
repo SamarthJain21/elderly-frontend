@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { auth } from './firebase'
-import type { ActionCard, ChatMessage, Mood, TodayCheckIn } from './types'
+import type { ActionCard, ChatMessage, FamilyMessage, Mood, TodayCheckIn } from './types'
 
 export type ChatStatus = 'connecting' | 'open' | 'reconnecting' | 'denied'
 
@@ -10,6 +10,8 @@ type ServerFrame =
   | { type: 'typing' }
   | { type: 'checkin'; checkin: TodayCheckIn | null }
   | { type: 'action_update'; messageId: string; action: ActionCard }
+  | { type: 'family_history'; messages: FamilyMessage[] }
+  | { type: 'family_message'; message: FamilyMessage }
   | { type: 'error'; message: string }
 
 const MAX_BACKOFF_MS = 15_000
@@ -22,6 +24,7 @@ function wsUrl(elderId: string): string {
 /** Live chat with the agent for one elder. Reconnects with backoff; stops on 4401/4403. */
 export function useChat(elderId: string | null) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [family, setFamily] = useState<FamilyMessage[]>([])
   const [status, setStatus] = useState<ChatStatus>('connecting')
   const [typing, setTyping] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -49,9 +52,16 @@ export function useChat(elderId: string | null) {
         const frame = JSON.parse(ev.data) as ServerFrame
         switch (frame.type) {
           case 'history':
+            setMessages(frame.messages)
+            break
+          case 'family_history':
+            // Sent to elders and caretakers alike, after `history` — so it marks the socket ready.
             attempt = 0
             setStatus('open')
-            setMessages(frame.messages)
+            setFamily(frame.messages)
+            break
+          case 'family_message':
+            setFamily((prev) => (prev.some((m) => m.id === frame.message.id) ? prev : [...prev, frame.message]))
             break
           case 'message':
             setMessages((prev) => (prev.some((m) => m.id === frame.message.id) ? prev : [...prev, frame.message]))
@@ -126,5 +136,15 @@ export function useChat(elderId: string | null) {
     return true
   }, [])
 
-  return { messages, status, typing, error, checkin, send, startCheckIn, confirm }
+  /** Elders send 'family_reply'; caretakers send 'family_message'. */
+  const sendFamily = useCallback((text: string, kind: 'family_reply' | 'family_message'): boolean => {
+    const ws = wsRef.current
+    const trimmed = text.trim()
+    if (ws === null || ws.readyState !== WebSocket.OPEN || trimmed === '') return false
+    ws.send(JSON.stringify({ type: kind, text: trimmed }))
+    setError(null)
+    return true
+  }, [])
+
+  return { messages, family, status, typing, error, checkin, send, startCheckIn, confirm, sendFamily }
 }

@@ -198,3 +198,14 @@ export interface Profile {
   emergencyContacts: EmergencyContact[]
 }
 
+
+export interface FamilyMessage {
+  id: string
+  sender: 'elder' | 'caretaker'
+  senderUid: string
+  senderName: string
+  text: string
+  quickReplies: string[]
+  viaAgent: boolean
+  createdAt: string
+}

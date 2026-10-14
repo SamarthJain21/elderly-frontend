@@ -52,6 +52,7 @@ async function seed(tier: 'alerts_only' | 'daily_summary' | 'full_access' = 'dai
     await setDoc(doc(db, 'elders', ELDER, 'actions', 'a1'), { status: 'awaiting_caretaker' })
     await setDoc(doc(db, 'rules', ELDER), validRules)
     await setDoc(doc(db, 'elders', ELDER, 'messages', 'm1'), { sender: 'elder', text: 'hi' })
+    await setDoc(doc(db, 'elders', ELDER, 'family_messages', 'f1'), { sender: 'caretaker', text: 'Did you eat?' })
   })
 }
 
@@ -151,6 +152,16 @@ describe('chat messages', () => {
     await seed('full_access')
     await assertSucceeds(getDoc(doc(as(CARETAKER), 'elders', ELDER, 'messages', 'm1')))
     await assertFails(getDoc(doc(as(STRANGER), 'elders', ELDER, 'messages', 'm1')))
+  })
+})
+
+describe('family chat', () => {
+  it('elder and every caretaker of theirs (even alerts_only) read it; strangers and client writes cannot', async () => {
+    await seed('alerts_only')
+    await assertSucceeds(getDoc(doc(as(ELDER), 'elders', ELDER, 'family_messages', 'f1')))
+    await assertSucceeds(getDoc(doc(as(CARETAKER), 'elders', ELDER, 'family_messages', 'f1')))
+    await assertFails(getDoc(doc(as(STRANGER), 'elders', ELDER, 'family_messages', 'f1')))
+    await assertFails(setDoc(doc(as(CARETAKER), 'elders', ELDER, 'family_messages', 'f2'), { sender: 'elder', text: 'spoof' }))
   })
 })
 
