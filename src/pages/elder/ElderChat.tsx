@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { Alert, Box, Button, ButtonBase, InputBase, Typography } from '@mui/material'
 import { useAuth } from '../../auth/AuthContext'
 import { useChat } from '../../lib/useChat'
-import type { ChatMessage, Mood } from '../../lib/types'
+import type { ChatMessage, ElderProfile, Mood } from '../../lib/types'
+import { useApi } from '../../lib/useApi'
+import { canListen, speak, stopSpeaking, useHasVoice, useListen } from '../../lib/speech'
 import { Pill } from '../../components/ui'
 import { tokens } from '../../theme'
 
@@ -44,12 +46,33 @@ function Typing() {
 
 const STARTERS = ['Good morning! 👋', 'I feel a bit lonely', 'What should I eat today?']
 
+const VOICE_KEY = 'elderly.voice'
+function readVoicePref(): boolean {
+  try { return localStorage.getItem(VOICE_KEY) !== 'off' } catch { return true }
+}
+function writeVoicePref(on: boolean): void {
+  try { localStorage.setItem(VOICE_KEY, on ? 'on' : 'off') } catch { /* private mode: keep in memory only */ }
+}
+
+function MicIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+      <rect x="9" y="3" width="6" height="11" rx="3" />
+      <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+    </svg>
+  )
+}
+
 export function ElderChat() {
   const { state } = useAuth()
   const elderId = state.status === 'ready' ? state.me.uid : null
   const { messages, status, typing, error, checkin, send, startCheckIn } = useChat(elderId)
   const [text, setText] = useState('')
   const endRef = useRef<HTMLDivElement>(null)
+  const profile = useApi<ElderProfile>(elderId && `/elders/${elderId}`)
+  const lang = profile.data?.language ?? 'en-US'
+  const hasVoice = useHasVoice(lang)
+  const [voiceOn, setVoiceOn] = useState(readVoicePref)
   const [params, setParams] = useSearchParams()
   const checkinParam = params.get('checkin')
 
@@ -72,8 +95,47 @@ export function ElderChat() {
   const suggestions = typing ? [] : last === undefined ? STARTERS : last.sender === 'agent' ? last.quickReplies : []
   const canSend = status === 'open' && !typing
 
-  const submit = (value: string) => {
+  const submit = useCallback((value: string) => {
+    stopSpeaking()
     if (canSend && send(value)) setText('')
+  }, [canSend, send])
+
+  // Spoken words go straight out; if we can't send right now, leave them in the box.
+  const onHeard = useCallback((said: string) => {
+    if (canSend && send(said)) return
+    setText(said)
+  }, [canSend, send])
+  const mic = useListen(lang, onHeard)
+
+  // Arrived from the big mic on the home screen: start listening right away.
+  const listenParam = params.get('listen')
+  useEffect(() => {
+    if (listenParam === null || status !== 'open') return
+    if (canListen && canSend) mic.start()
+    setParams({}, { replace: true })
+  }, [listenParam, status, canSend, mic, setParams])
+
+  // Read new agent replies aloud — but not the history loaded on connect.
+  const spokenRef = useRef<string | null | undefined>(undefined)
+  useEffect(() => {
+    const lastId = messages.at(-1)?.id ?? null
+    if (spokenRef.current === undefined) {
+      if (status === 'open') spokenRef.current = lastId
+      return
+    }
+    const last = messages.at(-1)
+    if (last === undefined || last.id === spokenRef.current) return
+    spokenRef.current = last.id
+    if (last.sender === 'agent' && voiceOn && hasVoice) speak(last.text, lang)
+  }, [messages, status, voiceOn, hasVoice, lang])
+
+  useEffect(() => stopSpeaking, [])
+
+  const toggleVoice = () => {
+    const next = !voiceOn
+    setVoiceOn(next)
+    writeVoicePref(next)
+    if (!next) stopSpeaking()
   }
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
@@ -85,8 +147,14 @@ export function ElderChat() {
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1.25, borderBottom: `1px solid ${tokens.line}`, flex: 'none' }}>
         <Button component={Link} to="/elder" sx={{ fontSize: 20, color: tokens.ink, px: 0.5 }}>‹ Back</Button>
         <Typography sx={{ fontFamily: 'Fraunces, serif', fontSize: 20, fontWeight: 650 }}>Elderly</Typography>
-        <Box sx={{ minWidth: 64, display: 'flex', justifyContent: 'flex-end' }}>
+        <Box sx={{ minWidth: 64, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1 }}>
           {checkin?.status === 'in_progress' && <Pill tone="warn">Check-in</Pill>}
+          {hasVoice && (
+            <ButtonBase onClick={toggleVoice} aria-label={voiceOn ? 'Turn voice off' : 'Turn voice on'} aria-pressed={voiceOn}
+              sx={{ border: `1px solid ${tokens.line}`, bgcolor: tokens.white, borderRadius: '12px', width: 46, height: 46, fontSize: 20 }}>
+              {voiceOn ? '🔊' : '🔇'}
+            </ButtonBase>
+          )}
         </Box>
       </Box>
 
@@ -104,7 +172,13 @@ export function ElderChat() {
         )}
         {messages.map((m) => <Bubble key={m.id} m={m} />)}
         {typing && <Typing />}
+        {mic.listening && (
+          <Box sx={{ fontSize: 21, lineHeight: 1.35, px: '18px', py: '14px', borderRadius: '24px', borderBottomRightRadius: '8px', maxWidth: '92%', my: 1.5, ml: 'auto', width: 'fit-content', border: `2px dashed ${tokens.line}`, color: tokens.ink2 }}>
+            {mic.interim || 'Listening…'}
+          </Box>
+        )}
         {error !== null && <Alert severity="warning" sx={{ my: 1.5, fontSize: 17 }}>{error}</Alert>}
+        {mic.error !== null && <Alert severity="warning" sx={{ my: 1.5, fontSize: 17 }}>{mic.error}</Alert>}
 
         {suggestions.length > 0 && (
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1, mb: 1 }}>
@@ -121,7 +195,27 @@ export function ElderChat() {
         <div ref={endRef} />
       </Box>
 
-      <Box component="form" onSubmit={onSubmit} sx={{ display: 'flex', gap: 1, p: 1.5, borderTop: `1px solid ${tokens.line}`, flex: 'none', bgcolor: tokens.paper }}>
+      <Box component="form" onSubmit={onSubmit} sx={{ display: 'flex', gap: 1, p: 1.5, borderTop: `1px solid ${tokens.line}`, flex: 'none', bgcolor: tokens.paper, alignItems: 'center' }}>
+        {canListen && (
+          <ButtonBase
+            onClick={mic.listening ? mic.stop : mic.start}
+            disabled={!canSend && !mic.listening}
+            aria-label={mic.listening ? 'Stop and send' : 'Speak'}
+            sx={{
+              width: 58, height: 58, borderRadius: '50%', flex: 'none', color: tokens.white,
+              bgcolor: mic.listening ? tokens.sos : tokens.accent,
+              animation: mic.listening ? 'micPulse 1.4s infinite' : 'none',
+              '@keyframes micPulse': {
+                '0%': { boxShadow: '0 0 0 0 rgba(194,54,43,.45)' },
+                '70%': { boxShadow: '0 0 0 18px rgba(194,54,43,0)' },
+                '100%': { boxShadow: '0 0 0 0 rgba(194,54,43,0)' },
+              },
+              '&.Mui-disabled': { opacity: 0.5 },
+            }}
+          >
+            <MicIcon />
+          </ButtonBase>
+        )}
         <InputBase
           value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a message…"
           inputProps={{ maxLength: 1000, 'aria-label': 'Message' }}

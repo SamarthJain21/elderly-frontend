@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { Alert, Box, ButtonBase, CircularProgress, Typography } from '@mui/material'
+import { Alert, Box, Button, ButtonBase, CircularProgress, Typography } from '@mui/material'
+import { canListen } from '../../lib/speech'
 import { TopBar } from '../../components/TopBar'
 import { useAuth } from '../../auth/AuthContext'
 import { useApi } from '../../lib/useApi'
@@ -57,13 +58,21 @@ export function ElderHome() {
             {checkin.data !== null && <CheckInCard today={checkin.data} now={now} />}
 
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', my: 2.5 }}>
-              <ButtonBase component={Link} to="/elder/chat" aria-label="Talk to Elderly" sx={{
+              <ButtonBase component={Link} to={canListen ? '/elder/chat?listen=1' : '/elder/chat'} aria-label="Talk to Elderly" sx={{
                 width: 148, height: 148, borderRadius: '50%', bgcolor: tokens.accent, color: tokens.white,
-                boxShadow: '0 14px 34px -8px rgba(30,107,87,.55)', fontSize: 56,
+                boxShadow: '0 14px 34px -8px rgba(30,107,87,.55)',
               }}>
-                💬
+                {canListen ? (
+                  <svg viewBox="0 0 24 24" width="58" height="58" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                    <rect x="9" y="3" width="6" height="11" rx="3" />
+                    <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+                  </svg>
+                ) : <Box component="span" sx={{ fontSize: 56 }}>💬</Box>}
               </ButtonBase>
-              <Typography sx={{ fontSize: 19, fontWeight: 700, mt: 1.75 }}>Talk to Elderly</Typography>
+              <Typography sx={{ fontSize: 19, fontWeight: 700, mt: 1.75, textAlign: 'center' }}>
+                {canListen ? 'Tap and talk to Elderly' : 'Talk to Elderly'}
+              </Typography>
+              <Button component={Link} to="/elder/chat" sx={{ mt: 0.5, fontSize: 16, color: tokens.ink2 }}>or type a message</Button>
             </Box>
 
             {!assessed ? (
