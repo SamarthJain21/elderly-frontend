@@ -6,7 +6,6 @@ import { useChat } from '../../lib/useChat'
 import type { ChatMessage, ElderProfile, Mood } from '../../lib/types'
 import { useApi } from '../../lib/useApi'
 import { stopSpeaking } from '../../lib/speech'
-import { Pill } from '../../components/ui'
 import { ActionCardView } from '../../components/ActionCardView'
 import { Bubble, ChatHeader, Composer, QuickReplies } from './chatKit'
 import { familySeenAt, useSpeakNewest, useVoice } from './chatHooks'
@@ -84,18 +83,22 @@ export function ElderChat() {
 
   return (
     <Box sx={{ height: '100dvh', display: 'flex', flexDirection: 'column', maxWidth: 640, mx: 'auto', bgcolor: tokens.paper }}>
-      <ChatHeader title="Elderly" lang={lang} voice={voice}
-        right={checkin?.status === 'in_progress' && <Pill tone="warn">Check-in</Pill>} />
+      <ChatHeader title="Elderly" lang={lang} voice={voice} />
+      {checkin?.status === 'in_progress' && (
+        <Box sx={{ px: 2, py: 0.75, bgcolor: tokens.amberSoft, color: tokens.amber, fontWeight: 700, fontSize: 16, flex: 'none' }}>
+          📝 Daily check-in in progress
+        </Box>
+      )}
 
       {status === 'reconnecting' && <Alert severity="warning" sx={{ borderRadius: 0 }}>Connecting again…</Alert>}
       {status === 'denied' && <Alert severity="error" sx={{ borderRadius: 0 }}>Please sign in again.</Alert>}
       {unreadFamily !== null && (
         <ButtonBase component={Link} to="/elder/family" sx={{
-          display: 'flex', justifyContent: 'space-between', px: 2, py: 1.25, bgcolor: tokens.plumSoft, color: tokens.plum,
-          fontSize: 18, fontWeight: 700, flex: 'none',
+          display: 'flex', alignItems: 'center', gap: 1.5, px: 2, py: 1.25, bgcolor: tokens.plumSoft, color: tokens.plum,
+          fontSize: 18, fontWeight: 700, flex: 'none', textAlign: 'left',
         }}>
-          💌 New message from {unreadFamily.senderName}
-          <Box component="span">Open ›</Box>
+          <Box component="span" sx={{ flex: 1, minWidth: 0 }}>💌 New message from {unreadFamily.senderName}</Box>
+          <Box component="span" sx={{ whiteSpace: 'nowrap', bgcolor: tokens.white, borderRadius: '10px', px: 1.25, py: 0.5 }}>Open ›</Box>
         </ButtonBase>
       )}
 

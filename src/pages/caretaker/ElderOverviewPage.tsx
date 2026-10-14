@@ -8,7 +8,7 @@ import {
 import { api } from '../../lib/api'
 import { useApi } from '../../lib/useApi'
 import { ALL_DAYS, DAY_LABEL, type Day, REMINDER_ICON, type Reminder } from '../../lib/types'
-import { Card, Chip, Eyebrow, Pill, SectionTitle } from '../../components/ui'
+import { Card, Chip, Eyebrow, SectionTitle } from '../../components/ui'
 import { tokens } from '../../theme'
 import { CheckInSection } from './CheckInSection'
 
@@ -149,7 +149,7 @@ export function ElderOverviewPage() {
           </Box>
 
           {a.healthNotes !== '' && (
-            <Box sx={{ mt: 2 }}><Pill tone="info">ℹ️ {a.healthNotes}</Pill></Box>
+            <Alert severity="info" icon={false} sx={{ mt: 2, bgcolor: tokens.blueSoft, color: tokens.blue }}>ℹ️ {a.healthNotes}</Alert>
           )}
 
           <CheckInSection elderId={elderId} />

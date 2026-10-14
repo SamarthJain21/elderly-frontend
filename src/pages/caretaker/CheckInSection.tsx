@@ -70,7 +70,7 @@ export function CheckInSection({ elderId }: { elderId: string }) {
           <Eyebrow>Last 7 days</Eyebrow>
           {week.data?.length === 0 && <Typography sx={{ color: tokens.muted, mt: 1 }}>No check-ins yet.</Typography>}
           {week.data?.map((c) => (
-            <Box key={c.id} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1, '& + &': { borderTop: `1px solid ${tokens.line}` } }}>
+            <Box key={c.id} sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, py: 1, '& + &': { borderTop: `1px solid ${tokens.line}` } }}>
               <Box sx={{ fontSize: 22, width: 28 }}>{c.mood ? MOOD_EMOJI[c.mood] : '·'}</Box>
               <Typography sx={{ fontWeight: 700, flex: 1 }}>{shortDate(c.date)}</Typography>
               {c.needsMedication && c.medicationTaken === false && <Pill tone="warn">Meds missed</Pill>}

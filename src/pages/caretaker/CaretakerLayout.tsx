@@ -73,9 +73,16 @@ export function CaretakerIndex() {
   return (
     <Box>
       <Typography variant="h3" component="h1" sx={{ fontSize: 30, mb: 2 }}>Today</Typography>
-      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+      <Box sx={{ display: 'grid', gap: 1 }}>
         {elders.map((e) => (
-          <Pill key={e.elderId} tone={e.assessed ? 'ok' : 'warn'}>{e.name}: {e.assessed ? 'set up' : 'needs assessment'}</Pill>
+          <Box key={e.elderId} component={Link} to={`/caretaker/elders/${e.elderId}`} sx={{
+            display: 'flex', alignItems: 'center', gap: 1.25, p: 1.5, borderRadius: '14px', bgcolor: tokens.paper,
+            border: `1px solid ${tokens.line}`, color: tokens.ink, textDecoration: 'none', minWidth: 0,
+          }}>
+            <Avatar name={e.name} size={34} />
+            <Box sx={{ flex: 1, minWidth: 0, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.name}</Box>
+            <Pill tone={e.assessed ? 'ok' : 'warn'}>{e.assessed ? 'Set up' : 'Needs assessment'}</Pill>
+          </Box>
         ))}
       </Box>
     </Box>

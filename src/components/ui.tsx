@@ -35,7 +35,10 @@ const PILL = {
 export function Pill({ tone, children }: { tone: keyof typeof PILL; children: ReactNode }) {
   const [bg, fg] = PILL[tone]
   return (
-    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, px: 1.25, py: 0.5, borderRadius: 999, fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', bgcolor: bg, color: fg }}>
+    <Box component="span" sx={{
+      display: 'inline-block', px: 1.25, py: 0.5, borderRadius: 999, fontSize: 13, fontWeight: 700, bgcolor: bg, color: fg,
+      whiteSpace: 'nowrap', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle',
+    }}>
       {children}
     </Box>
   )
