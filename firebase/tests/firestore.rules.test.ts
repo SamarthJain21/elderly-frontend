@@ -49,8 +49,7 @@ async function seed(tier: 'alerts_only' | 'daily_summary' | 'full_access' = 'dai
     await setDoc(doc(db, 'check_in_transcripts', 'c1'), { elderId: ELDER, rawTranscript: '...' })
     await setDoc(doc(db, 'elders', ELDER, 'logs', 'ok1'), { kind: 'ok', ack: false })
     await setDoc(doc(db, 'elders', ELDER, 'logs', 'alert1'), { kind: 'alert', ack: false })
-    await setDoc(doc(db, 'actions', 'a1'), { elderId: ELDER, status: 'pending' })
-    await setDoc(doc(db, 'approvals', 'ap1'), { elderId: ELDER, status: 'pending' })
+    await setDoc(doc(db, 'elders', ELDER, 'actions', 'a1'), { status: 'awaiting_caretaker' })
     await setDoc(doc(db, 'rules', ELDER), validRules)
     await setDoc(doc(db, 'elders', ELDER, 'messages', 'm1'), { sender: 'elder', text: 'hi' })
   })
@@ -158,14 +157,15 @@ describe('chat messages', () => {
 describe('actions and approvals', () => {
   beforeEach(() => seed('alerts_only'))
 
-  it('caretaker reads approvals at any tier but cannot approve from the client', async () => {
-    await assertSucceeds(getDoc(doc(as(CARETAKER), 'approvals', 'ap1')))
-    await assertFails(updateDoc(doc(as(CARETAKER), 'approvals', 'ap1'), { status: 'approved' }))
+  it('elder and caretaker (any tier) read actions; others cannot', async () => {
+    await assertSucceeds(getDoc(doc(as(ELDER), 'elders', ELDER, 'actions', 'a1')))
+    await assertSucceeds(getDoc(doc(as(CARETAKER), 'elders', ELDER, 'actions', 'a1')))
+    await assertFails(getDoc(doc(as(STRANGER), 'elders', ELDER, 'actions', 'a1')))
   })
 
-  it('nobody can write actions from the client', async () => {
-    await assertFails(updateDoc(doc(as(CARETAKER), 'actions', 'a1'), { status: 'done' }))
-    await assertFails(updateDoc(doc(as(ELDER), 'actions', 'a1'), { status: 'cancelled' }))
+  it('nobody approves or edits actions from the client', async () => {
+    await assertFails(updateDoc(doc(as(CARETAKER), 'elders', ELDER, 'actions', 'a1'), { status: 'done' }))
+    await assertFails(updateDoc(doc(as(ELDER), 'elders', ELDER, 'actions', 'a1'), { status: 'cancelled' }))
   })
 })
 

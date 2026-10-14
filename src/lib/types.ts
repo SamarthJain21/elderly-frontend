@@ -70,6 +70,41 @@ export interface ChatMessage {
   quickReplies: string[]
   createdAt: string
   actedBy: string | null
+  action: ActionCard | null
+}
+
+export type ActionStatus = 'awaiting_elder' | 'awaiting_caretaker' | 'done' | 'declined' | 'cancelled' | 'blocked' | 'failed'
+
+export interface ActionCard {
+  id: string
+  tool: string
+  title: string
+  status: ActionStatus
+  lines: string[]
+  amount: string | null
+  provider: string | null
+  eta: string | null
+  orderId: string | null
+}
+
+export interface Quote {
+  provider: string
+  lines: string[]
+  amountMinor: number
+  currency: 'INR' | 'THB' | 'SGD'
+  eta: string
+}
+
+export interface Action {
+  id: string
+  elderId: string
+  tool: string
+  args: Record<string, unknown>
+  status: ActionStatus
+  quote: Quote | null
+  orderId: string | null
+  requestText: string
+  createdAt: string
 }
 
 export type Mood = 'great' | 'good' | 'okay' | 'low' | 'bad'
@@ -139,13 +174,7 @@ export interface Profile {
   phone: string
   language: Language
   sharingTier: SharingTier
+  city: string
   emergencyContacts: EmergencyContact[]
 }
 
-export interface Approval {
-  id: string
-  actionId: string
-  elderId: string
-  status: 'pending' | 'approved' | 'declined'
-  elderRequestText: string
-}

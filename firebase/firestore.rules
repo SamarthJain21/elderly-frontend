@@ -94,13 +94,10 @@ service cloud.firestore {
 
     // ---------- agent actions (all tiers: approvals can't wait on sharing level) ----------
 
-    match /actions/{id} {
-      allow read: if isElder(resource.data.elderId) || isCaretakerOf(resource.data.elderId);
-    }
-
-    // Approve/decline goes through the backend so it can execute or cancel the action.
-    match /approvals/{id} {
-      allow read: if isCaretakerOf(resource.data.elderId);
+    // Agent actions; an action's status doubles as its approval state. Readable at every tier
+    // (approvals can't wait on sharing level). Decisions go through the backend API.
+    match /elders/{elderId}/actions/{id} {
+      allow read: if isElder(elderId) || isCaretakerOf(elderId);
     }
 
     match /requests/{id} {

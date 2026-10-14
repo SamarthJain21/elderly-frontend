@@ -116,7 +116,7 @@ export function ElderOverviewPage() {
 
   return (
     <Box>
-      <ApprovalsInbox elderId={elderId} />
+      <ApprovalsInbox elderId={elderId} firstName={elder.name.split(' ')[0] ?? elder.name} />
       {a === null ? (
         <Card sx={{ mt: 3, bgcolor: tokens.amberSoft, borderColor: 'transparent' }}>
           <Typography variant="h4" component="h2" sx={{ fontSize: 22, mb: 0.5 }}>Set up {elder.name}'s routine</Typography>

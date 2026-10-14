@@ -7,10 +7,11 @@ import type { ChatMessage, ElderProfile, Mood } from '../../lib/types'
 import { useApi } from '../../lib/useApi'
 import { canListen, saveVoiceURI, savedVoiceURI, speak, stopSpeaking, useListen, useVoices } from '../../lib/speech'
 import { Pill } from '../../components/ui'
+import { ActionCardView } from '../../components/ActionCardView'
 import { tokens } from '../../theme'
 
 // Mirrors the prototype's .msg / .msg.me / .msg.agent bubbles.
-function Bubble({ m }: { m: ChatMessage }) {
+function Bubble({ m, onAnswer, disabled }: { m: ChatMessage; onAnswer?: (id: string, approve: boolean) => void; disabled?: boolean }) {
   const mine = m.sender === 'elder'
   return (
     <Box sx={{
@@ -26,6 +27,10 @@ function Bubble({ m }: { m: ChatMessage }) {
         </Box>
       )}
       {m.text}
+      {m.action !== null && m.action !== undefined && (
+        <ActionCardView card={m.action} disabled={disabled}
+          onAnswer={onAnswer && m.action ? (approve) => onAnswer(m.action!.id, approve) : undefined} />
+      )}
     </Box>
   )
 }
@@ -66,7 +71,7 @@ function MicIcon() {
 export function ElderChat() {
   const { state } = useAuth()
   const elderId = state.status === 'ready' ? state.me.uid : null
-  const { messages, status, typing, error, checkin, send, startCheckIn } = useChat(elderId)
+  const { messages, status, typing, error, checkin, send, startCheckIn, confirm } = useChat(elderId)
   const [text, setText] = useState('')
   const endRef = useRef<HTMLDivElement>(null)
   const profile = useApi<ElderProfile>(elderId && `/elders/${elderId}`)
@@ -196,7 +201,9 @@ export function ElderChat() {
             Hello! I'm here whenever you want to talk. Type below or tap one of these.
           </Typography>
         )}
-        {messages.map((m) => <Bubble key={m.id} m={m} />)}
+        {messages.map((m) => (
+          <Bubble key={m.id} m={m} disabled={!canSend} onAnswer={(id, approve) => { stopSpeaking(); confirm(id, approve) }} />
+        ))}
         {typing && <Typing />}
         {mic.listening && (
           <Box sx={{ fontSize: 21, lineHeight: 1.35, px: '18px', py: '14px', borderRadius: '24px', borderBottomRightRadius: '8px', maxWidth: '92%', my: 1.5, ml: 'auto', width: 'fit-content', border: `2px dashed ${tokens.line}`, color: tokens.ink2 }}>

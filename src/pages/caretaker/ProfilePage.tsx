@@ -69,6 +69,8 @@ function ProfileForm({ elderId, initial }: { elderId: string; initial: Profile }
           <TextField label="Name" required value={p.name} onChange={(e) => setP({ ...p, name: e.target.value })} />
           <TextField label="Phone" required type="tel" value={p.phone} onChange={(e) => setP({ ...p, phone: e.target.value })} />
         </Box>
+        <TextField label="Town or city" placeholder="Pune" value={p.city} onChange={(e) => setP({ ...p, city: e.target.value })}
+          helperText="Used for weather and heat warnings." />
         <TextField select label="Language Elderly speaks with them" value={p.language} onChange={(e) => setP({ ...p, language: e.target.value as Language })}>
           {LANGUAGES.map((l) => <MenuItem key={l.value} value={l.value}>{l.label}</MenuItem>)}
         </TextField>
