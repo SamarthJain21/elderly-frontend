@@ -5,7 +5,7 @@ import { API_URL } from './mode'
  */
 import type {
   ActionCard, ActionStatus, Address, Assessment, AutonomyRules, Caretaker, CheckInRecord, CheckInStatus, Contact, Currency, EmergencyContact, FamilyMessage, HelpRequest,
-  Language, LogEntry, Message, Mood, Reminder, SharingTier,
+  Insights, Language, LogEntry, Message, Mood, Reminder, SharingTier,
 } from '../lib/types'
 
 const BASE = API_URL
@@ -46,6 +46,7 @@ export function createApi(getToken: TokenFn) {
     // check-ins, logs, family (app/routers/checkins.py)
     checkinToday: (id: string) => req<TodayCheckIn>('GET', `${e(id)}/checkins/today`),
     checkins: (id: string, days = 7) => req<CheckInRecord[]>('GET', `${e(id)}/checkins?days=${days}`),
+    insights: (id: string) => req<Insights>('GET', `${e(id)}/insights`),
     logs: (id: string, limit = 20) => req<LogEntry[]>('GET', `${e(id)}/logs?limit=${limit}`),
     family: (id: string, limit = 30) => req<FamilyMessage[]>('GET', `${e(id)}/family?limit=${limit}`),
     // reminders (app/routers/reminders.py)

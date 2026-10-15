@@ -111,3 +111,12 @@ export interface CheckInRecord {
 
 // app/routers/people.py
 export interface Caretaker { uid: string; name: string; email: string }
+
+// app/insights.py — drift detection + weekly insights (GET /elders/{id}/insights, caretakers)
+export type InsightSignal = 'mood' | 'sleep' | 'medication' | 'checkins'
+export interface Drift { signal: InsightSignal; days: number; since: string; detail: string }
+export interface InsightWeek {
+  days: number; checkinsDone: number; moodAvg: number | null; moodTrend: 'up' | 'down' | 'flat' | null
+  medsTakenPct: number | null; sleptWellPct: number | null; concerns: string[]
+}
+export interface Insights { status: 'stable' | 'watch' | 'concern'; drifts: Drift[]; week: InsightWeek; summary: string | null }

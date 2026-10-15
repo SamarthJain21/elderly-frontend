@@ -95,7 +95,7 @@ export async function refresh(full = true) {
   if (!elderId) return
   const ct = role === 'caretaker'
   const get = <T,>(p: Promise<T>) => p.catch((e: unknown) => { if (!(e instanceof ApiError && (e.status === 403 || e.status === 409))) console.warn(e); return undefined })
-  const [elder, profile, rules, actions, approvals, today, history, reminders, logs, contacts, requests, caretakers, family] = await Promise.all([
+  const [elder, profile, rules, actions, approvals, today, history, reminders, logs, contacts, requests, caretakers, family, insights] = await Promise.all([
     full ? get(api.elder(elderId)) : undefined,
     full ? get(api.profile(elderId)) : undefined,
     full ? get(api.rules(elderId)) : undefined,
@@ -110,6 +110,7 @@ export async function refresh(full = true) {
     ct && full ? get(api.caretakers(elderId)) : undefined,
     // The socket sends the family thread too; REST covers the first paint and a dropped socket.
     !chatOpen() ? get(api.family(elderId, 40)) : undefined,
+    ct ? get(api.insights(elderId)) : undefined,  // drift + weekly note (backend caches the note per day)
   ])
   if (getState().live.elderId !== elderId) return  // switched elder while loading
   update(d => {
@@ -126,6 +127,7 @@ export async function refresh(full = true) {
         .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
     }
     if (history) d.checkinHistory = history
+    if (insights) d.insights = insights
     if (today) applyToday(d, today)
     if (reminders) d.reminders = reminders
     if (logs) d.logs = logs.map(l => ({ ...l, ack: l.ack || d.ackedLogs.includes(l.id) }))

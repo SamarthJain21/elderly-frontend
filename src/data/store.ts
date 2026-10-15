@@ -4,7 +4,7 @@
  * so the Elder and Caretaker apps update each other live during a showcase.
  */
 import { useSyncExternalStore } from 'react'
-import type {
+import type { Insights,
   ActionCard, Address, Assessment, AutonomyRules, Caretaker, CheckInRecord, CheckInStatus, Contact, EmergencyContact,
   FamilyMessage, HelpRequest, Language, LogEntry, Message, Mood, Reminder, SharingTier,
 } from '../lib/types'
@@ -36,7 +36,7 @@ export interface LiveInfo {
 }
 
 export interface DemoState {
-  v: 9
+  v: 10
   onboarded: { caretaker: boolean; elder: boolean }
   caretaker: { uid: string; name: string; email: string }
   elder: {
@@ -52,6 +52,8 @@ export interface DemoState {
   invites: string[]
   /** GET /elders/{id}/checkins?days=7 — newest first. */
   checkinHistory: CheckInRecord[]
+  /** Live: from the backend. Demo: null → computed from checkinHistory (lib/insights). */
+  insights?: Insights | null
   assessment: Assessment
   rules: AutonomyRules
   contacts: Contact[]
@@ -83,7 +85,7 @@ export interface DemoState {
 }
 
 // Live and demo data never share storage.
-const KEY = isLive() ? 'elderly-live-v1' : 'elderly-demo-v9'
+const KEY = isLive() ? 'elderly-live-v1' : 'elderly-demo-v10'
 export const uid = (p = '') => p + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4)
 export const nowIso = () => new Date().toISOString()
 const minsAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString()
@@ -111,7 +113,7 @@ export function seed(): DemoState {
     healthNotes: 'Mild hearing loss. Low vision — prefers voice. Walks with a cane.',
   }
   return {
-    v: 9,
+    v: 10,
     onboarded: { caretaker: true, elder: true },
     caretaker: { uid: 'ct_emma', name: 'Emma', email: 'emma@example.com' },
     elder: {
@@ -177,13 +179,22 @@ export function seed(): DemoState {
 
 /** A plausible week of check-ins (backend: check_ins/{elderId}_{date}). */
 function pastCheckins(elderId: string): CheckInRecord[] {
+  // Newest first (yesterday). Story for the demo: a steady fortnight with one off day (not flagged — one day
+  // isn't a pattern), then the last two days lower mood and worse sleep → insights shows "Keep an eye".
   const rows: [Mood, CheckInRecord['sleepQuality'], number, string, boolean, string[]][] = [
+    ['low', 'poorly', 5, 'just tea and toast', true, ['knee pain']],
+    ['low', 'okay', 6, 'rice porridge', true, ['a little lonely']],
     ['good', 'well', 7, 'porridge, fish & rice', true, []],
     ['great', 'well', 7.5, 'eggs, noodle soup', true, []],
     ['okay', 'okay', 6, 'toast, soup', true, ['a little tired']],
     ['good', 'well', 7, 'porridge, chicken rice', true, []],
     ['low', 'poorly', 5, 'just tea and biscuits', false, ['knee pain', 'skipped lunch']],
-    ['good', 'okay', 6.5, 'oats, fish, vegetables', true, []],
+    ['good', 'well', 7, 'oats, fish, vegetables', true, []],
+    ['good', 'well', 7.5, 'congee, steamed fish', true, []],
+    ['great', 'well', 8, 'kaya toast, laksa', true, []],
+    ['good', 'okay', 6.5, 'porridge, vegetables', true, []],
+    ['good', 'well', 7, 'noodle soup, fruit', true, []],
+    ['okay', 'well', 7, 'toast, chicken rice', true, []],
   ]
   return rows.map(([mood, sleepQuality, sleepHours, meals, medicationTaken, anomalies], i) => {
     const d = new Date(Date.now() - (i + 1) * 86_400_000).toISOString().slice(0, 10)
@@ -219,7 +230,7 @@ function load(): DemoState | null {
   try {
     const raw = localStorage.getItem(KEY)
     const s = raw ? JSON.parse(raw) : null
-    return s && s.v === 9 ? s : null
+    return s && s.v === 10 ? s : null
   } catch { return null }
 }
 
