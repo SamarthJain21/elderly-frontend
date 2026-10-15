@@ -1,21 +1,19 @@
-import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import basicSsl from '@vitejs/plugin-basic-ssl'
 
-// https://vite.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    // Dev only: let ngrok tunnels reach the dev server for testing on a real phone.
-    // A leading dot allows any subdomain (ngrok URLs change each session).
-    allowedHosts: ['.ngrok-free.dev', '.ngrok-free.app'],
-    proxy: {
-      // /api/health -> http://localhost:8000/health
-      '/api': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        ws: true, // /api/ws/{elderId} -> ws://localhost:8000/ws/{elderId}
-        rewrite: (path) => path.replace(/^\/api/, ''),
-      },
+// `npm run dev:phone` (mode "phone") → self-signed HTTPS on port 5174, because phones only allow
+// the microphone on secure pages. `npm run dev` stays plain HTTP on 5173.
+export default defineConfig(({ mode }) => {
+  const phone = mode === 'phone'
+  return {
+    plugins: [react(), ...(phone ? [basicSsl()] : [])],
+    server: {
+      // Port 5173 matches the backend's default CORS origin (app/config.py → cors_origins).
+      port: phone ? 5174 : 5173,
+      strictPort: true,
+      // Listen on the local network too, so a phone on the same Wi-Fi can open it.
+      host: true,
     },
-  },
+  }
 })

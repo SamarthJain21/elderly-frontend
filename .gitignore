@@ -25,3 +25,7 @@ dist-ssr
 
 # Firebase deploy cache
 .firebase/
+
+# TypeScript build info
+*.tsbuildinfo
+.env

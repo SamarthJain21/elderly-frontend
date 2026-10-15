@@ -1,0 +1,9 @@
+{
+  "name": "Elderly — care companion",
+  "short_name": "Elderly",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5EFE6",
+  "theme_color": "#1E6B57",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
