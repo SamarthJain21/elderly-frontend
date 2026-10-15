@@ -142,10 +142,11 @@ export async function refresh(full = true) {
     // No "phone connected" event yet: for family, any sign of the elder using the app counts.
     if (ct && !d.onboarded.elder) d.onboarded.elder = d.family.some(f => f.sender === 'elder') || d.checkinHistory.length > 0
       || d.actions.length > 0 || d.checkin.status === 'in_progress' || d.checkin.status === 'done'
-    if (!ct && full) {
-      // The elder's app names "your family" after the first caretaker it can find.
-      const first = d.elder.emergencyContacts[0]
-      if (first && !d.caretaker.name) d.caretaker = { uid: '', name: first.name, email: '' }
+    if (!ct && elder) {
+      // The elder's app says who set things up: the caretaker, never an emergency contact (often a neighbour).
+      // No name known (older backend) → '' and the UI falls back to "your family".
+      const name = elder.caretakerNames?.[0] ?? ''
+      if (name !== d.caretaker.name) d.caretaker = { uid: '', name, email: '' }
     }
   })
 }

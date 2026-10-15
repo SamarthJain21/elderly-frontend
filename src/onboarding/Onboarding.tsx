@@ -453,7 +453,7 @@ export function ElderOnboarding() {
   const [step, setStep] = useState(0)
   const [heard, setHeard] = useState('')
   const [listening, setListening] = useState(false)
-  const care = s.caretaker.name
+  const care = s.caretaker.name || 'Your family'
   const family = s.contacts.filter(c => c.kind !== 'volunteer').slice(0, 4)
   const lang = s.elder.language
 
@@ -570,7 +570,7 @@ function JoinDemo() {
         <h1 style={{ fontSize: 32 }}>Elderly</h1>
         <div className="spinner" />
         <p style={{ fontSize: 20 }}>Signing you in, {s.elder.name}…</p>
-        <p className="small muted">Set up for you by {s.caretaker.name}</p>
+        {s.caretaker.name && <p className="small muted">Set up for you by {s.caretaker.name}</p>}
       </div>
     </div>
   )

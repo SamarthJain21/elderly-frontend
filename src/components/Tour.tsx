@@ -48,7 +48,9 @@ export function Tour({ steps: all, onDone, big = false, onStep }: {
   const pad = 6
   const box = rect && { top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2 }
   const cardW = Math.min(big ? 360 : 320, window.innerWidth - 24)
-  const below = !rect || rect.bottom + (big ? 260 : 190) < window.innerHeight
+  // Never place the card over the elder's SOS bar: treat its top edge as the bottom of the usable screen.
+  const floor = (big && document.querySelector('.sosbar')?.getBoundingClientRect().top) || window.innerHeight
+  const below = !rect || rect.bottom + (big ? 260 : 190) < floor
   // Below: pin the card's top under the spotlight. Above: pin its bottom just over it.
   const vertical = !rect ? { top: window.innerHeight / 2 - 90 } : below ? { top: rect.bottom + 16 } : { bottom: window.innerHeight - rect.top + 16 }
   const cardLeft = !rect ? (window.innerWidth - cardW) / 2 : Math.min(Math.max(12, rect.left + rect.width / 2 - cardW / 2), window.innerWidth - cardW - 12)

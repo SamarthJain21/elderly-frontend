@@ -110,7 +110,7 @@ function Home({ s, onMic, listening, say, go }: { s: DemoState; onMic: () => voi
           {!isLive() && <p className="muted center" style={{ marginTop: 18, fontSize: 16 }}>Helper visits available: <b>{helperVisitsLeft(s)}</b></p>}
         </div>
       </div>
-      <SosBar />
+      <SosBar aboveTour={!s.tours.elder} />
       {!s.tours.elder && <Tour big steps={elderTour(s.caretaker.name || 'your family')} onDone={() => update(d => { d.tours.elder = true })}
         onStep={st => st.say && s.elderUi.voice && speak(`${st.title}. ${st.say}`, s.elder.language)} />}
     </>
@@ -170,13 +170,14 @@ function CheckInCard({ s, onDone }: { s: DemoState; onDone: () => void }) {
   )
 }
 
-function SosBar() {
+/** `aboveTour`: while the first-visit tour dims the screen, SOS stays bright and tappable above it. */
+function SosBar({ aboveTour = false }: { aboveTour?: boolean }) {
   const [holding, setHolding] = useState(false)
   const t = useRef<number>(undefined)
   const start = () => { setHolding(true); t.current = window.setTimeout(() => { setHolding(false); triggerHelp() }, 1600) }
   const stop = () => { setHolding(false); window.clearTimeout(t.current) }
   return (
-    <button data-tour="e-sos" className={`sosbar ${holding ? 'holding' : ''}`} onPointerDown={start} onPointerUp={stop} onPointerLeave={stop} onPointerCancel={stop}
+    <button data-tour="e-sos" className={`sosbar ${holding ? 'holding' : ''} ${aboveTour ? 'above-tour' : ''}`} onPointerDown={start} onPointerUp={stop} onPointerLeave={stop} onPointerCancel={stop}
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') triggerHelp() }} aria-label="Press and hold for help">
       <span className="fill" /><span className="lbl">Hold for help<small>Calls your family & a neighbour</small></span>
     </button>
@@ -259,7 +260,7 @@ function ActionCardView({ a }: { a: ActionCard }) {
 
 function FamilyBubble({ m, s }: { m: FamilyMessage; s: DemoState }) {
   if (m.sender === 'system') return <p className="sysnote">{m.text}</p>
-  if (m.sender === 'elder') return <div className="msg me">{m.text}<span className="to">to {s.caretaker.name} ✓</span></div>
+  if (m.sender === 'elder') return <div className="msg me">{m.text}<span className="to">to {s.caretaker.name || 'your family'} ✓</span></div>
   const sender = s.contacts.find(c => c.name === m.senderName)
   return (
     <div className="msg fam">

@@ -32,7 +32,7 @@ export function createApi(getToken: TokenFn) {
     createElder: (b: { name: string; phone: string; language: Language }) =>
       req<{ elderId: string; email: string; tempPassword: string }>('POST', '/elders', b),
     myElders: () => req<{ elderId: string; name: string; language: Language; assessed: boolean }[]>('GET', '/elders'),
-    elder: (id: string) => req<{ elderId: string; name: string; phone: string; language: Language; sharingTier: SharingTier; assessment: Assessment | null }>('GET', e(id)),
+    elder: (id: string) => req<{ elderId: string; name: string; phone: string; language: Language; sharingTier: SharingTier; assessment: Assessment | null; caretakerNames?: string[] }>('GET', e(id)),
     saveAssessment: (id: string, a: Assessment) => req<Assessment>('PUT', `${e(id)}/assessment`, a),
     // settings (app/routers/settings.py)
     rules: (id: string) => req<AutonomyRules>('GET', `${e(id)}/rules`),

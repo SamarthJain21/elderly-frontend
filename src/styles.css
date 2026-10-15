@@ -383,7 +383,10 @@ a { color: inherit }
 .rhy-row { gap: 8px }
 
 /* ----- Guided tour ----- */
-.tour { position: fixed; inset: 0; z-index: 80 }
+.tour { position: fixed; inset: 0; z-index: 80; pointer-events: none }  /* taps pass through the dimming… */
+.tour-card { pointer-events: auto }  /* …only the card itself is interactive */
+/* Safety: SOS must work even during the first-visit tour (a new user may need help right away). */
+.sosbar.above-tour { z-index: 81; box-shadow: 0 0 0 4px rgba(255,255,255,.85) }
 .tour-dim { position: fixed; inset: 0; background: rgba(20,17,14,.6) }
 .tour-spot { position: fixed; border-radius: 16px; box-shadow: 0 0 0 9999px rgba(20,17,14,.6), 0 0 0 3px #fff inset; transition: top .3s, left .3s, width .3s, height .3s; pointer-events: none }
 .tour-card { position: fixed; background: var(--paper); border-radius: 18px; padding: 14px 16px; box-shadow: 0 20px 50px rgba(0,0,0,.35); animation: up .25s ease-out; transition: top .3s, left .3s }
