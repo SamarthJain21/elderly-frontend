@@ -21,6 +21,13 @@ let chatFor: string | null = null
 let pollTimer: number | undefined
 let retryTimer: number | undefined
 let rulesTimer: number | undefined
+let pendingRules: { elderId: string; rules: DemoState['rules'] } | null = null
+function flushRules() {
+  window.clearTimeout(rulesTimer)
+  const p = pendingRules
+  pendingRules = null
+  if (p && p.elderId) api.saveRules(p.elderId, p.rules).catch(soft("Couldn't save the rules"))
+}
 
 const errText = (e: unknown) =>
   e instanceof ApiError ? e.message
@@ -173,25 +180,33 @@ function onFrame(f: ServerFrame) {
   })
   if (f.type === 'error') notify(f.message)
   // A new action may need approval or a reminder may have been set — refresh the lists the socket doesn't carry.
-  if (f.type === 'message' && f.message.action) void refresh(false)
-  if (f.type === 'family_update' || f.type === 'action_update') void refresh(false)
+  // One agent turn sends several frames; coalesce them into a single refresh.
+  if ((f.type === 'message' && f.message.action) || f.type === 'family_update' || f.type === 'action_update') refreshSoon()
+}
+
+let refreshTimer: number | undefined
+function refreshSoon() {
+  window.clearTimeout(refreshTimer)
+  refreshTimer = window.setTimeout(() => void refresh(false), 800)
 }
 
 function openChat(elderId: string) {
   if (chat && chatFor === elderId) return
   closeChat()
   chatFor = elderId
-  chat = connectChat(elderId, getToken, onFrame, {
-    open: () => update(d => { d.live.connected = true }),
+  // Each socket only reports on itself: a late close/open from an older socket must not touch the current one.
+  const conn: NonNullable<typeof chat> = connectChat(elderId, getToken, frame => { if (chat === conn) onFrame(frame) }, {
+    open: () => { if (chat === conn) update(d => { d.live.connected = true }) },
     close: code => {
+      if (chat !== conn) return
       update(d => { d.live.connected = false; d.elderUi.typing = false })
-      if (chatFor !== elderId) return
       chat = null
       if (code === 4401 || code === 4403) { notify(code === 4403 ? 'No access to this person' : 'Please sign in again'); return }
       window.clearTimeout(retryTimer)
       retryTimer = window.setTimeout(() => { if (chatFor === elderId) { chatFor = null; openChat(elderId) } }, 3000)
     },
   })
+  chat = conn
 }
 function closeChat() {
   window.clearTimeout(retryTimer)
@@ -208,8 +223,10 @@ export function send(fn: (c: NonNullable<typeof chat>) => boolean) {
 
 // ---------- session ----------
 function stopAll() {
+  flushRules()  // a pending rules edit belongs to the elder being left — save it to them, now
   closeChat()
   window.clearInterval(pollTimer); pollTimer = undefined
+  window.clearTimeout(refreshTimer)
 }
 
 export async function selectElder(elderId: string) {
@@ -291,6 +308,9 @@ export async function signOut() {
 const eid = () => getState().live.elderId!
 
 export const live = {
+  /** Raise an SOS on the backend. Resolves only once the family has really been alerted; throws otherwise. */
+  sos: () => api.sos(eid()),
+  resolveAlert: (alertId: string) => api.resolveAlert(eid(), alertId).catch(() => { /* family can still resolve it */ }),
   say: (text: string) => { update(d => { d.messages.forEach(m => { m.quickReplies = [] }) }); if (send(c => c.say(text))) update(d => { d.elderUi.typing = true }) },
   confirm: (actionId: string, approve: boolean) => send(c => c.confirm(actionId, approve)),
   startCheckin: (mood: Mood) => { if (send(c => c.startCheckin(mood))) update(d => { d.elderUi.typing = true }) },
@@ -306,8 +326,11 @@ export const live = {
   },
   /** Rules change one toggle at a time — save them together a moment later. */
   saveRulesSoon: () => {
+    // Capture WHO and WHAT now: if the caretaker switches elder before the timer fires, these rules still go to
+    // the elder they were edited for (never to the newly selected one, and never the reset defaults).
+    pendingRules = { elderId: eid(), rules: structuredClone(getState().rules) }
     window.clearTimeout(rulesTimer)
-    rulesTimer = window.setTimeout(() => { api.saveRules(eid(), getState().rules).catch(soft("Couldn't save the rules")) }, 600)
+    rulesTimer = window.setTimeout(flushRules, 600)
   },
   saveProfile: async () => {
     const s = getState()

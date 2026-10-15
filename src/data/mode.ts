@@ -26,7 +26,8 @@ function initialMode(): DataMode {
 
 export const MODE: DataMode = initialMode()
 export const isLive = () => MODE === 'live'
-export const API_URL = import.meta.env.VITE_API_URL || 'https://elderly-api-37kiaykfwa-as.a.run.app'
+// Production builds get VITE_API_URL from .env.production (Cloud Run). Dev uses the Vite proxy to the local backend.
+export const API_URL: string = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api' : 'https://elderly-api-968215624615.asia-southeast1.run.app')
 
 /** Switch and reload so every module starts in the new mode. */
 export function switchMode(m: DataMode, to = '/') {
