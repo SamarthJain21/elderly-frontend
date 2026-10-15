@@ -53,6 +53,7 @@ async function seed(tier: 'alerts_only' | 'daily_summary' | 'full_access' = 'dai
     await setDoc(doc(db, 'rules', ELDER), validRules)
     await setDoc(doc(db, 'elders', ELDER, 'messages', 'm1'), { sender: 'elder', text: 'hi' })
     await setDoc(doc(db, 'elders', ELDER, 'family_messages', 'f1'), { sender: 'caretaker', text: 'Did you eat?' })
+    await setDoc(doc(db, 'elders', ELDER, 'alerts', 's1'), { source: 'sos_button', status: 'active' })
   })
 }
 
@@ -152,6 +153,16 @@ describe('chat messages', () => {
     await seed('full_access')
     await assertSucceeds(getDoc(doc(as(CARETAKER), 'elders', ELDER, 'messages', 'm1')))
     await assertFails(getDoc(doc(as(STRANGER), 'elders', ELDER, 'messages', 'm1')))
+  })
+})
+
+describe('emergency alerts', () => {
+  it('elder and caretaker (even alerts_only) read alerts; strangers cannot; nobody writes from the client', async () => {
+    await seed('alerts_only')
+    await assertSucceeds(getDoc(doc(as(ELDER), 'elders', ELDER, 'alerts', 's1')))
+    await assertSucceeds(getDoc(doc(as(CARETAKER), 'elders', ELDER, 'alerts', 's1')))
+    await assertFails(getDoc(doc(as(STRANGER), 'elders', ELDER, 'alerts', 's1')))
+    await assertFails(updateDoc(doc(as(CARETAKER), 'elders', ELDER, 'alerts', 's1'), { status: 'resolved' }))
   })
 })
 
