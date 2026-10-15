@@ -5,7 +5,8 @@ import { useChat } from '../../lib/useChat'
 import type { ElderProfile } from '../../lib/types'
 import { useApi } from '../../lib/useApi'
 import { stopSpeaking } from '../../lib/speech'
-import { Bubble, ChatHeader, Composer, QuickReplies } from './chatKit'
+import { Bubble, ChatHeader, Composer } from './chatKit'
+import { FamilyChips, SystemNote } from '../../components/FamilyChips'
 import { markFamilySeen, useSpeakNewest, useVoice } from './chatHooks'
 import { tokens } from '../../theme'
 
@@ -17,7 +18,7 @@ function time(iso: string): string {
 export function ElderFamily() {
   const { state } = useAuth()
   const elderId = state.status === 'ready' ? state.me.uid : null
-  const { family, status, error, sendFamily } = useChat(elderId)
+  const { family, status, error, sendFamily, runChip } = useChat(elderId)
   const profile = useApi<ElderProfile>(elderId && `/elders/${elderId}`)
   const lang = profile.data?.language ?? 'en-US'
   const voice = useVoice(lang)
@@ -41,8 +42,8 @@ export function ElderFamily() {
   useSpeakNewest(last?.id ?? null, last?.sender === 'caretaker' ? `${last.senderName}: ${last.text}` : null,
     status === 'open', voice.on && voice.hasVoice, lang)
 
-  // One-tap answers for the newest family message, until they've answered it.
-  const options = last !== undefined && last.sender === 'caretaker' ? last.quickReplies : []
+  // One-tap answers/actions for the newest message from family, until something newer arrives.
+  const chipsFor = last !== undefined && last.sender === 'caretaker' ? last : null
   const canSend = status === 'open'
   const onSend = (text: string) => {
     stopSpeaking()
@@ -61,6 +62,7 @@ export function ElderFamily() {
           </Typography>
         )}
         {family.map((m) => {
+          if (m.sender === 'system') return <SystemNote key={m.id} text={m.text} size="elder" />
           const mine = m.sender === 'elder'
           return (
             <Bubble key={m.id} mine={mine} tone="family" label={mine ? undefined : m.senderName}
@@ -75,7 +77,10 @@ export function ElderFamily() {
         })}
         {listening}
         {error !== null && <Alert severity="warning" sx={{ my: 1.5, fontSize: 17 }}>{error}</Alert>}
-        <QuickReplies options={options} disabled={!canSend} onPick={(q) => onSend(q)} />
+        {chipsFor !== null && (
+          <FamilyChips message={chipsFor} size="elder" disabled={!canSend}
+            onSend={(text) => onSend(text)} onRun={(id, i) => { stopSpeaking(); runChip(id, i) }} />
+        )}
         <div ref={endRef} />
       </Box>
 

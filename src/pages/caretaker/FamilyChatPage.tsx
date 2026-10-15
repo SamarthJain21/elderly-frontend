@@ -4,6 +4,7 @@ import { useAuth } from '../../auth/AuthContext'
 import { useChat } from '../../lib/useChat'
 import type { FamilyMessage } from '../../lib/types'
 import { Card } from '../../components/ui'
+import { FamilyChips, SystemNote } from '../../components/FamilyChips'
 import { useElder } from './elderContext'
 import { tokens } from '../../theme'
 
@@ -35,7 +36,7 @@ function Row({ m, mine, elderName }: { m: FamilyMessage; mine: boolean; elderNam
       <Typography sx={{ fontSize: 12, color: tokens.muted, mt: 0.5 }}>
         {time(m.createdAt)}
         {m.viaAgent && ' · passed on by Elderly'}
-        {m.sender === 'caretaker' && m.quickReplies.length > 0 && ` · their options: ${m.quickReplies.join(' / ')}`}
+        {m.sender === 'caretaker' && m.chips.length > 0 && ` · their options: ${m.chips.map((c) => c.label).join(' / ')}`}
       </Typography>
     </Box>
   )
@@ -45,7 +46,10 @@ export function FamilyChatPage() {
   const { elder } = useElder()
   const { state } = useAuth()
   const myUid = state.status === 'ready' ? state.me.uid : ''
-  const { family, status, error, sendFamily } = useChat(elder.elderId)
+  const { family, status, error, sendFamily, runChip } = useChat(elder.elderId)
+  const newest = family.at(-1)
+  // Suggested next steps appear under the elder's newest message until someone replies.
+  const chipsFor = newest !== undefined && newest.sender === 'elder' ? newest : null
   const [text, setText] = useState('')
   const endRef = useRef<HTMLDivElement>(null)
   const firstName = elder.name.split(' ')[0] ?? elder.name
@@ -72,7 +76,14 @@ export function FamilyChatPage() {
             Send {firstName} a message. It's read aloud to them, with one-tap answers.
           </Typography>
         )}
-        {family.map((m) => <Row key={m.id} m={m} mine={m.sender === 'caretaker' && m.senderUid === myUid} elderName={firstName} />)}
+        {family.map((m) => m.sender === 'system'
+          ? <SystemNote key={m.id} text={m.text} size="caretaker" />
+          : <Row key={m.id} m={m} mine={m.sender === 'caretaker' && m.senderUid === myUid} elderName={firstName} />)}
+        {chipsFor !== null && (
+          // "💬 " marks a message suggestion; send the words, not the marker.
+          <FamilyChips message={chipsFor} size="caretaker" disabled={status !== 'open'}
+            onSend={(text) => send(text.replace(/^💬\s*/u, ''))} onRun={runChip} />
+        )}
         {error !== null && <Alert severity="error" sx={{ my: 1 }}>{error}</Alert>}
         <div ref={endRef} />
       </Box>

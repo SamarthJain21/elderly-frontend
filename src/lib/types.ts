@@ -199,13 +199,25 @@ export interface Profile {
 }
 
 
+export type ChipAction =
+  | { type: 'remind'; title: string; minutes: number | null; at: string | null }
+  | { type: 'call'; name: string; phone: string }
+
+/** One-tap option for whoever receives a family message: send the label, or run a small action. */
+export interface Chip {
+  label: string
+  kind: 'message' | 'action'
+  action: ChipAction | null
+}
+
 export interface FamilyMessage {
   id: string
-  sender: 'elder' | 'caretaker'
+  sender: 'elder' | 'caretaker' | 'system'
   senderUid: string
   senderName: string
   text: string
-  quickReplies: string[]
+  chips: Chip[]
+  usedChips: number[]
   viaAgent: boolean
   createdAt: string
 }

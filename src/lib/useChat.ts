@@ -12,6 +12,7 @@ type ServerFrame =
   | { type: 'action_update'; messageId: string; action: ActionCard }
   | { type: 'family_history'; messages: FamilyMessage[] }
   | { type: 'family_message'; message: FamilyMessage }
+  | { type: 'family_update'; message: FamilyMessage }
   | { type: 'error'; message: string }
 
 const MAX_BACKOFF_MS = 15_000
@@ -62,6 +63,9 @@ export function useChat(elderId: string | null) {
             break
           case 'family_message':
             setFamily((prev) => (prev.some((m) => m.id === frame.message.id) ? prev : [...prev, frame.message]))
+            break
+          case 'family_update':
+            setFamily((prev) => prev.map((m) => (m.id === frame.message.id ? frame.message : m)))
             break
           case 'message':
             setMessages((prev) => (prev.some((m) => m.id === frame.message.id) ? prev : [...prev, frame.message]))
@@ -146,5 +150,14 @@ export function useChat(elderId: string | null) {
     return true
   }, [])
 
-  return { messages, family, status, typing, error, checkin, send, startCheckIn, confirm, sendFamily }
+  /** Run an action chip (e.g. a reminder) on a family message. The server checks it's allowed and unused. */
+  const runChip = useCallback((messageId: string, chip: number): boolean => {
+    const ws = wsRef.current
+    if (ws === null || ws.readyState !== WebSocket.OPEN) return false
+    ws.send(JSON.stringify({ type: 'family_action', messageId, chip }))
+    setError(null)
+    return true
+  }, [])
+
+  return { messages, family, status, typing, error, checkin, send, startCheckIn, confirm, sendFamily, runChip }
 }
