@@ -7,10 +7,10 @@ import { selectElder, signOut } from '../data/live'
 import { ComingSoon } from '../components/ui'
 import { Face } from '../components/Face'
 import { MockQR, Sheet, Switch, timeAgo, useToast } from '../components/ui'
-import { formatMoney, toMajor, toMinor } from '../lib/money'
+import { formatMoney, minorToInput, parseToMinor } from '../lib/money'
 import { MODE_LABEL, SPENDING_TOOLS, TOOL_META } from '../lib/policy'
 import { CREDIT, formatBalance, formatUsd, planById } from '../lib/plans'
-import type { ContactKind, Mode, SharingTier, ToolName } from '../lib/types'
+import type { ContactKind, Currency, Mode, SharingTier, ToolName } from '../lib/types'
 import { CHead } from './CaretakerApp'
 import { ProfileExtras } from './Screens'
 import { addressLine } from '../lib/types'
@@ -110,7 +110,7 @@ export function Rules() {
               {SPENDING_TOOLS.has(t) && (
                 <label className="field">Spending limit per order — above this, you’re always asked
                   <div className="row"><span style={{ fontWeight: 700 }}>{cur}</span>
-                    <input type="number" inputMode="decimal" min={0} value={toMajor(r.limitMinor ?? 0, cur)} onChange={e => setRuleLimit(t, toMinor(Number(e.target.value || 0), cur))} style={{ flex: 1 }} /></div>
+                    <LimitInput minor={r.limitMinor ?? 0} currency={cur} onValid={m => setRuleLimit(t, m)} /></div>
                 </label>
               )}
             </div>
@@ -358,5 +358,20 @@ function AccountCard() {
       <button className="btn" onClick={() => { void signOut().then(() => nav('/login')) }}>Sign out</button>
       <button className="btn ghost" onClick={() => switchMode('demo', '/')}>Open the demo instead</button>
     </div>
+  )
+}
+
+
+/** Spending limit as typed text: parsed exactly (no floats) and saved only when it's a valid amount. */
+function LimitInput({ minor, currency, onValid }: { minor: number; currency: Currency; onValid: (minor: number) => void }) {
+  const [text, setText] = useState(() => minorToInput(minor, currency))
+  const invalid = parseToMinor(text, currency) === null
+  return (
+    <input type="text" inputMode="decimal" value={text} aria-invalid={invalid} style={{ flex: 1, borderColor: invalid ? 'var(--sos)' : undefined }}
+      onChange={e => {
+        setText(e.target.value)
+        const m = parseToMinor(e.target.value, currency)
+        if (m !== null) onValid(m)
+      }} />
   )
 }

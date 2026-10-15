@@ -9,9 +9,11 @@
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --noEmit",
     "preview": "vite preview",
-    "test": "tsc -b --noEmit"
+    "test": "tsc -b --noEmit && vitest run --dir src",
+    "lint": "oxlint"
   },
   "dependencies": {
+    "dinero.js": "^2.0.2",
     "firebase": "^13.0.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
@@ -22,7 +24,9 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-basic-ssl": "^2.3.0",
     "@vitejs/plugin-react": "^6.1.2",
+    "oxlint": "^1.81.0",
     "typescript": "^7.0.2",
-    "vite": "^8.3.4"
+    "vite": "^8.3.4",
+    "vitest": "^5.0.4"
   }
 }
