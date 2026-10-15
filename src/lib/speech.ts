@@ -1,175 +1,101 @@
-// Web Speech API: speech-to-text (Chrome/Edge/Safari) and text-to-speech (all modern browsers).
-import { useCallback, useEffect, useRef, useState } from 'react'
-
-// Minimal typings — TypeScript's DOM lib doesn't ship SpeechRecognition.
-interface RecognitionAlternative { transcript: string }
-interface RecognitionResult { isFinal: boolean; 0: RecognitionAlternative; length: number }
-interface RecognitionEvent extends Event { resultIndex: number; results: { length: number; [i: number]: RecognitionResult } }
-interface RecognitionErrorEvent extends Event { error: string }
-interface Recognition extends EventTarget {
-  lang: string
-  continuous: boolean
-  interimResults: boolean
-  start(): void
-  stop(): void
-  abort(): void
-  onresult: ((e: RecognitionEvent) => void) | null
-  onerror: ((e: RecognitionErrorEvent) => void) | null
-  onend: (() => void) | null
-}
-type RecognitionCtor = new () => Recognition
-
-function recognitionCtor(): RecognitionCtor | null {
-  const w = window as unknown as { SpeechRecognition?: RecognitionCtor; webkitSpeechRecognition?: RecognitionCtor }
-  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null
-}
-
-export const canListen = typeof window !== 'undefined' && recognitionCtor() !== null
-export const canSpeak = typeof window !== 'undefined' && 'speechSynthesis' in window
-
-const SILENCE_MS = 3000
-
 /**
- * Tap to start, then it auto-finishes after 3s of silence (or tap again).
- * `onFinal` gets the full transcript once, when listening ends with something said.
+ * Speech-to-text and text-to-speech via the browser's Web Speech API (best in Chrome/Edge/Safari).
+ * Production plan: swap for a server-side STT/TTS provider behind the same functions.
  */
-export function useListen(lang: string, onFinal: (text: string) => void) {
-  const [listening, setListening] = useState(false)
-  const [interim, setInterim] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const recRef = useRef<Recognition | null>(null)
-  const textRef = useRef('')
-  const silenceRef = useRef<number | undefined>(undefined)
-  const onFinalRef = useRef(onFinal)
-  useEffect(() => { onFinalRef.current = onFinal }, [onFinal])
+import type { Language } from './types'
 
-  const stop = useCallback(() => {
-    window.clearTimeout(silenceRef.current)
-    recRef.current?.stop() // fires onend, which delivers the transcript
-  }, [])
+type SR = { lang: string; interimResults: boolean; maxAlternatives: number; start(): void; stop(): void
+  onresult: ((e: { results: { 0: { transcript: string } }[] }) => void) | null
+  onerror: ((e: { error: string }) => void) | null; onend: (() => void) | null }
 
-  const start = useCallback(() => {
-    const Ctor = recognitionCtor()
-    if (Ctor === null || recRef.current !== null) return
-    if (canSpeak) window.speechSynthesis.cancel() // don't transcribe our own voice
-    const rec = new Ctor()
-    rec.lang = lang
-    rec.continuous = true
-    rec.interimResults = true
-    textRef.current = ''
-    setInterim('')
-    setError(null)
+const SRCtor: (new () => SR) | undefined =
+  typeof window !== 'undefined' ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition) : undefined
 
-    const armSilence = () => {
-      window.clearTimeout(silenceRef.current)
-      silenceRef.current = window.setTimeout(() => rec.stop(), SILENCE_MS)
-    }
+export const canListen = () => !!SRCtor
+export const canSpeak = () => typeof window !== 'undefined' && 'speechSynthesis' in window
 
-    rec.onresult = (e) => {
-      let finalText = ''
-      let pending = ''
-      for (let i = 0; i < e.results.length; i++) {
-        const r = e.results[i]
-        if (r.isFinal) finalText += r[0].transcript
-        else pending += r[0].transcript
-      }
-      textRef.current = finalText
-      setInterim((finalText + pending).trim())
-      armSilence()
-    }
-    rec.onerror = (e) => {
-      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') setError('Please allow the microphone to talk.')
-      else if (e.error !== 'no-speech' && e.error !== 'aborted') setError("Sorry, I couldn't hear that.")
-    }
-    rec.onend = () => {
-      window.clearTimeout(silenceRef.current)
-      recRef.current = null
-      setListening(false)
-      setInterim('')
-      const said = textRef.current.trim()
-      if (said !== '') onFinalRef.current(said)
-    }
+// ---------------- listening ----------------
 
-    recRef.current = rec
-    rec.start()
-    setListening(true)
-    armSilence() // also ends if they never start speaking
-  }, [lang])
+let active: SR | null = null
 
-  useEffect(() => () => {
-    window.clearTimeout(silenceRef.current)
-    recRef.current?.abort()
-  }, [])
-
-  return { listening, interim, error, start, stop }
+export function listen(lang: Language, onText: (t: string) => void, onEnd: (err?: string) => void): () => void {
+  if (!SRCtor) { onEnd('unsupported'); return () => {} }
+  const r = new SRCtor()
+  r.lang = lang; r.interimResults = false; r.maxAlternatives = 1
+  // onerror and onend both fire on errors — report the end exactly once.
+  let ended = false
+  const finish = (err?: string) => {
+    if (ended) return
+    ended = true
+    if (active === r) active = null  // a late end from an OLD recognizer must not clear the current one
+    onEnd(err)
+  }
+  r.onresult = e => onText(e.results[0][0].transcript)
+  r.onerror = e => finish(e.error)
+  r.onend = () => finish()
+  try { active?.stop() } catch { /* previous already stopped */ }
+  try { r.start(); active = r } catch { finish('start-failed') }
+  return () => { try { r.stop() } catch { /* already stopped */ } }
 }
 
-// macOS ships joke/character voices under en-US; never use them for an elder companion.
-const NOVELTY = /albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|jester|junior|kathy|organ|pipe organ|princess|ralph|superstar|trinoids|whisper|wobble|zarvox|fred|grandma|grandpa|rocko|shelley|sandy|eddy|flo|reed/i
-// Natural-sounding voices, best first. Google voices are Chrome's network voices.
-const PREFERRED = [/^google/i, /natural|neural|premium|enhanced/i, /samantha|ava|allison|susan|zoe|karen|moira|tessa|serena|daniel/i, /lekha|kanya|narisa/i, /microsoft (aria|jenny|guy|swara|madhur|premwadee|niwat)/i]
+export const stopListening = () => { try { active?.stop() } catch { /* noop */ } }
 
-function score(v: SpeechSynthesisVoice): number {
+// ---------------- speaking ----------------
+
+// macOS lists joke/character voices as plain en-US; never use them for an elder companion.
+const NOVELTY = /albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|jester|junior|kathy|organ|princess|ralph|superstar|trinoids|whisper|wobble|zarvox|fred|grandma|grandpa|rocko|shelley|sandy|eddy|flo|reed/i
+// Natural-sounding voices first. Google voices are Chrome's network voices.
+const PREFERRED = [/^google/i, /natural|neural|premium|enhanced/i, /samantha|ava|allison|susan|zoe|karen|moira|tessa|serena|daniel/i,
+  /lekha|kanya|narisa/i, /microsoft (aria|jenny|guy|swara|madhur|premwadee|niwat)/i]
+
+const score = (v: SpeechSynthesisVoice) => {
   if (NOVELTY.test(v.name)) return -1
-  const i = PREFERRED.findIndex((re) => re.test(v.name))
+  const i = PREFERRED.findIndex(re => re.test(v.name))
   return i === -1 ? 1 : 100 - i * 10
 }
 
-/** Usable voices for `lang`, best first: exact locale beats same language (en-US over en-GB), then quality. */
+/** Usable voices for `lang`, best first: exact locale beats same language, then quality. */
 export function voicesFor(lang: string): SpeechSynthesisVoice[] {
-  if (!canSpeak) return []
-  const want = lang.toLowerCase()
-  const base = want.split('-')[0]
+  if (!canSpeak()) return []
+  const want = lang.toLowerCase(), base = want.split('-')[0]
   const norm = (v: SpeechSynthesisVoice) => v.lang.replace('_', '-').toLowerCase()
-  return window.speechSynthesis.getVoices()
-    .filter((v) => norm(v) === want || norm(v).startsWith(`${base}-`) || norm(v) === base)
-    .filter((v) => score(v) >= 0)
+  return speechSynthesis.getVoices()
+    .filter(v => norm(v) === want || norm(v).startsWith(`${base}-`) || norm(v) === base)
+    .filter(v => score(v) >= 0)
     .sort((a, b) => Number(norm(b) === want) - Number(norm(a) === want) || score(b) - score(a))
 }
 
-// Chosen voice is per device (voices differ by device) and per language.
 const prefKey = (lang: string) => `elderly.voiceURI.${lang}`
+export function savedVoiceURI(lang: string): string | null { try { return localStorage.getItem(prefKey(lang)) } catch { return null } }
+export function saveVoiceURI(lang: string, uri: string) { try { localStorage.setItem(prefKey(lang), uri) } catch { /* not remembered */ } }
 
-export function savedVoiceURI(lang: string): string | null {
-  try { return localStorage.getItem(prefKey(lang)) } catch { return null }
-}
+/** True once this device has a voice for `lang` (Chrome loads voices asynchronously). */
+export const hasVoiceFor = (lang: string) => voicesFor(lang).length > 0
 
-export function saveVoiceURI(lang: string, uri: string): void {
-  try { localStorage.setItem(prefKey(lang), uri) } catch { /* private mode: not remembered */ }
-}
-
-function pickVoice(lang: string): SpeechSynthesisVoice | undefined {
-  const voices = voicesFor(lang)
-  const saved = savedVoiceURI(lang)
-  return voices.find((v) => v.voiceURI === saved) ?? voices[0]
-}
-
-/**
- * Read text aloud slowly (0.85x per spec) in the elder's language.
- * Returns false (and stays silent) if the device has no voice for that language —
- * an English voice reading Thai or Hindi is worse than silence.
- */
-// Chrome garbage-collects in-flight utterances (speech stops or never starts) unless referenced.
+// Chrome garbage-collects an in-flight utterance (speech stops or never starts) unless something holds it.
 let current: SpeechSynthesisUtterance | null = null
 
-export function speak(text: string, lang: string): boolean {
-  if (!canSpeak) return false
-  const voice = pickVoice(lang)
-  if (voice === undefined) return false
-  const synth = window.speechSynthesis
-  const u = new SpeechSynthesisUtterance(text)
-  u.lang = lang
-  u.rate = 0.85
-  u.voice = voice
+/**
+ * Read text aloud, slowly (0.85× per spec), in the elder's language. Returns false and stays SILENT when the device
+ * has no voice for that language — an English voice reading Thai or Hindi is worse than silence.
+ */
+export function speak(text: string, lang: Language = 'en-US', rate = 0.85): boolean {
+  if (!canSpeak()) return false
+  const clean = text.replace(/<[^>]+>/g, '').replace(/\p{Extended_Pictographic}/gu, '').trim()
+  if (!clean) return false
+  const voices = voicesFor(lang)
+  const voice = voices.find(v => v.voiceURI === savedVoiceURI(lang)) ?? voices[0]
+  if (!voice) return false
+  const u = new SpeechSynthesisUtterance(clean)
+  u.lang = lang; u.rate = rate; u.voice = voice
   u.onend = () => { if (current === u) current = null }
   current = u
   const go = () => {
-    synth.resume() // Chrome can get stuck "paused" after a cancel
-    synth.speak(u)
+    try { speechSynthesis.resume(); speechSynthesis.speak(u) } catch { /* speech is a nicety */ }
   }
-  // Chrome drops a speak() issued in the same tick as cancel(); only cancel when needed, then wait.
-  if (synth.speaking || synth.pending) {
-    synth.cancel()
+  // Chrome silently drops speak() issued in the same tick as cancel(): only cancel when needed, then wait a beat.
+  if (speechSynthesis.speaking || speechSynthesis.pending) {
+    speechSynthesis.cancel()
     window.setTimeout(go, 80)
   } else {
     go()
@@ -177,25 +103,4 @@ export function speak(text: string, lang: string): boolean {
   return true
 }
 
-/** Voices for `lang`, kept up to date — Chrome loads them asynchronously. */
-export function useVoices(lang: string): SpeechSynthesisVoice[] {
-  const [voices, setVoices] = useState(() => voicesFor(lang))
-  useEffect(() => {
-    if (!canSpeak) return
-    const check = () => setVoices(voicesFor(lang))
-    window.speechSynthesis.addEventListener('voiceschanged', check)
-    // Voices may have loaded between first render and now, in which case no event will come.
-    const id = window.setTimeout(check, 0)
-    return () => {
-      window.clearTimeout(id)
-      window.speechSynthesis.removeEventListener('voiceschanged', check)
-    }
-  }, [lang])
-  return voices
-}
-
-export function stopSpeaking(): void {
-  if (!canSpeak) return
-  current = null
-  window.speechSynthesis.cancel()
-}
+export const stopSpeaking = () => { if (canSpeak()) { current = null; speechSynthesis.cancel() } }

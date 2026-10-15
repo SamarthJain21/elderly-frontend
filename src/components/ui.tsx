@@ -1,73 +1,97 @@
-// Small primitives matching the prototype's .card / .pill / .eyebrow / .chip / .av classes.
-import type { ReactNode } from 'react'
-import { Box, ButtonBase, Paper, Typography, type SxProps, type Theme } from '@mui/material'
-import { tokens } from '../theme'
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 
-export function Card({ children, sx }: { children: ReactNode; sx?: SxProps<Theme> }) {
-  return <Paper variant="outlined" sx={[{ p: '18px' }, ...(Array.isArray(sx) ? sx : [sx])]}>{children}</Paper>
+export const MicIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 11a7 7 0 0 0 14 0" /><path d="M12 18v4" />
+  </svg>
+)
+
+const WAVE = [8, 14, 22, 12, 28, 18, 10, 24, 30, 16, 12, 20, 26, 14, 8, 18, 22, 10]
+export const Wave = () => <span className="wave">{WAVE.map((h, i) => <i key={i} style={{ height: h }} />)}</span>
+
+// ---------- toast ----------
+const ToastCtx = createContext<(msg: string) => void>(() => {})
+export function ToastProvider({ children }: { children: ReactNode }) {
+  const [msg, setMsg] = useState<string | null>(null)
+  const timer = useRef<number>(undefined)
+  const show = useCallback((m: string) => {
+    setMsg(m); window.clearTimeout(timer.current); timer.current = window.setTimeout(() => setMsg(null), 2600)
+  }, [])
+  // Lets non-React code (the live data layer) show a toast: notify('…').
+  useEffect(() => {
+    const on = (e: Event) => show((e as CustomEvent<string>).detail)
+    window.addEventListener('elderly-toast', on); return () => window.removeEventListener('elderly-toast', on)
+  }, [show])
+  return <ToastCtx.Provider value={show}>{children}{msg && <div className="toast" role="status">{msg}</div>}</ToastCtx.Provider>
 }
+export const useToast = () => useContext(ToastCtx)
+export const notify = (msg: string) => window.dispatchEvent(new CustomEvent('elderly-toast', { detail: msg }))
 
-export function Eyebrow({ children }: { children: ReactNode }) {
+/** Marks a feature the backend doesn't support yet. `card` = a full explanatory card instead of a small pill. */
+export function ComingSoon({ children, card = false, title = 'Coming soon' }: { children?: ReactNode; card?: boolean; title?: string }) {
+  if (!card) return <span className="soon-pill" title={typeof children === 'string' ? children : undefined}>Coming soon</span>
   return (
-    <Typography component="div" sx={{ fontSize: 12, letterSpacing: '.08em', textTransform: 'uppercase', fontWeight: 700, color: tokens.muted }}>
-      {children}
-    </Typography>
+    <div className="soon-card" role="note">
+      <span className="soon-pill">Coming soon</span>
+      <p className="t">{title}</p>
+      {children && <p className="s">{children}</p>}
+    </div>
   )
 }
 
-export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
+// ---------- bottom sheet (scoped to the phone shell) ----------
+export function Sheet({ open, onClose, children, label }: { open: boolean; onClose: () => void; children: ReactNode; label: string }) {
+  useEffect(() => {
+    if (!open) return
+    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k)
+  }, [open, onClose])
+  if (!open) return null
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mt: 3, mb: 1.25 }}>
-      <Typography variant="h3" component="h2" sx={{ fontSize: 22 }}>{children}</Typography>
-      {action}
-    </Box>
+    <div className="sheet-bg" onClick={onClose}>
+      <div className="sheet" role="dialog" aria-modal="true" aria-label={label} onClick={e => e.stopPropagation()}>
+        <div className="grab" />
+        {children}
+      </div>
+    </div>
   )
 }
 
-const PILL = {
-  ok: [tokens.accentSoft, tokens.accent],
-  bad: [tokens.sosSoft, tokens.sos],
-  warn: [tokens.amberSoft, tokens.amber],
-  info: [tokens.blueSoft, tokens.blue],
-  plum: [tokens.plumSoft, tokens.plum],
-} as const
-
-export function Pill({ tone, children }: { tone: keyof typeof PILL; children: ReactNode }) {
-  const [bg, fg] = PILL[tone]
+export function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
-    <Box component="span" sx={{
-      display: 'inline-block', px: 1.25, py: 0.5, borderRadius: 999, fontSize: 13, fontWeight: 700, bgcolor: bg, color: fg,
-      whiteSpace: 'nowrap', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle',
-    }}>
-      {children}
-    </Box>
+    <label className="switch">
+      <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} aria-label={label} />
+      <span />
+    </label>
   )
 }
 
-export function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) {
-  return (
-    <ButtonBase
-      onClick={onClick}
-      aria-pressed={on}
-      sx={{
-        border: `1px solid ${on ? tokens.ink : tokens.line}`, bgcolor: on ? tokens.ink : tokens.white,
-        color: on ? tokens.white : tokens.ink, borderRadius: 999, px: 1.5, py: 0.875, fontSize: 14, fontWeight: 700,
-        '&:hover': { borderColor: tokens.ink2 },
-      }}
-    >
-      {children}
-    </ButtonBase>
-  )
+export const timeAgo = (iso: string) => {
+  const m = Math.round((Date.now() - new Date(iso).getTime()) / 60_000)
+  if (m < 1) return 'just now'
+  if (m < 60) return `${m}m ago`
+  const h = Math.round(m / 60)
+  return h < 24 ? `${h}h ago` : `${Math.round(h / 24)}d ago`
 }
+export const clock = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
-const AV_TONES = [[tokens.plumSoft, tokens.plum], [tokens.accentSoft, tokens.accent], [tokens.blueSoft, tokens.blue], [tokens.amberSoft, tokens.amber]] as const
-
-export function Avatar({ name, size = 40 }: { name: string; size?: number }) {
-  const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('')
-  const [bg, fg] = AV_TONES[[...name].reduce((a, c) => a + c.charCodeAt(0), 0) % AV_TONES.length]
+/** Fake-but-plausible QR (finder patterns + seeded modules). Mock only — real app encodes a one-time link. */
+export function MockQR({ seed, size = 180 }: { seed: string; size?: number }) {
+  const n = 25
+  let h = 2166136261
+  for (const c of seed) h = Math.imul(h ^ c.charCodeAt(0), 16777619)
+  const rnd = () => { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return ((h >>> 0) % 1000) / 1000 }
+  const finder = (x: number, y: number) => x < 7 && y < 7 || x >= n - 7 && y < 7 || x < 7 && y >= n - 7
+  const cells: ReactNode[] = []
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+    if (finder(x, y)) continue
+    if (rnd() > 0.52) cells.push(<rect key={`${x}-${y}`} x={x} y={y} width="1" height="1" />)
+  }
+  const F = ({ x, y }: { x: number; y: number }) => <g><rect x={x} y={y} width="7" height="7" /><rect x={x + 1} y={y + 1} width="5" height="5" fill="#fff" /><rect x={x + 2} y={y + 2} width="3" height="3" /></g>
   return (
-    <Box sx={{ width: size, height: size, borderRadius: '50%', display: 'grid', placeItems: 'center', fontWeight: 700, bgcolor: bg, color: fg, flex: 'none', fontSize: size * 0.4 }}>
-      {initials || '?'}
-    </Box>
+    <svg width={size} height={size} viewBox={`-1 -1 ${n + 2} ${n + 2}`} role="img" aria-label="Sign-in QR code" shapeRendering="crispEdges">
+      <rect x="-1" y="-1" width={n + 2} height={n + 2} fill="#fff" />
+      <g fill="#1D1A16">{cells}<F x={0} y={0} /><F x={n - 7} y={0} /><F x={0} y={n - 7} /></g>
+    </svg>
   )
 }
