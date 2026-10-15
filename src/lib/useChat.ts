@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { auth } from './firebase'
+import { API_BASE } from './api'
 import type { ActionCard, ChatMessage, FamilyMessage, Mood, TodayCheckIn } from './types'
 
 export type ChatStatus = 'connecting' | 'open' | 'reconnecting' | 'denied'
@@ -19,7 +20,8 @@ const MAX_BACKOFF_MS = 15_000
 
 function wsUrl(elderId: string): string {
   const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
-  return `${proto}://${window.location.host}/api/ws/${encodeURIComponent(elderId)}`
+  if (API_BASE.startsWith('http')) return `${API_BASE.replace(/^http/, 'ws')}/ws/${encodeURIComponent(elderId)}`
+  return `${proto}://${window.location.host}${API_BASE}/ws/${encodeURIComponent(elderId)}`
 }
 
 /** Live chat with the agent for one elder. Reconnects with backoff; stops on 4401/4403. */

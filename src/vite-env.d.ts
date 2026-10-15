@@ -5,6 +5,8 @@ interface ImportMetaEnv {
   readonly VITE_FIREBASE_AUTH_DOMAIN: string
   readonly VITE_FIREBASE_PROJECT_ID: string
   readonly VITE_FIREBASE_APP_ID: string
+  /** Hosted backend (Cloud Run) URL. Unset in dev → Vite proxy at /api. */
+  readonly VITE_API_URL?: string
 }
 
 interface ImportMeta {
