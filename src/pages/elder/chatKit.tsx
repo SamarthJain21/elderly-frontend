@@ -4,8 +4,10 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import type { useVoice } from './chatHooks'
 import { Link } from 'react-router'
 import { Box, Button, ButtonBase, InputBase, Menu, MenuItem, Typography, type SxProps, type Theme } from '@mui/material'
-import { canListen, saveVoiceURI, savedVoiceURI, speak, stopSpeaking, useListen } from '../../lib/speech'
+import { canListen, canSpeak, saveVoiceURI, savedVoiceURI, speak, stopSpeaking, useListen } from '../../lib/speech'
 import { tokens } from '../../theme'
+
+const LANGUAGE_NAME: Record<string, string> = { 'en-US': 'English', 'hi-IN': 'Hindi', 'th-TH': 'Thai', 'ja-JP': 'Japanese', 'ko-KR': 'Korean' }
 
 const iconBtn: SxProps<Theme> = { border: `1px solid ${tokens.line}`, bgcolor: tokens.white, borderRadius: '12px', width: 46, height: 46, fontSize: 20 }
 
@@ -42,6 +44,12 @@ export function ChatHeader({ title, lang, voice, right }: {
             </MenuItem>
           ))}
         </Menu>
+        {canSpeak && !voice.hasVoice && (
+          <Box component="span" title={`Install a ${LANGUAGE_NAME[lang] ?? lang} voice in this device's settings to hear replies`}
+            sx={{ fontSize: 13, fontWeight: 700, color: tokens.muted, border: `1px dashed ${tokens.line}`, borderRadius: '10px', px: 1, py: 0.5, textAlign: 'center', lineHeight: 1.2 }}>
+            🔇 No {LANGUAGE_NAME[lang] ?? lang} voice
+          </Box>
+        )}
         {voice.hasVoice && (
           <ButtonBase onClick={voice.toggle} aria-label={voice.on ? 'Turn voice off' : 'Turn voice on'} aria-pressed={voice.on} sx={iconBtn}>
             {voice.on ? '🔊' : '🔇'}
