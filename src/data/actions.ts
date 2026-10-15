@@ -20,7 +20,6 @@ import type { Contact } from '../lib/types'
 
 /** Open the phone dialler (live mode: real calls go through the phone, not the app). */
 const dial = (phone: string) => { if (phone) window.location.href = `tel:${phone.replace(/[^\d+]/g, '')}` }
-const EMERGENCY_RE = /(fell|fall|chest|can'?t breathe|ambulance|bleeding|dizzy|emergency|help me)/i
 
 // ---------- helpers ----------
 const log = (d: DemoState, message: string, kind: 'ok' | 'warn' | 'alert' = 'ok', actor: 'agent' | 'elder' | 'caretaker' | 'system' = 'agent') =>
@@ -286,11 +285,9 @@ export function elderSay(raw: string) {
   const text = shown.replace(/^[^\p{L}\p{N}]+/u, '')
   if (!text) return
   if (isLive()) {
-    // Emergencies: the same 10-second "I'm OK" countdown first, then the agent escalates (escalate_emergency).
-    if (EMERGENCY_RE.test(text) && getState().elderUi.overlay?.type !== 'emergency') {
-      update(d => { d.elderUi.overlay = { type: 'emergency', endsAt: Date.now() + 10_000 }; d.elderUi.lastEmergency = text })
-      return
-    }
+    // Everything goes to the agent, which understands context ("I fell asleep" is not "I fell") and raises a real
+    // emergency itself (escalate_emergency → SOS path). No keyword guessing here: it caused false alarms and
+    // swallowed the elder's actual request. The red SOS bar is the deliberate, always-available path.
     return live.say(shown)
   }
   update(d => { d.messages.forEach(m => { m.quickReplies = [] }); elderMsg(d, shown) })
@@ -529,17 +526,24 @@ function alertFamily(d: DemoState, description: string) {
 }
 
 /** Hold-for-help button (no backend endpoint yet — see review item P): goes straight to "family alerted". */
-export function triggerHelp() {
-  if (isLive()) {
-    // No SOS endpoint yet: the agent hears an emergency and runs escalate_emergency (alerts family + gives the number).
-    update(d => { d.elderUi.overlay = { type: 'emergency', endsAt: Date.now(), alerted: true } })
-    live.say('Emergency! I pressed the help button. I need help now.')
-    return
+/** Live SOS. "Alerted" is shown ONLY after the backend confirms; otherwise the elder is told to call directly. */
+async function sendSos() {
+  update(d => { d.elderUi.overlay = { type: 'emergency', endsAt: Date.now(), sending: true } })
+  try {
+    const r = await live.sos()
+    update(d => { d.elderUi.overlay = { type: 'emergency', endsAt: Date.now(), alerted: true, alertId: r.alert.id, number: r.emergencyNumber } })
+  } catch {
+    update(d => { d.elderUi.overlay = { type: 'emergency', endsAt: Date.now(), failed: true } })
   }
+}
+
+export function triggerHelp() {
+  // Holding the bar for 1.5 s is already deliberate, so it alerts straight away (no countdown).
+  if (isLive()) { void sendSos(); return }
   update(d => alertFamily(d, 'pressed the help button'))
 }
 export function emergencyCancel() {
-  if (isLive()) { update(d => { d.elderUi.overlay = null }); live.say("I'm OK, I don't need help."); return }
+  if (isLive()) { update(d => { d.elderUi.overlay = null }); return }
   update(d => {
     d.elderUi.overlay = null
     elderMsg(d, "I'm OK")
@@ -548,15 +552,15 @@ export function emergencyCancel() {
   })
 }
 export function emergencyFire() {
-  if (isLive()) {
-    const what = getState().elderUi.lastEmergency || 'I need help'
-    update(d => { d.elderUi.overlay = { type: 'emergency', endsAt: Date.now(), alerted: true } })
-    live.say(`Emergency! ${what}. Please alert my family now.`)
-    return
-  }
+  if (isLive()) { void sendSos(); return }
   update(d => alertFamily(d, d.elderUi.lastEmergency || 'asked for emergency help'))
 }
-export const closeEmergency = () => update(d => { d.elderUi.overlay = null })
+export const closeEmergency = () => {
+  const o = getState().elderUi.overlay
+  if (isLive() && o?.type === 'emergency' && o.alertId) void live.resolveAlert(o.alertId)  // "I'm safe now"
+  update(d => { d.elderUi.overlay = null })
+}
+export const retrySos = () => { if (isLive()) void sendSos() }
 
 // ---------- weather (check_weather → Open-Meteo, the same free API the backend uses) ----------
 async function sayWeather() {

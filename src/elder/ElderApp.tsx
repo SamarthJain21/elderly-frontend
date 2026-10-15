@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { isLive } from '../data/mode'
 import { useDemo, type DemoState } from '../data/store'
 import {
-  answerCall, closeEmergency, declineCall, elderCallContact, elderConfirm, elderSay, emergencyCancel, emergencyFire, emergencyNumber, isAnswered, tapChip,
+  answerCall, closeEmergency, retrySos, declineCall, elderCallContact, elderConfirm, elderSay, emergencyCancel, emergencyFire, emergencyNumber, isAnswered, tapChip,
   endCall, helperVisitsLeft, setVoice, startCheckin, triggerHelp,
 } from '../data/actions'
 import { Face } from '../components/Face'
@@ -317,14 +317,41 @@ function Overlay({ s }: { s: DemoState }) {
     if (o?.type !== 'emergency') return
     const t = window.setInterval(() => {
       tick(x => x + 1)
-      if (!o.alerted && Date.now() >= o.endsAt) { window.clearInterval(t); emergencyFire() }
+      if (!o.alerted && !o.sending && !o.failed && Date.now() >= o.endsAt) { window.clearInterval(t); emergencyFire() }
     }, 250)
     return () => window.clearInterval(t)
   }, [o])
   useEffect(() => { if (o?.type === 'incoming' && s.elderUi.voice) speak(`${o.who} is calling you`, s.elder.language) }, [o?.type]) // eslint-disable-line
   if (!o) return null
   if (o.type === 'emergency') {
-    const num = emergencyNumber(s)
+    const num = o.number ?? emergencyNumber(s)
+    if (o.sending) {
+      return (
+        <div className="ov sos" role="alertdialog" aria-label="Alerting your family" aria-busy="true">
+          <div style={{ fontSize: 56 }}>🚨</div>
+          <h2>Alerting your family…</h2>
+          <p>If it’s serious, don’t wait — call {num} now.</p>
+          <div className="spacer" />
+          <a className="bb white" style={{ textDecoration: 'none', display: 'block', fontSize: 26 }} href={`tel:${num}`}>📞 Call {num}</a>
+        </div>
+      )
+    }
+    if (o.failed) {
+      // Never pretend: the alert did NOT go through, so the elder must call directly.
+      const care = s.elder.emergencyContacts[0]
+      return (
+        <div className="ov sos" role="alertdialog" aria-label="Could not alert your family">
+          <div style={{ fontSize: 56 }}>⚠️</div>
+          <h2>We couldn’t reach your family</h2>
+          <p>Please call for help yourself now.</p>
+          <div className="spacer" />
+          <a className="bb white" style={{ textDecoration: 'none', display: 'block', fontSize: 26 }} href={`tel:${num}`}>📞 Call {num}</a>
+          {care && <a className="bb dark" style={{ textDecoration: 'none', display: 'block' }} href={`tel:${care.phone.replace(/\s/g, '')}`}>📞 Call {care.name}</a>}
+          <button className="bb dark" onClick={retrySos}>Try alerting again</button>
+          <button className="bb dark" onClick={closeEmergency}>Close</button>
+        </div>
+      )
+    }
     if (o.alerted) {
       const care = s.contacts.find(c => c.name === s.caretaker.name)
       return (

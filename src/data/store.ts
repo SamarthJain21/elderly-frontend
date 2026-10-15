@@ -20,7 +20,8 @@ export type Overlay =
   | { type: 'call'; who: string; face?: string; live?: boolean }
   | { type: 'incoming'; who: string; face?: string }
   /** Countdown, then `alerted`: family told + a button to call the local emergency number (backend never auto-dials). */
-  | { type: 'emergency'; endsAt: number; alerted?: boolean }
+  // alerted = the backend CONFIRMED the alert. sending/failed track the request; never claim help without it.
+  | { type: 'emergency'; endsAt: number; alerted?: boolean; sending?: boolean; failed?: boolean; alertId?: string; number?: string }
   | null
 
 /** Live-mode session (Firebase user + which elder we're looking at). Unused in demo mode. */
@@ -222,14 +223,23 @@ function load(): DemoState | null {
   } catch { return null }
 }
 
-let state: DemoState = load() ?? (isLive() ? emptyLive() : seed())
+// Live mode: the backend is the source of truth, so state lives only in this tab's memory.
+//  - Real people's data never lands in localStorage (shared/family devices).
+//  - Each tab has its own socket and elder; syncing state across tabs would mix elders (wrong-recipient bug).
+// Demo mode keeps localStorage + cross-tab sync: the showcase's embedded phones rely on it.
+const SYNC_ACROSS_TABS = !isLive()
+if (isLive()) { try { localStorage.removeItem(KEY) } catch { /* ignore */ } }  // clear anything an older build saved
+
+let state: DemoState = (SYNC_ACROSS_TABS ? load() : null) ?? (isLive() ? emptyLive() : seed())
 const listeners = new Set<() => void>()
-const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(isLive() ? 'elderly-live' : 'elderly-demo') : null
-channel?.addEventListener('message', () => { state = load() ?? (isLive() ? emptyLive() : seed()); listeners.forEach(l => l()) })
+const channel = SYNC_ACROSS_TABS && typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('elderly-demo') : null
+channel?.addEventListener('message', () => { state = load() ?? seed(); listeners.forEach(l => l()) })
 
 function persist() {
-  try { localStorage.setItem(KEY, JSON.stringify(state)) } catch { /* private mode: in-memory only */ }
-  channel?.postMessage('sync')
+  if (SYNC_ACROSS_TABS) {
+    try { localStorage.setItem(KEY, JSON.stringify(state)) } catch { /* private mode: in-memory only */ }
+    channel?.postMessage('sync')
+  }
   listeners.forEach(l => l())
 }
 

@@ -60,6 +60,10 @@ export function createApi(getToken: TokenFn) {
     requests: (id: string) => req<HelpRequest[]>('GET', `${e(id)}/requests`),
     updateRequest: (id: string, rid: string, status: 'confirmed' | 'done' | 'cancelled') => req<HelpRequest>('PATCH', `${e(id)}/requests/${rid}`, { status }),
     caretakers: (id: string) => req<Caretaker[]>('GET', `${e(id)}/caretakers`),
+    /** SOS: records the alert, tells every caretaker live, texts emergency contacts. Elder only. */
+    sos: (id: string) => req<{ alert: { id: string; status: string }; emergencyNumber: string;
+      firstContact: { name: string; phone: string } | null }>('POST', `${e(id)}/sos`),
+    resolveAlert: (id: string, alertId: string) => req<unknown>('POST', `${e(id)}/alerts/${encodeURIComponent(alertId)}`, { action: 'resolve' }),
     inviteCaretaker: (id: string, email: string) => req<{ status: 'added' | 'invited' }>('POST', `${e(id)}/caretakers`, { email }),
   }
 }
@@ -101,9 +105,24 @@ export type ServerFrame =
 
 export function connectChat(elderId: string, getToken: TokenFn, onFrame: (f: ServerFrame) => void,
   on: { open?: () => void; close?: (code: number, reason: string) => void } = {}) {
-  const ws = new WebSocket(BASE.replace(/^http/, 'ws') + `/ws/${encodeURIComponent(elderId)}`)
-  ws.onopen = async () => { ws.send(JSON.stringify({ type: 'auth', token: await getToken() })); on.open?.() } // auth must be first, within 10 s
-  ws.onmessage = ev => onFrame(JSON.parse(ev.data))
+  // Absolute API URL (https://…run.app) → wss://…; relative (/api in dev) → same host as the page.
+  const wsBase = /^https?:/.test(BASE) ? BASE.replace(/^http/, 'ws') : `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${BASE}`
+  const ws = new WebSocket(`${wsBase}/ws/${encodeURIComponent(elderId)}`)
+  ws.onopen = async () => {  // auth must be the first frame, within 10 s
+    try {
+      const token = await getToken()
+      if (ws.readyState !== WebSocket.OPEN) return  // closed while the token was refreshing
+      ws.send(JSON.stringify({ type: 'auth', token }))
+      on.open?.()
+    } catch {
+      ws.close(4401, 'token unavailable')  // treated like the server's 4401: ask to sign in again
+    }
+  }
+  ws.onmessage = ev => {
+    let frame: ServerFrame
+    try { frame = JSON.parse(ev.data) } catch { return }  // ignore anything that isn't a JSON frame
+    onFrame(frame)
+  }
   ws.onclose = ev => on.close?.(ev.code, ev.reason)
   /** false = not connected, nothing sent. */
   const send = (f: object) => { if (ws.readyState !== WebSocket.OPEN) return false; ws.send(JSON.stringify(f)); return true }
