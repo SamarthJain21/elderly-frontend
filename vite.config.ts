@@ -5,6 +5,9 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   plugins: [react()],
   server: {
+    // Dev only: let ngrok tunnels reach the dev server for testing on a real phone.
+    // A leading dot allows any subdomain (ngrok URLs change each session).
+    allowedHosts: ['.ngrok-free.dev', '.ngrok-free.app'],
     proxy: {
       // /api/health -> http://localhost:8000/health
       '/api': {
