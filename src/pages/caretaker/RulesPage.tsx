@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Alert, Box, Button, ButtonBase, CircularProgress, FormControlLabel, InputAdornment, Snackbar, Switch, TextField, Typography } from '@mui/material'
 import { api } from '../../lib/api'
 import { useApi } from '../../lib/useApi'
-import { CURRENCY_SYMBOL, minorToInput, parseToMinor, type Currency } from '../../lib/money'
+import { currencySymbol, exponentOf, minorToInput, parseToMinor, type Currency } from '../../lib/money'
 import type { AutonomyRules, Mode, ToolName } from '../../lib/types'
 import { Card } from '../../components/ui'
 import { useElder } from './elderContext'
@@ -58,7 +58,8 @@ function RulesForm({ elderId, firstName, initial }: { elderId: string; firstName
   const [rules, setRules] = useState(initial)
   // Limit inputs are edited as text and parsed to integer minor units on save — never floats.
   const [limits, setLimits] = useState<Partial<Record<ToolName, string>>>(() =>
-    Object.fromEntries(Object.entries(initial.tools).filter(([, r]) => r.limitMinor !== null).map(([k, r]) => [k, minorToInput(r.limitMinor ?? 0)])),
+    Object.fromEntries(Object.entries(initial.tools).filter(([, r]) => r.limitMinor !== null)
+      .map(([k, r]) => [k, minorToInput(r.limitMinor ?? 0, initial.currency)])),
   )
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
@@ -72,9 +73,10 @@ function RulesForm({ elderId, firstName, initial }: { elderId: string; firstName
   const save = async () => {
     const tools = { ...rules.tools }
     for (const [name, text] of Object.entries(limits) as [ToolName, string][]) {
-      const minor = parseToMinor(text)
+      const minor = parseToMinor(text, currency)
       if (minor === null) {
-        setError(`Enter a valid amount for “${TOOLS.find((t) => t.name === name)?.label}”, like 500 or 499.50.`)
+        const example = exponentOf(currency) === 0 ? '500' : '500 or 499.50'
+        setError(`Enter a valid amount for “${TOOLS.find((t) => t.name === name)?.label}”, like ${example}.`)
         return
       }
       tools[name] = { ...tools[name], limitMinor: minor }
@@ -126,8 +128,8 @@ function RulesForm({ elderId, firstName, initial }: { elderId: string; firstName
                 onChange={(e) => setLimits({ ...limits, [t.name]: e.target.value })}
                 helperText="Above this, Elderly always asks you first."
                 slotProps={{
-                  input: { startAdornment: <InputAdornment position="start">{CURRENCY_SYMBOL[currency]}</InputAdornment> },
-                  htmlInput: { inputMode: 'decimal' },
+                  input: { startAdornment: <InputAdornment position="start">{currencySymbol(currency)}</InputAdornment> },
+                  htmlInput: { inputMode: exponentOf(currency) === 0 ? 'numeric' : 'decimal' },
                 }}
               />
             )}
