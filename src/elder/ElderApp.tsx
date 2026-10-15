@@ -11,6 +11,7 @@ import { MicIcon, Wave, useToast } from '../components/ui'
 import { Tour, type TourStep } from '../components/Tour'
 import { update } from '../data/store'
 import { canListen, listen, speak, stopListening, stopSpeaking } from '../lib/speech'
+import { activityLabel } from '../lib/activity'
 import type { ActionCard, Chip, FamilyMessage, Message } from '../lib/types'
 
 type Screen = 'home' | 'talk' | 'reminders'
@@ -200,7 +201,7 @@ function Talk({ s, items, onMic, listening, say, back }: { s: DemoState; items: 
         <div className="chat">
           {items.length === 0 && <div className="msg agent"><span className="tag">Helper</span>Hello {s.elder.name}. What can I do for you?</div>}
           {items.map(it => it.kind === 'agent' ? <AgentBubble key={it.m.id} m={it.m} last={it.m.id === s.messages[s.messages.length - 1]?.id} /> : <FamilyBubble key={it.m.id} m={it.m} s={s} />)}
-          {s.elderUi.typing && <div className="msg agent typing" aria-label="Helper is typing"><i /><i /><i /></div>}
+          {s.elderUi.typing && <Typing s={s} />}
           <div ref={end} />
         </div>
       </div>
@@ -216,6 +217,16 @@ function Talk({ s, items, onMic, listening, say, back }: { s: DemoState; items: 
         </form>
       </div>
     </>
+  )
+}
+
+/** Typing dots, plus what the helper is doing when an action runs ("Checking the weather…"). */
+function Typing({ s }: { s: DemoState }) {
+  const label = activityLabel(s.elderUi.activity, s.elder.language)
+  return (
+    <div className={'msg agent typing' + (label ? ' with-label' : '')} role="status" aria-label={label ?? 'Helper is typing'}>
+      <span className="dots"><i /><i /><i /></span>{label && <span className="activity">{label}</span>}
+    </div>
   )
 }
 

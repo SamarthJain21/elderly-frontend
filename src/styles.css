@@ -67,6 +67,9 @@ a { color: inherit }
 .typing { display: inline-flex; gap: 5px; padding: 16px 18px }
 .typing i { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); opacity: .4; animation: blink 1.2s infinite }
 .typing i:nth-child(2) { animation-delay: .2s } .typing i:nth-child(3) { animation-delay: .4s }
+.typing .dots { display: inline-flex; gap: 5px }
+.typing.with-label { align-items: center; gap: 12px }
+.typing .activity { font-size: 1.05rem; color: var(--ink2); opacity: .85 }
 @keyframes blink { 50% { opacity: 1 } }
 
 /* ================= ELDER ================= */
