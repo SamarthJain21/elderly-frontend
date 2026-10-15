@@ -1,0 +1,28 @@
+# CI/CD: on push to main → test → build → deploy to Firebase Hosting.
+# Firestore rules are NOT deployed here: their tests need the emulator; deploy them by hand after `npm test` in firebase/.
+steps:
+  - id: install
+    name: node:22-bookworm-slim
+    entrypoint: npm
+    args: ["ci"]
+
+  - id: test
+    name: node:22-bookworm-slim
+    entrypoint: npm
+    args: ["test"]
+
+  - id: build
+    name: node:22-bookworm-slim
+    entrypoint: npm
+    args: ["run", "build"]   # reads .env.production (public Firebase web config + API URL)
+
+  - id: deploy
+    name: node:22-bookworm-slim
+    entrypoint: bash
+    args:
+      - -c
+      - npm ci --prefix firebase && ./firebase/node_modules/.bin/firebase deploy --only hosting --project "$PROJECT_ID" --non-interactive
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+timeout: 1200s
