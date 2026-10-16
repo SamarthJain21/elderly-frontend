@@ -532,3 +532,11 @@ a { color: inherit }
 .login-new .eyebrow { text-align: center }
 
 .push-card { gap: 12px; align-items: center; background: var(--blue-soft); box-shadow: none }
+
+/* Narrow phones: nothing pokes out of cards (todo #25) */
+.acard .h { flex-wrap: wrap }
+.acard .h > span:first-child { min-width: 0; overflow-wrap: anywhere }
+.acard .h .pill { flex: none; white-space: nowrap }
+.acard, .msg, .card { overflow-wrap: anywhere }
+.e-quick { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+.e-quick button { min-width: 0; font-size: clamp(15px, 4.4vw, 18px) }
