@@ -78,6 +78,9 @@ export function createApi(getToken: TokenFn) {
     placesSearch: (q: string, country: string, session: string) =>
       req<{ placeId: string; main: string; secondary: string; text: string }[]>('GET', `/places/autocomplete?q=${encodeURIComponent(q)}&country=${country}&session=${session}`),
     place: (placeId: string, session: string) => req<Address>('GET', `/places/${encodeURIComponent(placeId)}?session=${session}`),
+    /** Spelling + generic name of a typed medicine (app/medicines.py) — no dose or use advice. */
+    checkMedicine: (name: string, country: string) =>
+      req<{ input: string; recognised: boolean; suggestion: string | null; generic: string | null }>('POST', '/medicines/check', { name, country }),
     inviteCaretaker: (id: string, email: string) => req<{ status: 'added' | 'invited' }>('POST', `${e(id)}/caretakers`, { email }),
   }
 }

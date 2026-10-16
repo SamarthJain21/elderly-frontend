@@ -499,3 +499,8 @@ a { color: inherit }
 .warn-card { background: var(--amber-soft); border-radius: 14px; padding: 12px 14px; color: var(--ink) }
 .warn-card b { color: var(--amber) }
 .warn-card ul { margin: 6px 0 4px; padding-left: 18px; font-size: 14.5px; line-height: 1.5 }
+
+/* Setup: medicine-name check */
+.med-hint { font-size: 13.5px; margin: 4px 0 0; color: var(--ink2) }
+.med-hint.ok { color: var(--accent); font-weight: 600 }
+.med-hint.warn { color: var(--amber) }
