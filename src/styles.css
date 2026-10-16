@@ -179,6 +179,11 @@ a { color: inherit }
 .list-row .t { font-weight: 700 } .list-row .s { font-size: 13.5px; color: var(--muted) }
 .chev { margin-left: auto; color: var(--muted); font-size: 20px }
 .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px }
+/* Helper rules accordion (caretaker/Manage.tsx Rules) */
+.rule-head { display: flex; align-items: center; gap: 12px; background: none; border: 0; padding: 0; text-align: left; font: inherit; color: inherit; cursor: pointer; min-width: 0 }
+.rule-head .grow { display: flex; flex-direction: column; min-width: 0 }
+.rule-head .acc { color: var(--accent); font-weight: 700 }
+.rule-head .chev { color: var(--muted); font-size: 18px; margin-right: 6px }
 .seg button { border: 1.5px solid var(--line); background: #fff; border-radius: 12px; padding: 10px; font-size: 13.5px; font-weight: 700; text-align: left; line-height: 1.2; min-height: 54px }
 .seg button small { display: block; font-weight: 400; font-size: 11.5px; opacity: .75; margin-top: 2px }
 .seg button.on { border-color: var(--ink); background: var(--ink); color: #fff }
