@@ -30,7 +30,7 @@ export function listen(lang: Language, onText: (t: string) => void, onEnd: (err?
   const r = new SRCtor()
   // Continuous: the browser's default stops at the first short pause and cuts people off.
   r.lang = speechLocale(lang); r.interimResults = true; r.continuous = true; r.maxAlternatives = 1
-  const finals: string[] = []
+  let finals: string[] = []
   let interim = ''
   let silence: ReturnType<typeof setTimeout> | undefined
   const cap = setTimeout(() => { try { r.stop() } catch { /* already stopped */ } }, MAX_LISTEN_MS)
@@ -42,24 +42,55 @@ export function listen(lang: Language, onText: (t: string) => void, onEnd: (err?
     if (active === r) active = null  // a late end from an OLD recognizer must not clear the current one
     clearTimeout(silence); clearTimeout(cap)
     const said = [...finals, interim].join(' ').replace(/\s+/g, ' ').trim()
-    if (said) onText(said)
-    onEnd(said ? undefined : err)
+    const echo = !!said && isEcho(said)  // the mic heard the helper's own voice: don't send it back (that loops)
+    if (said && !echo) onText(said)
+    onEnd(said && !echo ? undefined : echo ? 'echo' : err)
+    const after = afterListening; afterListening = null
+    after?.()  // a reply that arrived while they were speaking is read now
   }
   r.onresult = e => {
-    interim = ''
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      const res = e.results[i]
-      if (res.isFinal) finals.push(res[0].transcript.trim()); else interim += res[0].transcript
-    }
+    // Rebuild from the whole list every time (Android repeats earlier phrases in later events, which piled up).
+    const all = Array.from({ length: e.results.length }, (_, i) => e.results[i])
+    finals = collapseRepeats(all.filter(x => x.isFinal).map(x => x[0].transcript.trim()))
+    interim = all.filter(x => !x.isFinal).map(x => x[0].transcript).join(' ')
     clearTimeout(silence)
     silence = setTimeout(() => { try { r.stop() } catch { /* already stopped */ } }, SILENCE_MS)
   }
   r.onerror = e => finish(e.error)
   r.onend = () => finish()
   try { active?.stop() } catch { /* previous already stopped */ }
+  stopSpeaking()  // never listen while the helper is talking — the mic would hear it
   try { r.start(); active = r } catch { finish('start-failed') }
   return () => { try { r.stop() } catch { /* already stopped */ } }
 }
+
+/**
+ * Android Chrome sends growing versions of the same phrase as separate finals ("hello", "hello how",
+ * "hello how are you"). Keep the longest of each run; keep genuinely separate phrases.
+ */
+export function collapseRepeats(phrases: string[]): string[] {
+  const out: string[] = []
+  const norm = (t: string) => t.toLowerCase().replace(/[^\p{L}\p{N} ]/gu, '').trim()
+  for (const p of phrases.filter(Boolean)) {
+    const last = out[out.length - 1]
+    if (last !== undefined && norm(p).startsWith(norm(last))) out[out.length - 1] = p      // grew: replace
+    else if (last !== undefined && norm(last).startsWith(norm(p))) continue               // shrank/repeat: skip
+    else out.push(p)
+  }
+  return out
+}
+
+// What the helper said recently, to recognise its own voice coming back through the mic.
+let lastSpoken: { text: string; at: number } | null = null
+export function isEcho(heard: string, now = Date.now()): boolean {
+  if (!lastSpoken || now - lastSpoken.at > 30_000) return false
+  const n = (t: string) => t.toLowerCase().replace(/[^\p{L}\p{N} ]/gu, ' ').split(/\s+/).filter(Boolean)
+  const h = n(heard), said = new Set(n(lastSpoken.text))
+  if (h.length < 3) return false
+  return h.filter(w => said.has(w)).length / h.length >= 0.8  // nearly every word was in what the helper just said
+}
+let afterListening: (() => void) | null = null
+const listeningNow = () => active !== null
 
 export const stopListening = () => { try { active?.stop() } catch { /* noop */ } }
 
@@ -212,6 +243,8 @@ const reading = new Map<string, { text: string; lang: Language }>()
  */
 export function speakMessage(messageId: string, text: string, lang: Language) {
   if (soundBlocked()) { holdUntilTap(() => speakMessage(messageId, text, lang)); return }
+  if (listeningNow()) { afterListening = () => speakMessage(messageId, text, lang); return }
+  lastSpoken = { text, at: Date.now() }
   const my = ++seq
   stopAudio()
   if (canSpeak() && (speechSynthesis.speaking || speechSynthesis.pending)) speechSynthesis.cancel()
@@ -231,6 +264,8 @@ export function speak(text: string, lang: Language = 'en-US', rate = 0.85): bool
   const clean = text.replace(/<[^>]+>/g, '').replace(/\p{Extended_Pictographic}/gu, '').trim()
   if (!clean) return false
   if (soundBlocked()) { holdUntilTap(() => speak(text, lang, rate)); return true }
+  if (listeningNow()) { afterListening = () => speak(text, lang, rate); return true }
+  lastSpoken = { text: clean, at: Date.now() }
   if (cloud && typeof Audio !== 'undefined') { speakCloud(cloud, clean, lang, rate); return true }
   return speakDevice(clean, lang, rate)
 }
