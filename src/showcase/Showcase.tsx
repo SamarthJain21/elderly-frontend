@@ -32,14 +32,6 @@ const GOOGLE_AI: [string, string][] = [
   ['Built and run on Google Cloud', '— Cloud Run, Firestore, Firebase Auth and Hosting, Cloud Build. Checked by a 30-case test suite in four languages.'],
 ]
 
-const SCREENS: [string, string, string, string][] = [
-  ['/elder?demo', '👵', 'Elder app', 'Voice-first home, big buttons, faces to call, hold for help.'],
-  ['/caretaker?demo', '👩', 'Family app', 'How they’re doing, chat, approvals, the helper’s rules.'],
-  ['/onboarding/caretaker?demo', '🚀', 'Family setup', 'Privacy first, then routine, medicines and rules.'],
-  ['/onboarding/elder?demo', '🤝', 'Elder’s first run', 'Meet the helper, try the mic — read aloud.'],
-  ['/pricing', '💳', 'Plans', 'All AI is free; top up for volunteer visits.'],
-]
-
 export function Launcher() {
   const s = useDemo()
   const signedIn = isLive() && s.live.status === 'ready'
@@ -57,7 +49,6 @@ export function Launcher() {
           when something’s wrong.</p>
         <div className="hero-cta">
           <Link className="btn pri hero-btn" to="/try">✨ Try it live with Gemini</Link>
-          <Link className="btn" to="/demo">Scripted demo (offline, no AI)</Link>
         </div>
         <p className="small muted">No sign-in: you get a private sandbox — an elder’s phone and their family’s, side by side — deleted after 24 hours.</p>
 
@@ -70,12 +61,6 @@ export function Launcher() {
           <ul>{GOOGLE_AI.map(([b, t]) => <li key={b}><b>{b}</b> {t}</li>)}</ul>
         </div>
 
-        <p className="eyebrow" style={{ marginTop: 32 }}>Explore the screens (demo data)</p>
-        <div className="lgrid small-cards">
-          {SCREENS.map(([to, ic, t, d]) => (
-            <Link key={to} to={to} className="card lcard"><span className="ic">{ic}</span><h3>{t}</h3><p>{d}</p></Link>
-          ))}
-        </div>
       </div>
     </div>
   )

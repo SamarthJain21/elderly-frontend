@@ -1,6 +1,6 @@
 /**
  * Live (real backend + Firebase Auth) or demo (in-browser data for the showcase).
- * `/demo`, embedded phones and any URL with `?demo` always run in demo; otherwise the saved choice, default live.
+ * Embedded showcase phones and any URL with `?demo` run in demo; otherwise the saved choice, default live.
  * Decided once per page load.
  */
 export type DataMode = 'live' | 'demo'
@@ -18,7 +18,7 @@ function initialMode(): DataMode {
   if (SANDBOX_FRAME) return 'live'
   const q = new URLSearchParams(location.search)
   // The side-by-side showcase (and its embedded phones) always uses demo data.
-  if (location.pathname.startsWith('/demo') || q.has('demo') || q.has('embed') || window.self !== window.top) {
+  if (q.has('demo') || q.has('embed') || window.self !== window.top) {
     // Remember it for this tab, so a reload mid-test stays in the demo instead of jumping to sign-in.
     try { sessionStorage.setItem(TAB_KEY, 'demo') } catch { /* ignore */ }
     return 'demo'
