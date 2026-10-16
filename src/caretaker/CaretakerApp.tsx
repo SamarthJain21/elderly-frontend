@@ -9,6 +9,7 @@ import { CREDIT, formatBalance, planById } from '../lib/plans'
 import Chat from './Chat'
 import SetupPhone from './SetupPhone'
 import { CheckinHistory, FamilyMembers, HelpRequests, weekCheckins } from './Screens'
+import { InsightsCard, weekStatus } from './InsightsCard'
 import { addressLine } from '../lib/types'
 import { Tour, type TourStep } from '../components/Tour'
 import { update } from '../data/store'
@@ -76,6 +77,8 @@ function Overview({ s }: { s: DemoState }) {
   const nk = nick(s)
   const [sos, setSos] = useState(false)
   const alerts = s.logs.filter(l => l.kind === 'alert' && !l.ack)
+  // Alerts first; otherwise the week's picture, so the headline never says 'all good' above a 'keep an eye' card.
+  const week = weekStatus(s)
   const pending = s.actions.filter(a => a.status === 'awaiting_caretaker')
   const plan = planById(s.billing.plan)
   const left = quotaLeft(s), total = quotaTotal(s)
@@ -94,8 +97,8 @@ function Overview({ s }: { s: DemoState }) {
           <div className="status-hero">
             <Face k={s.elder.face} name={s.elder.name} size={72} />
             <div className="grow">
-              <span className={`pill ${alerts.length ? 'bad' : 'ok'}`}><span className="dot" />{alerts.length ? `${alerts.length} alert${alerts.length > 1 ? 's' : ''}` : 'All good'}</span>
-              <p className="s">{alerts.length ? alerts[0].message : `${s.elder.name} is at home and doing well`}</p>
+              <span className={`pill ${alerts.length ? 'bad' : week.cls}`}><span className="dot" />{alerts.length ? `${alerts.length} alert${alerts.length > 1 ? 's' : ''}` : week.label}</span>
+              <p className="s">{alerts.length ? alerts[0].message : week.line}</p>
             </div>
           </div>
           <div className="row" data-tour="actions" style={{ flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
@@ -121,6 +124,8 @@ function Overview({ s }: { s: DemoState }) {
             <span className="chev">›</span>
           </Link>
         )}
+
+        <InsightsCard s={s} compact />
 
         <div className="metrics">
           <Link to="/caretaker/checkins" data-tour="checkin" className="card metric" style={{ textDecoration: 'none' }}><p className="k">Check-in today ›</p><p className="v">{s.checkin.stage === 'done' ? (mood === 'bad' ? '😟' : mood === 'okay' ? '😐' : '😊') : s.checkin.stage === 'meds' ? '…' : '—'} <small>{s.checkin.stage === 'done' ? 'done' : s.checkin.stage === 'meds' ? 'in progress' : `due ${s.assessment.checkIn.time}`}</small></p><div className="row" style={{ gap: 2, marginTop: 6 }} aria-label="Last 7 days">{weekCheckins(s).slice(0, 7).reverse().map(c => <span key={c.id} style={{ fontSize: 15 }}>{c.mood ? ({ great: '😄', good: '😊', okay: '😐', low: '😕', bad: '😟' } as const)[c.mood] : '·'}</span>)}</div></Link>
