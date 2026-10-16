@@ -19,7 +19,8 @@ export function AdminUsage() {
   const [days, setDays] = useState(14)
   const [r, setR] = useState<UsageReport | null>(null)
   const [err, setErr] = useState('')
-  const ready = isLive() && s.live.status === 'ready'
+  // Any signed-in account: an admin needn't have set anyone up (the server checks the email).
+  const ready = isLive() && ['ready', 'needsOnboarding', 'needsElder'].includes(s.live.status)
   useEffect(() => { if (ready) api.adminUsage(days).then(setR, e => setErr((e as Error).message)) }, [ready, days])
 
   if (!isLive()) return <Shell><p>Sign in to see costs. <button className="linkish" onClick={() => switchMode('live', '/login?next=/admin')}>Sign in</button></p></Shell>
