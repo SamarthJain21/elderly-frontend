@@ -137,7 +137,7 @@ export function Rules() {
             <li>Emergencies call for help right away (with a 10-second “I’m OK”).</li>
             <li>Urgent help at home (burst pipe, locked out…) goes out right away — even if care credit has run out.</li>
             <li>Calling family is always allowed — {nk} places the call.</li>
-            <li>Never sends money or shares bank codes.</li>
+            <li>Never sends money or shares bank codes — and if someone asks {nk} for an OTP, PIN or a payment, the helper warns them and tells you.</li>
             <li>Every action is logged and visible to you and {nk}.</li>
           </ul>
         </div>
