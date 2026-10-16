@@ -26,7 +26,7 @@ export function createApi(getToken: TokenFn) {
   const e = (id: string) => `/elders/${encodeURIComponent(id)}`
   return {
     // auth & onboarding (app/routers/me.py) — /me 404 means "signed in but not onboarded"
-    me: () => req<{ uid: string; email: string | null; role: 'elder' | 'caretaker' }>('GET', '/me'),
+    me: () => req<{ uid: string; email: string | null; role: 'elder' | 'caretaker'; admin?: boolean }>('GET', '/me'),
     onboardCaretaker: (name: string) => req('POST', '/onboarding/caretaker', { name }),
     // elders (app/routers/elders.py)
     createElder: (b: { name: string; phone: string; language: Language }) =>
@@ -83,8 +83,16 @@ export function createApi(getToken: TokenFn) {
       req<{ input: string; recognised: boolean; suggestion: string | null; generic: string | null }>('POST', '/medicines/check', { name, country }),
     deviceSettings: (id: string) => req<DeviceSettings>('GET', `${e(id)}/device-settings`),
     saveDeviceSettings: (id: string, s: DeviceSettings) => req<DeviceSettings>('PUT', `${e(id)}/device-settings`, s),
+    /** Cost dashboard (app/routers/admin_api.py) — admins only. */
+    adminUsage: (days: number) => req<UsageReport>('GET', `/admin/usage?days=${days}`),
     inviteCaretaker: (id: string, email: string) => req<{ status: 'added' | 'invited' }>('POST', `${e(id)}/caretakers`, { email }),
   }
+}
+
+/** app/routers/admin_api.py */
+export interface UsageReport {
+  days: { date: string; counts: Record<string, number>; costUsd: Record<string, number>; totalUsd: number }[]
+  totalUsd: number; prices: Record<string, Record<string, number>>; note: string
 }
 
 /** app/routers/settings.py ProfileUpdate */

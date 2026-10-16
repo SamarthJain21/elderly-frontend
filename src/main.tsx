@@ -9,6 +9,7 @@ import { CaretakerOnboarding, ElderOnboarding, JoinLink } from './onboarding/Onb
 import { Launcher, Pricing } from './showcase/Showcase'
 import { LiveGate, Login } from './live/Login'
 import { TrySandbox } from './showcase/Try'
+import { AdminUsage } from './admin/Admin'
 import { EMBEDDED as embedded, isLive } from './data/mode'
 import { bootLive } from './data/live'
 
@@ -32,6 +33,7 @@ createRoot(document.getElementById('root')!).render(
           {/* The scripted offline demo is hidden; old links go to the live one. */}
           <Route path="/demo" element={<Navigate to="/try" replace />} />
           <Route path="/try" element={<TrySandbox />} />
+          <Route path="/admin" element={<AdminUsage />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/elder" element={<LiveGate app="elder"><ElderApp framed={!embedded} /></LiveGate>} />
