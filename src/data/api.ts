@@ -114,6 +114,9 @@ export interface BackendAction {
   messageId: string | null; decidedBy: string | null; createdAt: string; updatedAt: string
 }
 
+/** The tap check-in (app/routers/chat.py CheckInAnswersFrame). null = skipped. */
+export interface CheckinAnswers { mood: Mood; sleepQuality: 'well' | 'okay' | 'poorly' | null; ate: boolean | null; medicationTaken: boolean | null }
+
 export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message) }
 }
@@ -132,6 +135,7 @@ export type ServerFrame =
   // app/alerts.py raise_alert: SOS button or an emergency the helper detected — sent to the family the moment it happens
   // app/agent/voice_push.py: a reply's voice, first sentence first (seq 0, 1…), base64 MP3
   | { type: 'audio'; messageId: string; seq: number; last: boolean; mime: string; data: string }
+  | { type: 'checkin_done'; kind: 'ok' | 'warn' | 'alert'; summary: string }   // to family: refresh now
   | { type: 'device_settings'; settings: DeviceSettings }   // the family changed the elder app's settings
   | { type: 'alert'; alert: { id: string; source: 'sos_button' | 'agent'; description: string; status: string } }
 
@@ -162,6 +166,7 @@ export function connectChat(elderId: string, getToken: TokenFn, onFrame: (f: Ser
     close: () => ws.close(),
     say: (text: string) => send({ type: 'message', text }),                          // elder → helper
     startCheckin: (mood: Mood | null) => send({ type: 'start_checkin', mood }),
+    checkinAnswers: (a: CheckinAnswers) => send({ type: 'checkin_answers', ...a }),   // the tap check-in
     confirm: (actionId: string, approve: boolean) => send({ type: 'confirm', actionId, approve }),
     familyMessage: (text: string) => send({ type: 'family_message', text }),       // caretaker → elder
     familyReply: (text: string) => send({ type: 'family_reply', text }),           // elder → caretakers

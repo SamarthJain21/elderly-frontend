@@ -3,8 +3,8 @@ import { Navigate } from 'react-router-dom'
 import { isLive } from '../data/mode'
 import { useDemo, type DemoState } from '../data/store'
 import {
-  answerCall, closeEmergency, isPretendNumber, retrySos, declineCall, elderCallContact, elderConfirm, elderSay, emergencyCancel, emergencyFire, emergencyNumber, isAnswered, tapChip,
-  endCall, helperVisitsLeft, setVoice, startCheckin, triggerHelp,
+  answerCall, checkinAnswers, closeEmergency, isPretendNumber, retrySos, declineCall, elderCallContact, elderConfirm, elderSay, emergencyCancel, emergencyFire, emergencyNumber, isAnswered, tapChip,
+  endCall, helperVisitsLeft, setVoice, triggerHelp,
 } from '../data/actions'
 import { Face } from '../components/Face'
 import { MicIcon, Wave, useToast } from '../components/ui'
@@ -14,6 +14,7 @@ import { canListen, listen, onSoundBlockedChange, setPlayback, soundBlocked, spe
 import { activityLabel } from '../lib/activity'
 import { partOfDay, strings, type Strings } from '../lib/i18n'
 import type { ActionCard, FamilyMessage, Message } from '../lib/types'
+import type { CheckinAnswers } from '../data/api'
 
 type Screen = 'home' | 'talk' | 'reminders'
 type Item = { kind: 'agent'; m: Message } | { kind: 'fam'; m: FamilyMessage }
@@ -155,20 +156,58 @@ function FamilyQuestion({ s }: { s: DemoState }) {
   )
 }
 
+/**
+ * The daily check-in as big taps: mood (the faces), then sleep, food and medicines — one question at a time, read
+ * aloud. Recorded directly (no chat needed); "Tell me more" opens the chat for anything else.
+ */
 function CheckInCard({ s, onDone }: { s: DemoState; onDone: () => void }) {
   const t = strings(s.elder.language)
-  if (s.checkin.stage === 'done') return <div className="done-note">{t.checkedIn}</div>
+  const [a, setA] = useState<Partial<CheckinAnswers> & { step: number }>({ step: 0 })
+  const hasMeds = s.assessment.medications.length > 0
+  const ask = (q: string) => { if (s.elderUi.voice) speak(q, s.elder.language) }
+  const steps = ['mood', 'sleep', 'ate', ...(hasMeds ? ['meds'] : [])] as const
+  const next = (patch: Partial<CheckinAnswers>) => {
+    const n = { ...a, ...patch, step: a.step + 1 }
+    if (n.step >= steps.length) {
+      checkinAnswers({ mood: n.mood!, sleepQuality: n.sleepQuality ?? null, ate: n.ate ?? null, medicationTaken: n.medicationTaken ?? null })
+      setA({ step: 0 })
+      return
+    }
+    setA(n)
+    ask(steps[n.step] === 'sleep' ? t.ci.sleepQ : steps[n.step] === 'ate' ? t.ci.ateQ : t.ci.medsQ)
+  }
+  if (s.checkin.stage === 'done' || s.checkin.status === 'done') return (
+    <div className="done-note row" style={{ justifyContent: 'space-between' }}>{t.checkedIn}
+      <button className="linkish" onClick={onDone}>{t.ci.tellMore}</button></div>
+  )
   if (s.checkin.stage === 'meds') return <button className="done-note" style={{ border: 0, width: '100%' }} onClick={onDone}>{t.finishCheckin}</button>
   if (!['due', 'upcoming', 'missed'].includes(s.checkin.status)) return null
-  const go = (m: 'good' | 'okay' | 'bad') => { startCheckin(m); onDone() }
+  const step = steps[a.step]
+  const big = (label: string, onClick: () => void, emoji?: string) => <button onClick={onClick}>{emoji && <span>{emoji}</span>}{label}</button>
   return (
     <div className="checkin" data-tour="e-checkin">
-      <p>{t.feeling[partOfDay()]}</p>
-      <div className="faces3">
-        <button onClick={() => go('good')}><span>😊</span>{t.moodGood}</button>
-        <button onClick={() => go('okay')}><span>😐</span>{t.moodOkay}</button>
-        <button onClick={() => go('bad')}><span>😟</span>{t.moodBad}</button>
-      </div>
+      {a.step > 0 && <div className="ci-dots" aria-hidden>{steps.map((_, i) => <i key={i} className={i < a.step ? 'on' : i === a.step ? 'now' : ''} />)}</div>}
+      {step === 'mood' && <>
+        <p>{t.feeling[partOfDay()]}</p>
+        <div className="faces3">
+          {big(t.moodGood, () => next({ mood: 'good' }), '😊')}{big(t.moodOkay, () => next({ mood: 'okay' }), '😐')}{big(t.moodBad, () => next({ mood: 'bad' }), '😟')}
+        </div>
+      </>}
+      {step === 'sleep' && <>
+        <p>{t.ci.sleepQ}</p>
+        <div className="faces3">
+          {big(t.ci.sleep[0], () => next({ sleepQuality: 'well' }), '😴')}{big(t.ci.sleep[1], () => next({ sleepQuality: 'okay' }), '😐')}{big(t.ci.sleep[2], () => next({ sleepQuality: 'poorly' }), '🥱')}
+        </div>
+      </>}
+      {step === 'ate' && <>
+        <p>{t.ci.ateQ}</p>
+        <div className="faces3 two">{big(t.ci.ate[0], () => next({ ate: true }), '🍲')}{big(t.ci.ate[1], () => next({ ate: false }), '⏳')}</div>
+      </>}
+      {step === 'meds' && <>
+        <p>{t.ci.medsQ}</p>
+        <div className="faces3 two">{big(t.ci.meds[0], () => next({ medicationTaken: true }), '💊')}{big(t.ci.meds[1], () => next({ medicationTaken: false }), '⏳')}</div>
+      </>}
+      {a.step > 0 && <button className="linkish ci-skip" onClick={() => next({})}>{t.ci.skip}</button>}
     </div>
   )
 }

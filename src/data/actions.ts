@@ -16,6 +16,7 @@ import { formatMoney } from '../lib/money'
 import { CREDIT, formatBalance, formatUsd, planById, priceFor, type Billing, type PlanId } from '../lib/plans'
 import { isLive } from './mode'
 import { deviceOf, live, saveDevice } from './live'
+import type { CheckinAnswers } from './api'
 import type { Contact } from '../lib/types'
 
 /** Open the phone dialler (live mode: real calls go through the phone, not the app). */
@@ -394,6 +395,22 @@ export function caretakerDecide(actionId: string, approve: boolean, opts: { topU
     card.needsTopUp = false
     const say = perform(d, card); upsertAction(d, card)
     agentMsg(d, `Good news — ${firstName(d)} said yes! ${say}`)
+  })
+}
+
+/** The tap check-in: mood, sleep, meals, medicines as big buttons — recorded directly, no chat needed. */
+export function checkinAnswers(a: CheckinAnswers) {
+  if (isLive()) { live.checkinAnswers(a); return }
+  update(d => {
+    const today = new Date().toISOString().slice(0, 10)
+    const low = a.mood === 'low' || a.mood === 'bad'
+    d.checkin = { ...d.checkin, status: 'done', mood: a.mood, stage: 'done' }
+    d.checkinHistory = [{ id: `${d.elder.elderId}_${today}`, elderId: d.elder.elderId, date: today, status: 'done', mood: a.mood,
+      sleepQuality: a.sleepQuality, sleepHours: null, meals: a.ate === null ? null : a.ate ? 'ate something' : 'nothing yet',
+      medicationTaken: a.medicationTaken, anomalies: [], urgent: [], escalateFlag: a.mood === 'bad' }, ...d.checkinHistory.filter(h => h.date !== today)]
+    log(d, `Check-in: feeling ${a.mood}${a.sleepQuality ? `, slept ${a.sleepQuality}` : ''}${a.ate === false ? ', not eaten yet' : ''}${a.medicationTaken === false ? ', medicines not taken yet' : ''}`,
+      a.mood === 'bad' ? 'alert' : low || a.medicationTaken === false || a.sleepQuality === 'poorly' ? 'warn' : 'ok')
+    agentMsg(d, low ? `Thank you for telling me. I've let ${firstName(d)} know you're not feeling great.` : `Thank you! I've shared it with ${firstName(d)}. Have a lovely day.`)
   })
 }
 
