@@ -4,7 +4,8 @@
 import { InsightsCard } from './InsightsCard'
 import { PhoneField } from '../components/PhoneField'
 import { countryForTimezone, phoneError } from '../lib/phone'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { api } from '../data/live'
 import { nick, useDemo } from '../data/store'
 import { isLive } from '../data/mode'
 import { inviteCaretaker, saveAddress, saveEmergencyContacts, setRequestStatus } from '../data/actions'
@@ -20,12 +21,16 @@ const MOOD_LABEL: Record<Mood, string> = { great: 'great', good: 'good', okay: '
 // ---------------- Address (backend geocodes it; orders are refused without one) ----------------
 export const EMPTY_ADDRESS: Address = { line1: '', line2: '', landmark: '', city: '', postcode: '' }
 
-export function AddressFields({ value, onChange }: { value: Address; onChange: (a: Address) => void }) {
+/** `country`: two-letter code to search in (from where the elder lives). Search needs a signed-in (live) session. */
+export function AddressFields({ value, onChange, country }: { value: Address; onChange: (a: Address) => void; country?: string }) {
+  // Editing the street, city or postcode means it's no longer the place picked from search.
   const f = (k: keyof Address, label: string, ph: string, extra: object = {}) => (
-    <label className="field grow">{label}<input value={(value[k] as string) ?? ''} placeholder={ph} onChange={e => onChange({ ...value, [k]: e.target.value })} {...extra} /></label>
+    <label className="field grow">{label}<input value={(value[k] as string) ?? ''} placeholder={ph} {...extra}
+      onChange={e => onChange({ ...value, [k]: e.target.value, ...(['line1', 'city', 'postcode'].includes(k) ? { placeId: null } : {}) })} /></label>
   )
   return (
     <div className="stack" style={{ gap: 10 }}>
+      {isLive() && <AddressSearch country={country} onPick={a => onChange({ ...value, ...a, landmark: value.landmark || a.landmark })} />}
       {f('line1', 'Street address', '14 Elm Street')}
       <div className="row">{f('line2', 'Unit / floor', '#03-02')}{f('postcode', 'Postcode', '238801', { inputMode: 'numeric' })}</div>
       {f('landmark', 'Landmark (helps drivers)', 'Near Riverside Park')}
@@ -34,6 +39,37 @@ export function AddressFields({ value, onChange }: { value: Address; onChange: (
   )
 }
 export const addressComplete = (a: Address | null) => !!a && a.line1.trim().length > 0 && a.city.trim().length > 0
+
+/** Google address search (server-side Places): suggestions while typing; picking one fills the fields. */
+function AddressSearch({ country, onPick }: { country?: string; onPick: (a: Address) => void }) {
+  const [q, setQ] = useState('')
+  const [hits, setHits] = useState<{ placeId: string; main: string; secondary: string }[]>([])
+  const [err, setErr] = useState('')
+  const session = useRef(crypto.randomUUID())  // one billed session: the keystrokes + the final pick
+  useEffect(() => {
+    if (q.trim().length < 3) { setHits([]); return }
+    const t = setTimeout(() => {
+      api.placesSearch(q.trim(), country ?? 'IN', session.current).then(h => { setHits(h); setErr('') }, e => setErr((e as Error).message))
+    }, 300)
+    return () => clearTimeout(t)
+  }, [q, country])
+  const pick = async (id: string) => {
+    try {
+      const a = await api.place(id, session.current)
+      onPick(a); setQ(''); setHits([]); session.current = crypto.randomUUID()
+    } catch (e) { setErr((e as Error).message) }
+  }
+  return (
+    <div className="addr-search">
+      <label className="field">🔎 Search the address<input value={q} onChange={e => setQ(e.target.value)} placeholder="Start typing — street, building or area" autoComplete="off" /></label>
+      {hits.length > 0 && <ul className="addr-hits" role="listbox">{hits.map(h => (
+        <li key={h.placeId}><button type="button" onClick={() => void pick(h.placeId)}><b>{h.main}</b><span>{h.secondary}</span></button></li>
+      ))}</ul>}
+      {err && <p className="small muted">{err}</p>}
+      <p className="small muted">Or type it in below. You can add the flat number and a landmark after picking.</p>
+    </div>
+  )
+}
 
 function AddressCard() {
   const s = useDemo()
@@ -45,7 +81,7 @@ function AddressCard() {
       <div className="row"><p className="eyebrow grow">Home address</p>
         {located ? <span className="pill ok">📍 Located ({located})</span> : <span className="pill warn">Not located yet</span>}</div>
       <p className="small muted">Used for food & medicine delivery and ride pickups. Orders can’t be placed without it.</p>
-      <AddressFields value={a} onChange={setA} />
+      <AddressFields value={a} onChange={setA} country={countryForTimezone(s.assessment.timezone)} />
       <button className="btn pri" disabled={!addressComplete(a)} onClick={() => { saveAddress(a); toast('Saved — we’ll locate it on the map') }}>Save address</button>
     </div>
   )
