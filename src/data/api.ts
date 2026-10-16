@@ -65,6 +65,15 @@ export function createApi(getToken: TokenFn) {
     sos: (id: string) => req<{ alert: { id: string; status: string }; emergencyNumber: string;
       firstContact: { name: string; phone: string } | null }>('POST', `${e(id)}/sos`),
     resolveAlert: (id: string, alertId: string) => req<unknown>('POST', `${e(id)}/alerts/${encodeURIComponent(alertId)}`, { action: 'resolve' }),
+    /** Natural read-aloud voice (app/routers/voice_api.py): MP3 of the text. */
+    tts: async (text: string, language: Language): Promise<Blob> => {
+      const res = await fetch(`${BASE}/tts`, {
+        method: 'POST', body: JSON.stringify({ text, language }), signal: AbortSignal.timeout(8_000),
+        headers: { Authorization: `Bearer ${await getToken()}`, 'Content-Type': 'application/json' },
+      })
+      if (!res.ok) throw new ApiError(res.status, 'Voice unavailable')
+      return res.blob()
+    },
     inviteCaretaker: (id: string, email: string) => req<{ status: 'added' | 'invited' }>('POST', `${e(id)}/caretakers`, { email }),
   }
 }
