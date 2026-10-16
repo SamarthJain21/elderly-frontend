@@ -90,3 +90,22 @@ describe('voice pushed by the server', () => {
     expect(played).toHaveLength(1)
   })
 })
+
+describe('voice input', () => {
+  it('collapses Android’s growing repeats but keeps separate phrases', async () => {
+    const { collapseRepeats } = await import('./speech')
+    expect(collapseRepeats(['hello', 'hello how', 'hello how are you'])).toEqual(['hello how are you'])
+    expect(collapseRepeats(['I need a taxi', 'I need a taxi', 'to the clinic'])).toEqual(['I need a taxi', 'to the clinic'])
+    expect(collapseRepeats(['मुझे', 'मुझे दवाई चाहिए'])).toEqual(['मुझे दवाई चाहिए'])
+  })
+
+  it('recognises the helper’s own voice coming back through the mic, but not the elder', async () => {
+    const { isEcho, speak, setCloudVoice } = await import('./speech')
+    setCloudVoice(async () => new Blob(['x']))
+    speak('I can order two idlis and a coffee for 210 rupees. Shall I go ahead?', 'en-US')
+    expect(isEcho('I can order two idlis and a coffee')).toBe(true)
+    expect(isEcho('yes please go ahead')).toBe(false)          // a real answer
+    expect(isEcho('order two', Date.now())).toBe(false)         // too short to judge
+    expect(isEcho('I can order two idlis and a coffee', Date.now() + 60_000)).toBe(false)  // long after
+  })
+})
