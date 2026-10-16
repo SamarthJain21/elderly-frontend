@@ -210,6 +210,7 @@ function onFrame(f: ServerFrame) {
     }
   })
   if (f.type === 'error') notify(f.message)
+  if (f.type === 'notice' && getState().live.role === 'caretaker') { notify(f.summary); void refresh(false) }
   if (f.type === 'checkin_done' && getState().live.role === 'caretaker') {
     // A finished check-in: show it now, and say so if something's off (the summary is the family log line).
     if (f.kind !== 'ok') notify(`${f.kind === 'alert' ? '😟' : '👀'} ${getState().elder.name}: ${f.summary.replace(/^Check-in: /, '')}`)
