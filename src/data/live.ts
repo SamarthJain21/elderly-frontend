@@ -171,14 +171,14 @@ function onFrame(f: ServerFrame) {
       case 'checkin': applyToday(d, f.checkin); break
       case 'message':
         upsertMessage(d, f.message)
-        if (f.message.sender === 'agent') d.elderUi.typing = false
+        if (f.message.sender === 'agent') { d.elderUi.typing = false; d.elderUi.activity = null }
         break
       case 'action_update':
         upsertCard(d, f.action)
         d.messages.forEach(m => { if (m.id === f.messageId || m.action?.id === f.action.id) m.action = f.action })
         break
-      case 'typing': d.elderUi.typing = true; break
-      case 'error': d.elderUi.typing = false; break
+      case 'typing': d.elderUi.typing = true; d.elderUi.activity = f.tool ?? null; break
+      case 'error': d.elderUi.typing = false; d.elderUi.activity = null; break
     }
   })
   if (f.type === 'error') notify(f.message)

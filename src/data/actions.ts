@@ -32,9 +32,9 @@ const elderMsg = (d: DemoState, text: string) =>
   d.messages.push({ id: uid('m_'), sender: 'elder', text, quickReplies: [], createdAt: nowIso(), actedBy: null, action: null })
 
 /** Agent "thinking" delay so the typing indicator is visible. */
-function agentTurn(fn: (d: DemoState) => void, delay = 900) {
-  update(d => { d.elderUi.typing = true })
-  setTimeout(() => update(d => { d.elderUi.typing = false; fn(d) }), delay)
+function agentTurn(fn: (d: DemoState) => void, delay = 900, activity: string | null = null) {
+  update(d => { d.elderUi.typing = true; d.elderUi.activity = activity })
+  setTimeout(() => update(d => { d.elderUi.typing = false; d.elderUi.activity = null; fn(d) }), delay)
 }
 
 /** Free volunteer calls included in the plan this month. */
@@ -262,6 +262,12 @@ const INTENTS: [string, RegExp][] = [
   ['lonely', /(lonely|alone|bored|sad|miss)/i],
 ]
 
+/** Which tool each demo intent runs — shown under the typing dots ("Finding a taxi…"). */
+const INTENT_TOOL: Record<string, string> = {
+  emergency: 'escalate_emergency', message: 'send_message_to_caretaker', remind: 'set_reminder', medicine: 'order_medicine',
+  ride: 'book_ride', food: 'order_food', volunteer: 'notify_volunteer', call: 'call_contact',
+}
+
 function skillFor(text: string) {
   if (/(leak|tap|pipe|toilet)/i.test(text)) return 'plumbing'
   if (/(light|bulb|fan|socket|electric)/i.test(text)) return 'electrical'
@@ -306,6 +312,7 @@ export function elderSay(raw: string) {
   }
 
   const intent = INTENTS.find(([, re]) => re.test(text))?.[0]
+  const activity = intent ? INTENT_TOOL[intent] ?? null : null
   agentTurn(d => {
     switch (intent) {
       case 'money':
@@ -330,6 +337,7 @@ export function elderSay(raw: string) {
       }
       case 'weather':
         d.elderUi.typing = true  // stays on while the real forecast loads
+        d.elderUi.activity = 'check_weather'
         void sayWeather()
         return
       case 'medicine': return runTool(d, 'order_medicine', text)
@@ -355,7 +363,7 @@ export function elderSay(raw: string) {
         return agentMsg(d, `I can order medicine or food, book a ride, ask a volunteer to fix something, or call your family. What would you like?`,
           ['💊 Order my medicine', `📞 Call ${firstName(d)}`, '🔧 Something is broken'])
     }
-  })
+  }, activity ? 1300 : 900, activity)  // a little longer when there's an action to name
 }
 
 export function elderConfirm(actionId: string, approve: boolean) {
@@ -577,7 +585,7 @@ async function sayWeather() {
   } catch {
     say = "I couldn't check the weather just now."
   }
-  update(d => { d.elderUi.typing = false; agentMsg(d, say, ['☂️ Will it rain later?', '📞 Call Emma', '👍 Thanks']) })
+  update(d => { d.elderUi.typing = false; d.elderUi.activity = null; agentMsg(d, say, ['☂️ Will it rain later?', '📞 Call Emma', '👍 Thanks']) })
 }
 const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1)
 

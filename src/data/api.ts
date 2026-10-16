@@ -101,7 +101,7 @@ export type ServerFrame =
   | { type: 'checkin'; checkin: TodayCheckIn | null }
   | { type: 'message'; message: Message }
   | { type: 'action_update'; messageId: string; action: ActionCard }
-  | { type: 'typing' }
+  | { type: 'typing'; tool?: string }   // tool: an action is running
   | { type: 'error'; message: string }
 
 export function connectChat(elderId: string, getToken: TokenFn, onFrame: (f: ServerFrame) => void,

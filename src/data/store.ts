@@ -74,7 +74,7 @@ export interface DemoState {
     invoices: Invoice[]
     paymentMethod: { kind: 'card'; brand: string; last4: string } | { kind: 'wallet'; label: string } | null
   }
-  elderUi: { typing: boolean; overlay: Overlay; voice: boolean; lastEmergency?: string }
+  elderUi: { typing: boolean; /** tool the agent is running, e.g. 'check_weather' */ activity?: string | null; overlay: Overlay; voice: boolean; lastEmergency?: string }
   caretakerUnread: number
   /** Frontend-only: how the elder's setup link was sent, and which guided tours are finished. */
   setup: { sentVia: string | null; sentAt: string | null }
