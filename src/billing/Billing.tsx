@@ -130,7 +130,7 @@ function PlanPageDemo() {
         {plan.id !== 'basic' && (s.billing.cancelAtPeriodEnd
           ? <button className="btn" onClick={() => { resumePlan(); toast('Your plan will renew as normal') }}>Keep my {plan.name} plan</button>
           : <button className="btn ghost" style={{ color: 'var(--sos)' }} onClick={() => { cancelPlan(); toast(`Cancelled — you keep ${plan.name} until ${renew}`) }}>Cancel plan</button>)}
-        <p className="small muted center">Prices in USD, tax included. Free calls reset on the 1st of each month; care credit never expires. Cancel any time.</p>
+        <p className="small muted center">Sample prices in USD — payments aren’t switched on yet; local pricing (₹, ฿) comes with them. Free calls reset on the 1st of each month; care credit never expires. Cancel any time.</p>
       </div></div>
     </>
   )

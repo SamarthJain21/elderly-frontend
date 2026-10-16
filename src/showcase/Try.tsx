@@ -67,11 +67,12 @@ export function TrySandbox() {
           <div className="card try-steps">
             <p className="eyebrow">Things to try — every reply is Gemini, live</p>
             <ol>
-              <li>On {sb.elder.name}’s phone, tap a mood to start today’s <b>check-in</b> — it chats, then {sb.caretaker.name} sees the summary.</li>
-              <li>Ask <b>“Will it rain today?”</b> or <b>“Order me breakfast”</b> — it acts within the rules {sb.caretaker.name} set, and asks before spending.</li>
+              <li>On {sb.caretaker.name}’s phone: <b>“Keep an eye”</b> — Gemini noticed {sb.elder.name}’s mood has been low for two days, compared with {sb.elder.name}’s usual.</li>
+              <li>On {sb.elder.name}’s phone, tap a mood to start today’s <b>check-in</b> — a short chat; {sb.caretaker.name} sees the summary.</li>
+              <li>Ask <b>“Will it rain today?”</b> or <b>“Order me breakfast”</b> — it acts within {sb.caretaker.name}’s rules and asks before spending.</li>
               <li>Tap the mic and speak, in {LANGS.find(([l]) => l === sb.language)?.[1]} or any language — it answers in {sb.elder.name}’s language.</li>
-              <li>Say <b>“I fell in the bathroom”</b> — {sb.caretaker.name}’s app gets an emergency alert straight away.</li>
-              <li>On {sb.caretaker.name}’s home, see how the last two low days are noticed — and message {sb.elder.name} with one-tap replies.</li>
+              <li>In {sb.caretaker.name}’s Chat, tap <b>“Did you take your medicine?”</b> — {sb.elder.name} hears it and answers with one tap.</li>
+              <li>Say <b>“I fell in the bathroom”</b> or hold the red button — {sb.caretaker.name}’s phone shows the alert straight away.</li>
             </ol>
           </div>
         </>

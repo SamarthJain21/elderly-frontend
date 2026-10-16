@@ -11,7 +11,7 @@ import type { Insights,
 import type { Billing, PlanId } from '../lib/plans'
 import { defaultRules } from '../lib/policy'
 import { currencyForTimezone } from '../lib/money'
-import { SANDBOX_FRAME, isLive } from './mode'
+import { EMBEDDED, SANDBOX_FRAME, isLive } from './mode'
 
 /** amountMinor is US cents — subscriptions and top-ups are billed in USD. */
 export interface LedgerEntry { id: string; date: string; description: string; amount: number; kind: 'topup' | 'included' | 'call' | 'emergency' }
@@ -171,7 +171,8 @@ export function seed(): DemoState {
     elderUi: { typing: false, overlay: null, voice: true },
     caretakerUnread: 0,
     setup: { sentVia: 'SMS', sentAt: minsAgo(60 * 24 * 6) },
-    tours: { caretaker: false, elder: false },
+    // Side by side, two tours at once is 15 steps before anything happens; the ❓ buttons still open them.
+    tours: { caretaker: EMBEDDED, elder: EMBEDDED },
     live: { status: 'demo', role: null, uid: null, email: null, displayName: null, elderId: null, elders: [], connected: false },
     ackedLogs: [],
   }
@@ -218,7 +219,8 @@ export function emptyLive(): DemoState {
     checkin: { status: 'upcoming', mood: null, stage: null },
     billing: { ...base.billing, volunteerUsed: 0, balance: 0, ledger: [], invoices: [], paymentMethod: null },
     setup: { sentVia: null, sentAt: null },
-    tours: { caretaker: false, elder: false },
+    // Side by side, two tours at once is 15 steps before anything happens; the ❓ buttons still open them.
+    tours: { caretaker: EMBEDDED, elder: EMBEDDED },
     live: { status: 'loading', role: null, uid: null, email: null, displayName: null, elderId: null, elders: [], connected: false },
   }
 }

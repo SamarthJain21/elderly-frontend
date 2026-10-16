@@ -18,41 +18,63 @@ function TopBar({ children }: { children?: React.ReactNode }) {
   )
 }
 
+const FEATURES: [string, string, string][] = [
+  ['🗣️', 'Talks in their language', 'Hindi, Hinglish, Thai or English. They speak or tap; replies are read aloud in a natural Google voice.'],
+  ['✅', 'Gets things done — safely', 'Orders food and medicine, books a ride, sets reminders, finds a neighbour to fix things — within the spending limits and approvals the family sets.'],
+  ['💛', 'A daily check-in', 'A one-minute chat about mood, sleep, meals and medicines. The family sees the summary, and is told when the week drifts from normal.'],
+  ['🚨', 'Help in one press', 'Hold the red button — or just say “I fell”. Family and trusted neighbours are alerted straight away.'],
+]
+
+const GOOGLE_AI: [string, string][] = [
+  ['Gemini on Vertex AI', 'runs every conversation with function calling. The model must act through tools, and the family’s rules are enforced in code — it can’t pretend it did something. Flash-Lite answers in about a second; Flash steps in if it’s busy.'],
+  ['Gemini understands and summarises', '— it pulls mood, sleep, meals and worries out of the check-in chat, and writes the family’s weekly note.'],
+  ['Cloud Text-to-Speech (Chirp 3 HD)', 'gives the helper a warm voice in Hindi, Thai and English; Hinglish is rewritten in Devanagari by Gemini first.'],
+  ['Built and run on Google Cloud', '— Cloud Run, Firestore, Firebase Auth and Hosting, Cloud Build. Checked by a 30-case test suite in four languages.'],
+]
+
+const SCREENS: [string, string, string, string][] = [
+  ['/elder?demo', '👵', 'Elder app', 'Voice-first home, big buttons, faces to call, hold for help.'],
+  ['/caretaker?demo', '👩', 'Family app', 'How they’re doing, chat, approvals, the helper’s rules.'],
+  ['/onboarding/caretaker?demo', '🚀', 'Family setup', 'Privacy first, then routine, medicines and rules.'],
+  ['/onboarding/elder?demo', '🤝', 'Elder’s first run', 'Meet the helper, try the mic — read aloud.'],
+  ['/pricing', '💳', 'Plans', 'All AI is free; top up for volunteer visits.'],
+]
+
 export function Launcher() {
-  const toast = useToast()
-  const cards: [string, string, string, string][] = [
-    ['/try', '✨', 'Try it with real AI', 'Your own private sandbox on the live server: Gemini on Vertex AI, both phones side by side.'],
-    ['/demo', '📱📱', 'Live side-by-side', 'Grandma’s phone and Emma’s phone, talking to each other in real time.'],
-    ['/elder', '👵', 'Elder app', 'Voice-first home, big buttons, faces to call, hold-for-help.'],
-    ['/caretaker', '👩', 'Caretaker app', 'Status, chat, approvals, helper rules, plan & billing.'],
-    ['/onboarding/caretaker', '🚀', 'Caretaker onboarding', 'Privacy first, then your loved one’s details, routine, medicines, rules, plan.'],
-    ['/onboarding/elder', '🤝', 'Elder onboarding', 'Scan code, meet the helper, try the mic — read aloud.'],
-    ['/pricing', '💳', 'Care credit & plans', 'Free AI. Top up from $5, $1 per volunteer call, emergencies never blocked.'],
-  ]
+  const s = useDemo()
+  const signedIn = isLive() && s.live.status === 'ready'
   return (
     <div style={{ minHeight: '100dvh' }}>
-      <TopBar>{isLive()
-        ? <button className="btn sm" onClick={() => switchMode('demo', '/')}>Switch to demo</button>
-        : <><button className="btn sm" onClick={() => switchMode('live', '/')}>Use real account</button>
-          <button className="btn sm" onClick={() => { resetDemo(); toast('Demo data reset') }}>↺ Reset demo</button></>}</TopBar>
+      <TopBar>{signedIn
+        ? <><Link className="btn sm pri" to={s.live.role === 'elder' ? '/elder' : '/caretaker'}>Open my app</Link>
+          <button className="btn sm" onClick={() => void signOut()}>Sign out</button></>
+        : <button className="btn sm" onClick={() => switchMode('live', '/login')}>Sign in</button>}</TopBar>
       <div className="launch">
-        <ModeCard />
-        <p className="eyebrow">Prototype showcase</p>
+        <p className="eyebrow">Google AI Builder Cup 2026 · Elder care for India and Thailand</p>
         <h1>A helper your loved one can talk to.<br />Peace of mind for family.</h1>
-        <p className="lead">Elders speak naturally; an AI helper acts within rules their family sets; volunteers nearby handle the hands-on help. {isLive() ? 'Signed in, everything is saved on the Elderly server; the side-by-side showcase always uses demo data.' : 'Everything here runs in the browser with demo data — open it on a phone for the real feel.'}</p>
-        <div className="lgrid">
-          {cards.map(([to, ic, t, d]) => (
+        <p className="lead">Millions of older adults live alone while their children work in other cities. Elderly is a companion
+          they simply talk to — that checks in every day, gets things done within rules the family sets, and tells the family
+          when something’s wrong.</p>
+        <div className="hero-cta">
+          <Link className="btn pri hero-btn" to="/try">✨ Try it live with Gemini</Link>
+          <Link className="btn" to="/demo">Scripted demo (offline, no AI)</Link>
+        </div>
+        <p className="small muted">No sign-in: you get a private sandbox — an elder’s phone and their family’s, side by side — deleted after 24 hours.</p>
+
+        <div className="lgrid feat">
+          {FEATURES.map(([ic, t, d]) => <div key={t} className="card lcard"><span className="ic">{ic}</span><h3>{t}</h3><p>{d}</p></div>)}
+        </div>
+
+        <div className="card gai">
+          <p className="eyebrow">How it uses Google AI</p>
+          <ul>{GOOGLE_AI.map(([b, t]) => <li key={b}><b>{b}</b> {t}</li>)}</ul>
+        </div>
+
+        <p className="eyebrow" style={{ marginTop: 32 }}>Explore the screens (demo data)</p>
+        <div className="lgrid small-cards">
+          {SCREENS.map(([to, ic, t, d]) => (
             <Link key={to} to={to} className="card lcard"><span className="ic">{ic}</span><h3>{t}</h3><p>{d}</p></Link>
           ))}
-        </div>
-        <div className="card" style={{ marginTop: 24 }}>
-          <p className="eyebrow">Try this story</p>
-          <ol style={{ margin: '8px 0 0', paddingLeft: 20, lineHeight: 1.8 }}>
-            <li>Open <b>Live side-by-side</b>. On Emma’s phone tap <b>“Did you take your medicine?”</b> — Grandma hears it and gets big reply buttons.</li>
-            <li>Grandma taps <b>❌ Not yet</b> → Emma gets one-tap next steps (remind, call).</li>
-            <li>Grandma taps <b>🔧 Fix something</b> → the request waits for Emma’s approval and uses a volunteer call.</li>
-            <li>Tap <b>Empty credit</b> → a normal request waits for Emma to <b>Top up $5 & approve</b>, but “The pipe burst, urgent!” still gets help and the credit goes negative.</li>
-          </ol>
         </div>
       </div>
     </div>
@@ -68,6 +90,15 @@ export function SideBySide() {
         <button className="btn sm" onClick={() => { resetDemo(); toast('Demo reset') }}>↺ Reset</button>
         <Link className="btn sm pri" to="/try">Try with real AI ✨</Link>
       </TopBar>
+      <div className="card demo-note">
+        <p><b>Scripted offline demo — the helper’s replies here are canned, not AI.</b> For the real Gemini, <Link to="/try">try it live ✨</Link>.</p>
+        <ol>
+          <li>On Emma’s phone open Chat and tap <b>“Did you take your medicine?”</b> — Grandma hears it with big reply buttons.</li>
+          <li>Grandma taps <b>❌ Not yet</b> → Emma gets one-tap next steps (remind, call).</li>
+          <li>Grandma taps <b>🔧 Fix something</b> → it waits for Emma’s approval and uses a volunteer visit.</li>
+          <li>Tap <b>Empty credit</b> → a normal request waits for a top-up, but “The pipe burst, urgent!” still gets help.</li>
+        </ol>
+      </div>
       <div className="duo">
         <div className="col"><b>👵 Grandma’s phone (Elder)</b><iframe src="/elder?embed=1" title="Elder app" /></div>
         <div className="col"><b>👩 Emma’s phone (Caretaker)</b><iframe src="/caretaker?embed=1" title="Caretaker app" /></div>
@@ -88,7 +119,7 @@ export function Pricing() {
         <div className="row" style={{ margin: '20px 0', flexWrap: 'wrap' }}>
           <CycleToggle cycle={cycle} setCycle={setCycle} />
           <span className="grow" />
-          <span className="small muted">Prices in USD</span>
+          <span className="small muted">Sample prices (USD) · payments not live yet</span>
         </div>
         <PlanCards cycle={cycle} onChoose={() => { window.location.href = '/onboarding/caretaker' }} />
         <div className="card" style={{ marginTop: 18 }}>
@@ -103,28 +134,3 @@ export function Pricing() {
 }
 
 /** Live = signed in to the real Elderly server; demo = everything in this browser. */
-function ModeCard() {
-  const s = useDemo()
-  if (!isLive()) return (
-    <div className="card row" style={{ marginBottom: 20, gap: 12, flexWrap: 'wrap' }}>
-      <span style={{ fontSize: 26 }}>🧪</span>
-      <div className="grow" style={{ minWidth: 200 }}><b>Demo mode</b><p className="small muted">Pretend data in this browser — nothing is sent anywhere.</p></div>
-      <button className="btn pri sm" onClick={() => switchMode('live', '/login')}>Sign in for real</button>
-    </div>
-  )
-  const st = s.live.status
-  return (
-    <div className="card row" style={{ marginBottom: 20, gap: 12, flexWrap: 'wrap' }}>
-      <span style={{ fontSize: 26 }}>🔐</span>
-      <div className="grow" style={{ minWidth: 200 }}>
-        <b><span className={`live-dot ${s.live.connected ? 'on' : ''}`} />Live — real Elderly server</b>
-        <p className="small muted">{st === 'signedOut' ? 'Not signed in.' : st === 'loading' ? 'Checking your account…'
-          : st === 'error' ? `Can’t connect: ${s.live.error}` : `Signed in as ${s.live.email}${s.live.role ? ` (${s.live.role === 'elder' ? 'elder' : 'family'})` : ''}.`}</p>
-      </div>
-      {st === 'signedOut' ? <Link className="btn pri sm" to="/login">Sign in</Link>
-        : st === 'ready' ? <><Link className="btn pri sm" to={s.live.role === 'elder' ? '/elder' : '/caretaker'}>Open my app</Link>
-          <button className="btn sm" onClick={() => void signOut()}>Sign out</button></>
-        : st === 'needsOnboarding' || st === 'needsElder' ? <Link className="btn pri sm" to="/onboarding/caretaker">Finish setting up</Link> : null}
-    </div>
-  )
-}

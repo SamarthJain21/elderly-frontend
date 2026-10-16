@@ -9,13 +9,11 @@ import { CaretakerOnboarding, ElderOnboarding, JoinLink } from './onboarding/Onb
 import { Launcher, Pricing, SideBySide } from './showcase/Showcase'
 import { LiveGate, Login } from './live/Login'
 import { TrySandbox } from './showcase/Try'
-import { isLive } from './data/mode'
+import { EMBEDDED as embedded, isLive } from './data/mode'
 import { bootLive } from './data/live'
 
 if (isLive()) bootLive()
 
-// Inside the side-by-side demo the apps fill their iframe (no phone frame of their own).
-const embedded = new URLSearchParams(location.search).has('embed') || window.self !== window.top
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

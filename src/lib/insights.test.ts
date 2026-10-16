@@ -23,4 +23,8 @@ describe('demoInsights mirrors the backend rules', () => {
     const data = [...Array.from({ length: 13 }, (_, i) => ci(i + 1)), ci(0, 'bad')]
     expect(demoInsights(data, TODAY).drifts).toEqual([])
   })
+  it('a good check-in today keeps the drift until tomorrow', () => {
+    const data = [...Array.from({ length: 11 }, (_, i) => ci(i + 3)), ci(2, 'low'), ci(1, 'low'), ci(0, 'good')]
+    expect(demoInsights(data, TODAY).drifts.map(d => [d.signal, d.days, d.since])).toEqual([['mood', 2, day(2)]])
+  })
 })

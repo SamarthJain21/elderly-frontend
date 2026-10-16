@@ -1,6 +1,6 @@
 /**
  * Demo-mode mirror of app/insights.py (live mode always uses the backend's result).
- * Same rules: per-signal 7-day personal baseline, drift after 2+ consecutive off days.
+ * Same rules: per-signal 7-day personal baseline, drift after 2+ consecutive off days, judged on complete days.
  */
 import type { CheckInRecord, Drift, Insights, InsightSignal, InsightWeek } from './types'
 
@@ -35,14 +35,17 @@ export function demoInsights(history: CheckInRecord[], today = new Date()): Insi
   const drifts: Drift[] = []
   for (const s of ['mood', 'sleep', 'medication', 'checkins'] as InsightSignal[]) {
     const vals = window.map(d => value(byDay.get(d), s))
-    let run = 0
-    for (let i = vals.length - 1; i >= 0; i--) {
+    const offAt = (i: number) => {
       const v = vals[i]
       const base = vals.slice(Math.max(0, i - 7), i).filter((x): x is number => x !== null)
-      if (v === null || base.length < 3 || !off(v, mean(base), s)) break
-      run++
+      return v !== null && base.length >= 3 && off(v, mean(base), s)
     }
-    if (run >= 2) drifts.push({ signal: s, days: run, since: window[window.length - run], detail: `${WORDS[s]} for ${run} days` })
+    // Judged on complete days: today can extend a run, but one good answer today doesn't clear it until tomorrow.
+    let newest = vals.length - 1
+    if (doneToday && !offAt(newest)) newest--
+    let run = 0
+    for (let i = newest; i >= 0 && offAt(i); i--) run++
+    if (run >= 2) drifts.push({ signal: s, days: run, since: window[newest - run + 1], detail: `${WORDS[s]} for ${run} days` })
   }
   const lastWeek = window.slice(-7).map(d => byDay.get(d)).filter((c): c is CheckInRecord => c?.status === 'done')
   const moods = lastWeek.flatMap(c => (c.mood ? [MOOD[c.mood]] : []))

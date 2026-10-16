@@ -427,7 +427,7 @@ export function CaretakerOnboarding() {
         {showPlans ? '▾' : '▸'} Or save with a monthly plan {plan !== 'basic' ? `(${plan === 'pro' ? 'Pro' : 'Premium'} selected)` : ''}
       </button>
       {showPlans && <>
-        <div className="row" style={{ flexWrap: 'wrap' }}><span className="grow small muted">Prices in USD</span><CycleToggle cycle={cycle} setCycle={setCycle} /></div>
+        <div className="row" style={{ flexWrap: 'wrap' }}><span className="grow small muted">Sample prices (USD) · payments not live yet</span><CycleToggle cycle={cycle} setCycle={setCycle} /></div>
         <PlanCards cycle={cycle} current={plan === 'basic' ? undefined : plan} onChoose={id => { setPlan(id); if (id === 'basic') setStartFree(true) }} compact />
       </>}
     </> },

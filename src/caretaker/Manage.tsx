@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { nick, resetDemo, update, useDemo } from '../data/store'
 import { addContact, addReminder, caretakerDecide, deleteReminder, helperVisitsLeft, quotaLeft, setElderLanguage, setNickname, setRuleLimit, setRuleMode, setSharingTier, setTrustedOnly, toggleTrusted } from '../data/actions'
-import { isLive, switchMode } from '../data/mode'
+import { EMBEDDED, isLive, switchMode } from '../data/mode'
 import { selectElder, signOut } from '../data/live'
 import { ComingSoon } from '../components/ui'
 import { Face } from '../components/Face'
@@ -273,7 +273,8 @@ export function More() {
         </div>
         <div className="card">
           <Link to="/caretaker" className="list-row" onClick={() => update(d => { d.tours.caretaker = false })}><span style={{ fontSize: 24, width: 32, textAlign: 'center' }}>🧭</span><div className="grow"><p className="t">Take the tour again</p><p className="s">A 1-minute walk through the app</p></div><span className="chev">›</span></Link>
-          <Link to="/" className="list-row"><span style={{ fontSize: 24, width: 32, textAlign: 'center' }}>🧪</span><div className="grow"><p className="t">Showcase menu</p><p className="s">Side-by-side demo, onboarding, pricing</p></div><span className="chev">›</span></Link>
+          {/* Developer showcase links: only in the standalone demo, never for real users or inside /demo, /try. */}
+          {!isLive() && !EMBEDDED && <Link to="/" className="list-row"><span style={{ fontSize: 24, width: 32, textAlign: 'center' }}>🧪</span><div className="grow"><p className="t">Showcase menu</p><p className="s">Side-by-side demo, onboarding, pricing</p></div><span className="chev">›</span></Link>}
         </div>
       </div></div>
     </>
