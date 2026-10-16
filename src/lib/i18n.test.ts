@@ -24,8 +24,16 @@ describe('elder app translations', () => {
     expect(missed).toEqual([])
   })
 
+  it('hi-Latn: Hinglish is Roman-script Hindi — no Devanagari, and not just English', () => {
+    const all = texts(strings('hi-Latn'))
+    expect(all.filter(s => DEVANAGARI.test(s))).toEqual([])
+    const en = texts(strings('en-US'))
+    const same = all.filter((s, i) => s === en[i] && /[a-z]{4,}/i.test(s))
+    expect(same.length).toBeLessThan(all.length * 0.1)  // a few loanwords ("Helper", "Taxi") are fine
+  })
+
   it('the tour has the same six steps in every language', () => {
-    for (const lang of ['en-US', 'hi-IN', 'th-TH'] as const) expect(strings(lang).tour('Nok')).toHaveLength(6)
+    for (const lang of ['en-US', 'hi-IN', 'hi-Latn', 'th-TH'] as const) expect(strings(lang).tour('Nok')).toHaveLength(6)
   })
 
   it('languages without a translation fall back to English', () => {

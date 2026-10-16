@@ -18,10 +18,13 @@ export const canSpeak = () => typeof window !== 'undefined' && 'speechSynthesis'
 
 let active: SR | null = null
 
+/** Browser speech locale: Hinglish is spoken Hindi (the hi-IN recognizer and voices handle the mix). */
+export const speechLocale = (lang: Language): string => lang === 'hi-Latn' ? 'hi-IN' : lang
+
 export function listen(lang: Language, onText: (t: string) => void, onEnd: (err?: string) => void): () => void {
   if (!SRCtor) { onEnd('unsupported'); return () => {} }
   const r = new SRCtor()
-  r.lang = lang; r.interimResults = false; r.maxAlternatives = 1
+  r.lang = speechLocale(lang); r.interimResults = false; r.maxAlternatives = 1
   // onerror and onend both fire on errors — report the end exactly once.
   let ended = false
   const finish = (err?: string) => {
@@ -130,7 +133,7 @@ function speakDevice(clean: string, lang: Language, rate: number): boolean {
   const voice = voices.find(v => v.voiceURI === savedVoiceURI(lang)) ?? voices[0]
   if (!voice) return false
   const u = new SpeechSynthesisUtterance(clean)
-  u.lang = lang; u.rate = rate; u.voice = voice
+  u.lang = speechLocale(lang); u.rate = rate; u.voice = voice
   u.onend = () => { if (current === u) current = null }
   current = u
   const go = () => {

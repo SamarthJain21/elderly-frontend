@@ -148,7 +148,7 @@ export function connectChat(elderId: string, getToken: TokenFn, onFrame: (f: Ser
 }
 
 // ---------- 'Try with real AI' (app/routers/sandbox_api.py) — no sign-in ----------
-export type SandboxLanguage = 'en-US' | 'hi-IN' | 'th-TH'
+export type SandboxLanguage = 'en-US' | 'hi-IN' | 'hi-Latn' | 'th-TH'
 export interface Sandbox {
   elderId: string; language: SandboxLanguage; expiresAt: string
   elder: { name: string; email: string; password: string }

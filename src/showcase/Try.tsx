@@ -7,7 +7,7 @@ import { createSandbox, type Sandbox, type SandboxLanguage } from '../data/api'
  * of history) and shows both apps side by side, each frame signed in to its own account (see lib/firebase.ts).
  */
 const KEY = 'elderly-try'
-const LANGS: [SandboxLanguage, string][] = [['en-US', 'English'], ['hi-IN', 'हिन्दी'], ['th-TH', 'ไทย']]
+const LANGS: [SandboxLanguage, string][] = [['en-US', 'English'], ['hi-IN', 'हिन्दी'], ['hi-Latn', 'Hinglish'], ['th-TH', 'ไทย']]
 
 /** Reuse this tab's sandbox after a reload while it has at least an hour left. */
 function saved(): Sandbox | null {

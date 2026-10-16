@@ -286,7 +286,7 @@ const TIERS: [SharingTier, string, string][] = [
   ['daily_summary', 'Daily summary', 'Mood, check-ins and helper actions (recommended)'],
   ['full_access', 'Full access', 'Also their conversations with the helper'],
 ]
-const LANGS: [string, string][] = [['en-US', 'English'], ['hi-IN', 'हिन्दी Hindi'], ['th-TH', 'ไทย Thai'], ['ja-JP', '日本語 Japanese'], ['ko-KR', '한국어 Korean']]
+const LANGS: [string, string][] = [['en-US', 'English'], ['hi-IN', 'हिन्दी Hindi'], ['hi-Latn', 'Hinglish (Hindi in English letters)'], ['th-TH', 'ไทย Thai'], ['ja-JP', '日本語 Japanese'], ['ko-KR', '한국어 Korean']]
 
 export function Settings() {
   const s = useDemo()

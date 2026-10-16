@@ -33,7 +33,7 @@ function Frame({ step, total, onBack, children, foot }: { step: number; total: n
   )
 }
 
-const LANGS: [Language, string][] = [['en-US', 'English'], ['hi-IN', 'हिन्दी Hindi'], ['th-TH', 'ไทย Thai'], ['ja-JP', '日本語 Japanese'], ['ko-KR', '한국어 Korean']]
+const LANGS: [Language, string][] = [['en-US', 'English'], ['hi-IN', 'हिन्दी Hindi'], ['hi-Latn', 'Hinglish (Hindi in English letters)'], ['th-TH', 'ไทย Thai'], ['ja-JP', '日本語 Japanese'], ['ko-KR', '한국어 Korean']]
 const NICKS = ['Mom', 'Dad', 'Grandma', 'Grandpa', 'Nana', 'Papa']
 /** Sensible default for "you are their…" from what you call them. */
 const relFor = (n: string) => /^(mom|dad|mum|mother|father|ma|pa)$/i.test(n) ? 'daughter' : /grand|nana|papa|granny|gran/i.test(n) ? 'granddaughter' : 'family'

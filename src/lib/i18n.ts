@@ -144,6 +144,73 @@ const HI: Strings = {
   voiceBrowser: 'आवाज़ Chrome या Edge में चलती है — बटन दबाइए या लिखिए', micError: e => `माइक्रोफ़ोन: ${e}`,
 }
 
+const HL: Strings = {
+  locale: 'en-IN',
+  greet: { morning: 'Good morning,', afternoon: 'Namaste,', evening: 'Good evening,' },
+  feeling: { morning: 'Aaj subah aap kaisa feel kar rahe hain?', afternoon: 'Aaj dopahar aap kaisa feel kar rahe hain?', evening: 'Aaj shaam aap kaisa feel kar rahe hain?' },
+  help: '❓ Madad', helpAria: 'Mujhe dikhaiye yeh kaise kaam karta hai',
+  moodGood: 'Accha', moodOkay: 'Theek-thaak', moodBad: 'Accha nahi',
+  checkedIn: '✓ Aaj ka haal bata diya — dhanyavaad!', finishCheckin: '💬 Apna haal batana poora kariye ›',
+  micAria: 'Apne helper se baat kariye', listening: 'Main sun rahi hoon…', tapAndTell: ['Dabaiye aur bataiye', 'aapko kya chahiye'],
+  tapFace: 'Phone karne ke liye chehra dabaiye', noFaces: 'Aapki family yahan apni photos lagayegi.', callAria: n => `${n} ko phone kariye`,
+  whatNeed: 'Aapko kya chahiye?',
+  tileMedicine: 'Meri dawai', tileFood: 'Khana', tileRide: 'Gaadi', tileFix: 'Kuch theek karwana hai', tileOk: c => `${c} ko bataiye main theek hoon`, tileDay: 'Mera din',
+  sayMedicine: 'Meri dawai mangwa dijiye', sayFood: 'Mujhe bhookh lagi hai, kuch khana mangwa dijiye', sayRide: 'Mujhe clinic jaane ke liye taxi chahiye',
+  sayFix: 'Ghar mein kuch kharab ho gaya hai, theek karne ke liye kisi ko bhej dijiye', sayCall: c => `${c} ko phone kijiye`,
+  helperVisits: 'Bachi hui helper visits:',
+  myFamily: 'meri family', yourFamily: 'aapki family',
+  sosHold: 'Madad ke liye dabakar rakhiye', sosSub: 'Family aur padosi ko khabar jaayegi', sosAria: 'Madad ke liye dabakar rakhiye',
+  home: '‹ Home', talk: 'Baat kariye', voiceOn: 'Awaaz chalu kariye', voiceOff: 'Awaaz band kariye',
+  helper: 'Helper', hello: n => `Namaste ${n} ji. Main aapki kya madad karoon?`,
+  typeHere: 'Ya yahan likhiye…', typeAria: 'Apni baat likhiye', speak: 'Boliye', typing: 'Helper likh rahi hai',
+  status: { awaiting_elder: 'Aapke jawab ka intezaar', awaiting_caretaker: 'Family ki manzoori ka intezaar', done: 'Ho gaya', handed_off: 'Book karne ke liye ready',
+    declined: 'Is baar nahi', cancelled: 'Cancel ho gaya', blocked: 'Allowed nahi hai', failed: 'Nahi ho paaya' },
+  tool: { order_food: 'Khane ka order', order_medicine: 'Dawai ka order', book_ride: 'Taxi', set_reminder: 'Reminder',
+    send_message_to_caretaker: 'Family ko message', notify_volunteer: 'Ghar par madad', escalate_emergency: 'Emergency' },
+  yesPlease: 'Haan ji, kar dijiye', noThanks: 'Nahi, dhanyavaad',
+  sentTo: c => `${c} ko bheja ✓`, sentYou: '🔊 ne aapko message bheja', yourRel: r => `aapke ${r}`, family: 'family',
+  playFrom: n => `${n} ka message suniye`, listenMsg: 'Yeh message suniye',
+  messageFrom: n => `${n} ka message.`, youCanAnswer: 'Aap jawab de sakte hain:', or: ', ya ', done: 'ho gaya',
+  myDay: 'Mera din', nothingToday: 'Aaj kuch plan nahi hai. Din enjoy kariye! ☀️', nothingTodaySay: 'Aaj kuch plan nahi hai.',
+  readDay: '🔊 Mera din padhkar sunaiye', atTime: (t, what) => `${t} baje, ${what}`,
+  alerting: 'Family ko khabar de rahe hain…', alertingAria: 'Family ko khabar de rahe hain', seriousCall: n => `Agar haalat serious hai to intezaar mat kariye — abhi ${n} par phone kariye.`,
+  callNum: n => `📞 ${n} par phone kariye`, couldntReach: 'Hum aapki family tak nahi pahunch paaye', callYourself: 'Please abhi khud madad ke liye phone kariye.',
+  tryAgain: 'Phir se khabar bhejiye', close: 'Band kariye', alerted: 'Aapki family ko khabar de di gayi hai',
+  alertedBody: n => `Agar haalat serious hai to abhi ${n} par phone kariye. Jahan hain wahin rahiye — madad aa rahi hai.`, safeNow: 'Ab main theek hoon',
+  gettingHelp: 'Aapke liye madad bula rahe hain', alertIn: 'Family ko khabar jaayegi', imOk: 'Main theek hoon — rokiye', alertNow: 'Abhi khabar bhejiye',
+  incoming: 'Video call aa rahi hai', isCalling: n => `${n} aapko phone kar rahe hain`, answer: '📞 Uthaiye', notNow: 'Abhi nahi',
+  onCall: 'Call chal rahi hai', calling: 'Phone lag raha hai…', speakerOn: 'Speaker chalu hai', locationShared: 'Aapki location bhej di gayi hai', endCall: 'Call khatam kariye',
+  tour: c => [
+    { title: 'Mujhse baat kijiye', say: `Hara button dabaiye aur bas bataiye aapko kya chahiye. Jaise, ${c} ko phone karo, ya meri dawai mangwao.`,
+      body: `Hara button dabaiye aur bataiye aapko kya chahiye — jaise “${c} ko phone karo” ya “Meri dawai mangwao”.` },
+    { title: `${c} ke messages`, say: `${c} ke messages yahan aate hain. Main unhe padhkar sunati hoon. Jawab dene ke liye bada button dabaiye.`,
+      body: `${c} ke messages yahan aate hain. Main unhe padhkar sunati hoon — jawab dene ke liye bada button dabaiye.` },
+    { title: 'Aaj aap kaise hain?', say: 'Har din main aapka haal poochungi. Bas ek chehra dabaiye.', body: 'Har din main aapka haal poochungi. Bas ek chehra dabaiye.' },
+    { title: 'Aapke apne', say: 'Apne kisi pyaare ko phone karne ke liye unka chehra dabaiye.', body: 'Apne kisi pyaare ko phone karne ke liye unka chehra dabaiye.' },
+    { title: 'Bade buttons', say: 'Dawai, khana, gaadi, ya ghar mein kuch theek karwane ke liye bada button bhi daba sakte hain.',
+      body: 'Ya bada button dabaiye — dawai, khana, gaadi, ya ghar mein kuch theek karwane ke liye.' },
+    { title: 'Madad chahiye?', say: 'Agar kabhi madad chahiye, to laal button dabakar rakhiye. Aapki family ko turant khabar jaayegi.',
+      body: 'Agar kabhi madad chahiye, to laal button dabakar rakhiye. Aapki family ko turant khabar jaayegi.' },
+  ],
+  tourUi: { of: (i, n) => `${n} mein se ${i}`, close: 'Band kariye', again: '🔊 Phir se', next: 'Aage ›', done: 'Theek hai 👍', againAria: 'Phir se sunaiye' },
+  ob: {
+    hello: 'Namaste!', setUp: c => `${c} ne aapke liye sab kuch set kar diya hai. Chaliye main aapko dikhati hoon — bas do minute lagenge.`,
+    start: 'Shuru kariye', next: 'Aage', skip: 'Chhodiye', back: 'Peeche',
+    hi: n => `Namaste ${n} ji!`, imHelper: 'Main aapki helper hoon. Bas hara button dabaiye aur bataiye aapko kya chahiye.',
+    imHelperSay: n => `Namaste ${n} ji! Main aapki helper hoon. Bas hara button dabaiye aur bataiye aapko kya chahiye. Main aapki family ko phone kar sakti hoon, aapki dawai mangwa sakti hoon, ya cheezein theek karne ke liye kisi ko bula sakti hoon.`,
+    sayAgain: '🔊 Phir se sunaiye',
+    micTitle: 'Kya main sun sakti hoon jab aap button dabayein?', micBody: 'Main sirf hara button dabane ke baad sunti hoon. Main aapke shabd rakhti hoon, recording nahi.',
+    micSay: 'Aapki baat sunne ke liye mujhe microphone chahiye. Please Allow dabaiye.', allowMic: 'Microphone allow kariye',
+    tryTitle: 'Chaliye try karte hain', tryBody: 'Button dabaiye aur kahiye “Namaste”', trySay: 'Chaliye try karte hain. Hara button dabaiye aur namaste kahiye.',
+    heard: t => `✓ Maine suna: “${t}”`, niceToMeet: n => `Aapse milkar bahut accha laga, ${n} ji!`, helloWord: 'Namaste',
+    peopleTitle: 'Aapke apne', peopleBody: 'Phone karne ke liye chehra dabaiye.', peopleSay: 'Yeh aapke apne hain. Phone karne ke liye chehra dabaiye.',
+    setTitle: 'Sab ready hai!', setBody: 'Agar kabhi madad chahiye, to laal button dabakar rakhiye.',
+    setSay: 'Sab ready hai! Agar kabhi madad chahiye, to laal button dabakar rakhiye.', startUsing: 'Elderly shuru kariye',
+  },
+  signingIn: 'Aapko sign in kar rahe hain…',
+  voiceBrowser: 'Awaaz Chrome ya Edge mein chalti hai — button dabaiye ya likhiye', micError: e => `Microphone: ${e}`,
+}
+
 const TH: Strings = {
   locale: 'th-TH',
   greet: { morning: 'อรุณสวัสดิ์ค่ะ', afternoon: 'สวัสดีตอนบ่ายค่ะ', evening: 'สวัสดีตอนเย็นค่ะ' },
@@ -211,7 +278,7 @@ const TH: Strings = {
   voiceBrowser: 'ใช้เสียงได้ใน Chrome หรือ Edge — แตะปุ่มหรือพิมพ์แทนได้ค่ะ', micError: e => `ไมโครโฟน: ${e}`,
 }
 
-const BY_LANG: Partial<Record<Language, Strings>> = { 'en-US': EN, 'hi-IN': HI, 'th-TH': TH }
+const BY_LANG: Partial<Record<Language, Strings>> = { 'en-US': EN, 'hi-IN': HI, 'hi-Latn': HL, 'th-TH': TH }
 
 export const strings = (lang: Language): Strings => BY_LANG[lang] ?? EN
 export const partOfDay = (h = new Date().getHours()): 'morning' | 'afternoon' | 'evening' =>

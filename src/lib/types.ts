@@ -4,7 +4,8 @@
  */
 
 // app/routers/elders.py
-export type Language = 'en-US' | 'hi-IN' | 'th-TH' | 'ja-JP' | 'ko-KR'
+/** hi-Latn = Hinglish: Hindi in Roman letters, mixed with English (how many people in India text). */
+export type Language = 'en-US' | 'hi-IN' | 'hi-Latn' | 'th-TH' | 'ja-JP' | 'ko-KR'
 // app/autonomy.py
 export type Currency = 'INR' | 'THB' | 'SGD'
 export type Mode = 'autonomous' | 'elder_confirm' | 'caretaker_approve' | 'blocked'

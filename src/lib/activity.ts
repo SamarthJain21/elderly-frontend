@@ -17,6 +17,12 @@ const LABELS: Partial<Record<Language, Labels>> = {
     check_weather: 'मौसम देख रहे हैं…', notify_volunteer: 'मदद के लिए किसी को बुला रहे हैं…', call_contact: 'कॉल तैयार कर रहे हैं…',
     escalate_emergency: 'परिवार को खबर कर रहे हैं…',
   },
+  'hi-Latn': {
+    order_food: 'Khana dhoondh rahe hain…', order_medicine: 'Dawai dekh rahe hain…', book_ride: 'Taxi dhoondh rahe hain…',
+    set_reminder: 'Reminder laga rahe hain…', send_message_to_caretaker: 'Family ko bhej rahe hain…',
+    check_weather: 'Mausam dekh rahe hain…', notify_volunteer: 'Madad ke liye kisi ko bula rahe hain…', call_contact: 'Call ready kar rahe hain…',
+    escalate_emergency: 'Family ko khabar kar rahe hain…',
+  },
   'th-TH': {
     order_food: 'กำลังหาอาหาร…', order_medicine: 'กำลังตรวจสอบยา…', book_ride: 'กำลังหารถแท็กซี่…',
     set_reminder: 'กำลังตั้งการเตือน…', send_message_to_caretaker: 'กำลังส่งถึงครอบครัว…',
