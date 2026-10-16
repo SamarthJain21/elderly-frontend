@@ -4,7 +4,8 @@
  */
 
 // app/routers/elders.py
-export type Language = 'en-US' | 'hi-IN' | 'th-TH' | 'ja-JP' | 'ko-KR'
+/** hi-Latn = Hinglish: Hindi in Roman letters, mixed with English (how many people in India text). */
+export type Language = 'en-US' | 'hi-IN' | 'hi-Latn' | 'th-TH' | 'ja-JP' | 'ko-KR'
 // app/autonomy.py
 export type Currency = 'INR' | 'THB' | 'SGD'
 export type Mode = 'autonomous' | 'elder_confirm' | 'caretaker_approve' | 'blocked'
@@ -111,3 +112,12 @@ export interface CheckInRecord {
 
 // app/routers/people.py
 export interface Caretaker { uid: string; name: string; email: string }
+
+// app/insights.py — drift detection + weekly insights (GET /elders/{id}/insights, caretakers)
+export type InsightSignal = 'mood' | 'sleep' | 'medication' | 'checkins'
+export interface Drift { signal: InsightSignal; days: number; since: string; detail: string }
+export interface InsightWeek {
+  days: number; checkinsDone: number; moodAvg: number | null; moodTrend: 'up' | 'down' | 'flat' | null
+  medsTakenPct: number | null; sleptWellPct: number | null; concerns: string[]
+}
+export interface Insights { status: 'stable' | 'watch' | 'concern'; drifts: Drift[]; week: InsightWeek; summary: string | null }

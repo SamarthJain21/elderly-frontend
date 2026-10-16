@@ -9,7 +9,8 @@
  *   Caretakers only get the family thread over the socket, so approvals/logs arrive by polling.
  */
 import { connectChat, contactIn, createApi, ApiError, type BackendAction, type Profile, type ServerFrame, type TodayCheckIn } from './api'
-import { auth, getToken, onUser, signOutUser } from '../lib/firebase'
+import { setCloudVoice } from '../lib/speech'
+import { auth, getToken, isSandboxSigningIn, onUser, sandboxSignIn, signOutUser } from '../lib/firebase'
 import { emptyLive, getState, update, type DemoState } from './store'
 import { formatMoney } from '../lib/money'
 import { notify } from '../components/ui'
@@ -95,7 +96,7 @@ export async function refresh(full = true) {
   if (!elderId) return
   const ct = role === 'caretaker'
   const get = <T,>(p: Promise<T>) => p.catch((e: unknown) => { if (!(e instanceof ApiError && (e.status === 403 || e.status === 409))) console.warn(e); return undefined })
-  const [elder, profile, rules, actions, approvals, today, history, reminders, logs, contacts, requests, caretakers, family] = await Promise.all([
+  const [elder, profile, rules, actions, approvals, today, history, reminders, logs, contacts, requests, caretakers, family, insights] = await Promise.all([
     full ? get(api.elder(elderId)) : undefined,
     full ? get(api.profile(elderId)) : undefined,
     full ? get(api.rules(elderId)) : undefined,
@@ -110,6 +111,7 @@ export async function refresh(full = true) {
     ct && full ? get(api.caretakers(elderId)) : undefined,
     // The socket sends the family thread too; REST covers the first paint and a dropped socket.
     !chatOpen() ? get(api.family(elderId, 40)) : undefined,
+    ct ? get(api.insights(elderId)) : undefined,  // drift + weekly note (backend caches the note per day)
   ])
   if (getState().live.elderId !== elderId) return  // switched elder while loading
   update(d => {
@@ -126,6 +128,7 @@ export async function refresh(full = true) {
         .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
     }
     if (history) d.checkinHistory = history
+    if (insights) d.insights = insights
     if (today) applyToday(d, today)
     if (reminders) d.reminders = reminders
     if (logs) d.logs = logs.map(l => ({ ...l, ack: l.ack || d.ackedLogs.includes(l.id) }))
@@ -142,10 +145,11 @@ export async function refresh(full = true) {
     // No "phone connected" event yet: for family, any sign of the elder using the app counts.
     if (ct && !d.onboarded.elder) d.onboarded.elder = d.family.some(f => f.sender === 'elder') || d.checkinHistory.length > 0
       || d.actions.length > 0 || d.checkin.status === 'in_progress' || d.checkin.status === 'done'
-    if (!ct && full) {
-      // The elder's app names "your family" after the first caretaker it can find.
-      const first = d.elder.emergencyContacts[0]
-      if (first && !d.caretaker.name) d.caretaker = { uid: '', name: first.name, email: '' }
+    if (!ct && elder) {
+      // The elder's app says who set things up: the caretaker, never an emergency contact (often a neighbour).
+      // No name known (older backend) → '' and the UI falls back to "your family".
+      const name = elder.caretakerNames?.[0] ?? ''
+      if (name !== d.caretaker.name) d.caretaker = { uid: '', name, email: '' }
     }
   })
 }
@@ -168,14 +172,14 @@ function onFrame(f: ServerFrame) {
       case 'checkin': applyToday(d, f.checkin); break
       case 'message':
         upsertMessage(d, f.message)
-        if (f.message.sender === 'agent') d.elderUi.typing = false
+        if (f.message.sender === 'agent') { d.elderUi.typing = false; d.elderUi.activity = null }
         break
       case 'action_update':
         upsertCard(d, f.action)
         d.messages.forEach(m => { if (m.id === f.messageId || m.action?.id === f.action.id) m.action = f.action })
         break
-      case 'typing': d.elderUi.typing = true; break
-      case 'error': d.elderUi.typing = false; break
+      case 'typing': d.elderUi.typing = true; d.elderUi.activity = f.tool ?? null; break
+      case 'error': d.elderUi.typing = false; d.elderUi.activity = null; break
     }
   })
   if (f.type === 'error') notify(f.message)
@@ -277,12 +281,15 @@ let booted = false
 export function bootLive() {
   if (booted) return
   booted = true
+  setCloudVoice((text, lang) => api.tts(text, lang))  // natural voice; speak() falls back to the device voice
   // Firebase normally answers in well under a second; if it never does, say so instead of spinning.
   let authAnswered = false
   window.setTimeout(() => {
     if (!authAnswered) update(d => { d.live.status = 'error'; d.live.error = `Sign-in didn’t start on ${location.host}. If this is a phone on your Wi-Fi, add this address to Firebase → Authentication → Authorized domains, or use the demo.` })
   }, 10_000)
+  sandboxSignIn?.catch((e: unknown) => update(d => { d.live.status = 'error'; d.live.error = (e as Error)?.message || 'Couldn’t open the sandbox' }))
   onUser(u => {
+    if (!u && isSandboxSigningIn()) return  // sandbox frame: its sign-in is still on the way
     authAnswered = true
     stopAll()
     if (!u) {

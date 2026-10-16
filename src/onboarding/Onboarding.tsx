@@ -11,6 +11,7 @@ import { MicIcon, Switch, useToast } from '../components/ui'
 import { currencyForTimezone, TIMEZONES } from '../lib/money'
 import { defaultRules } from '../lib/policy'
 import { canListen, listen, speak } from '../lib/speech'
+import { strings } from '../lib/i18n'
 import type { Address, Contact, Day, Language, Medication, Mode, ToolName } from '../lib/types'
 import { CycleToggle, PlanCards, TopUpPicker } from '../billing/Billing'
 import { CREDIT, formatUsd, planById } from '../lib/plans'
@@ -32,7 +33,7 @@ function Frame({ step, total, onBack, children, foot }: { step: number; total: n
   )
 }
 
-const LANGS: [Language, string][] = [['en-US', 'English'], ['hi-IN', 'हिन्दी Hindi'], ['th-TH', 'ไทย Thai'], ['ja-JP', '日本語 Japanese'], ['ko-KR', '한국어 Korean']]
+const LANGS: [Language, string][] = [['en-US', 'English'], ['hi-IN', 'हिन्दी Hindi'], ['hi-Latn', 'Hinglish (Hindi in English letters)'], ['th-TH', 'ไทย Thai'], ['ja-JP', '日本語 Japanese'], ['ko-KR', '한국어 Korean']]
 const NICKS = ['Mom', 'Dad', 'Grandma', 'Grandpa', 'Nana', 'Papa']
 /** Sensible default for "you are their…" from what you call them. */
 const relFor = (n: string) => /^(mom|dad|mum|mother|father|ma|pa)$/i.test(n) ? 'daughter' : /grand|nana|papa|granny|gran/i.test(n) ? 'granddaughter' : 'family'
@@ -453,55 +454,56 @@ export function ElderOnboarding() {
   const [step, setStep] = useState(0)
   const [heard, setHeard] = useState('')
   const [listening, setListening] = useState(false)
-  const care = s.caretaker.name
-  const family = s.contacts.filter(c => c.kind !== 'volunteer').slice(0, 4)
   const lang = s.elder.language
+  const t = strings(lang).ob
+  const care = s.caretaker.name || strings(lang).yourFamily
+  const family = s.contacts.filter(c => c.kind !== 'volunteer').slice(0, 4)
 
   const steps: { say: string; body: ReactNode; cta: string; next?: () => void }[] = [
-    { say: `Hello! ${care} has set everything up for you. Let me show you around. It only takes two minutes.`, cta: 'Start', body: <>
+    { say: `${t.hello} ${t.setUp(care)}`, cta: t.start, body: <>
       <WaveHand />
-      <h1 className="center" style={{ fontSize: 38 }}>Hello!</h1>
-      <p className="center" style={{ fontSize: 22 }}>{care} has set everything up for you. Let me show you around — it takes two minutes.</p>
+      <h1 className="center" style={{ fontSize: 38 }}>{t.hello}</h1>
+      <p className="center" style={{ fontSize: 22 }}>{t.setUp(care)}</p>
     </> },
-    { say: `Hi ${s.elder.name}! I'm your helper. Just tap the green button and tell me what you need. I can call your family, order your medicine, or find someone to fix things.`, cta: 'Next', body: <>
+    { say: t.imHelperSay(s.elder.name), cta: t.next, body: <>
       <div className="center bob" style={{ marginTop: 10, display: 'flex', justifyContent: 'center' }}><Face k={s.elder.face} name={s.elder.name} size={130} /></div>
-      <h1 className="center" style={{ fontSize: 34 }}>Hi {s.elder.name}!</h1>
-      <p className="center" style={{ fontSize: 22 }}>I’m your helper. Just tap the green button and tell me what you need.</p>
-      <button className="bb no" onClick={() => speak(`Hi ${s.elder.name}! I'm your helper. Just tap the green button and tell me what you need.`, lang)}>🔊 Say it again</button>
+      <h1 className="center" style={{ fontSize: 34 }}>{t.hi(s.elder.name)}</h1>
+      <p className="center" style={{ fontSize: 22 }}>{t.imHelper}</p>
+      <button className="bb no" onClick={() => speak(`${t.hi(s.elder.name)} ${t.imHelper}`, lang)}>{t.sayAgain}</button>
     </> },
-    { say: `To hear you, I need to use the microphone. Please tap Allow.`, cta: 'Allow microphone', next: async () => {
+    { say: t.micSay, cta: t.allowMic, next: async () => {
       // Never get stuck on an ignored permission prompt: move on after 5 s either way.
       const ask = navigator.mediaDevices?.getUserMedia({ audio: true }).then(st => st.getTracks().forEach(t => t.stop()))
       try { await Promise.race([ask, new Promise(r => setTimeout(r, 5000))]) } catch { /* denied: big buttons still work */ }
       setStep(x => x + 1)
     }, body: <>
       <div className="micwrap" style={{ marginTop: 30 }}><div className="mic on" aria-hidden><MicIcon /></div></div>
-      <h1 className="center" style={{ fontSize: 32 }}>Can I listen when you tap?</h1>
-      <p className="center" style={{ fontSize: 21 }}>I only listen after you tap the green button. I keep your words, not recordings.</p>
+      <h1 className="center" style={{ fontSize: 32 }}>{t.micTitle}</h1>
+      <p className="center" style={{ fontSize: 21 }}>{t.micBody}</p>
     </> },
-    { say: `Let's try. Tap the green button and say hello.`, cta: heard ? 'Next' : 'Skip', body: <>
-      <h1 className="center" style={{ fontSize: 32 }}>Let’s try it</h1>
-      <p className="center" style={{ fontSize: 21 }}>Tap the button and say <b>“Hello”</b></p>
-      <div className="micwrap"><button className={`mic ${listening ? 'on' : ''}`} aria-label="Speak" onClick={() => {
-        if (!canListen()) { setHeard('Hello'); speak(`Lovely to meet you, ${s.elder.name}!`, lang); return }
-        setListening(true); listen(lang, t => { setHeard(t); setListening(false); speak(`Lovely to meet you, ${s.elder.name}!`, lang) }, () => setListening(false))
+    { say: t.trySay, cta: heard ? t.next : t.skip, body: <>
+      <h1 className="center" style={{ fontSize: 32 }}>{t.tryTitle}</h1>
+      <p className="center" style={{ fontSize: 21 }}>{t.tryBody}</p>
+      <div className="micwrap"><button className={`mic ${listening ? 'on' : ''}`} aria-label={strings(lang).speak} onClick={() => {
+        if (!canListen()) { setHeard(t.helloWord); speak(t.niceToMeet(s.elder.name), lang); return }
+        setListening(true); listen(lang, said => { setHeard(said); setListening(false); speak(t.niceToMeet(s.elder.name), lang) }, () => setListening(false))
       }}><MicIcon /></button></div>
-      {heard && <p className="done-note" style={{ justifyContent: 'center' }}>✓ I heard: “{heard}”</p>}
+      {heard && <p className="done-note" style={{ justifyContent: 'center' }}>{t.heard(heard)}</p>}
     </> },
-    { say: `These are your people. Tap a face to call them.`, cta: 'Next', body: <>
-      <h1 className="center" style={{ fontSize: 32 }}>Your people</h1>
-      <p className="center" style={{ fontSize: 21 }}>Tap a face to call them.</p>
+    { say: t.peopleSay, cta: t.next, body: <>
+      <h1 className="center" style={{ fontSize: 32 }}>{t.peopleTitle}</h1>
+      <p className="center" style={{ fontSize: 21 }}>{t.peopleBody}</p>
       <div className="people" style={{ marginTop: 10 }}>{family.map((c, i) => (
         <div key={c.id} className="center" style={{ fontWeight: 700, fontSize: 17, display: 'flex', flexDirection: 'column', alignItems: 'center', animation: `pop .5s ${0.2 + i * 0.2}s both cubic-bezier(.2,1.6,.4,1)` }}>
           <Face k={c.face} name={c.name} size={74} /><p style={{ marginTop: 6 }}>{c.name}</p>
         </div>
       ))}</div>
     </> },
-    { say: `You're all set! If you ever need help, press and hold the red button.`, cta: 'Start using Elderly', next: () => { if (isLive()) { update(d => { d.onboarded.elder = true }); nav('/elder'); return } update(d => { d.onboarded.elder = true; d.logs.unshift({ id: uid('log_'), timestamp: new Date().toISOString(), actor: 'elder', message: `${d.elder.nickname || d.elder.name}’s phone is connected — you can chat now 🎉`, kind: 'ok', ack: true, checkInId: null }) }); nav('/elder') }, body: <>
+    { say: t.setSay, cta: t.startUsing, next: () => { if (isLive()) { update(d => { d.onboarded.elder = true }); nav('/elder'); return } update(d => { d.onboarded.elder = true; d.logs.unshift({ id: uid('log_'), timestamp: new Date().toISOString(), actor: 'elder', message: `${d.elder.nickname || d.elder.name}’s phone is connected — you can chat now 🎉`, kind: 'ok', ack: true, checkInId: null }) }); nav('/elder') }, body: <>
       <Confetti />
       <div className="center" style={{ fontSize: 90, marginTop: 30, animation: 'pop .6s both cubic-bezier(.2,1.6,.4,1)' }}>🎉</div>
-      <h1 className="center" style={{ fontSize: 36 }}>You’re all set!</h1>
-      <p className="center" style={{ fontSize: 22 }}>If you ever need help, press and hold the <b style={{ color: 'var(--sos)' }}>red button</b>.</p>
+      <h1 className="center" style={{ fontSize: 36 }}>{t.setTitle}</h1>
+      <p className="center" style={{ fontSize: 22 }}>{t.setBody}</p>
     </> },
   ]
   const sc = steps[step]
@@ -548,7 +550,7 @@ function JoinLive() {
           <button className="btn" onClick={() => nav('/login?as=elder')}>Sign in another way</button>
         </> : <>
           <div className="spinner" />
-          <p style={{ fontSize: 20 }}>Signing you in…</p>
+          <p style={{ fontSize: 20 }}>{strings(s.elder.language).signingIn}</p>
         </>}
       </div>
     </div>
@@ -570,7 +572,7 @@ function JoinDemo() {
         <h1 style={{ fontSize: 32 }}>Elderly</h1>
         <div className="spinner" />
         <p style={{ fontSize: 20 }}>Signing you in, {s.elder.name}…</p>
-        <p className="small muted">Set up for you by {s.caretaker.name}</p>
+        {s.caretaker.name && <p className="small muted">Set up for you by {s.caretaker.name}</p>}
       </div>
     </div>
   )

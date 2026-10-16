@@ -7,8 +7,12 @@ export type DataMode = 'live' | 'demo'
 const KEY = 'elderly-mode'
 const TAB_KEY = 'elderly-mode-tab'
 
+/** Inside /try: an app frame signed in to a throwaway sandbox account on the real backend (real Gemini). */
+export const SANDBOX_FRAME = typeof window !== 'undefined' && new URLSearchParams(location.search).has('sandbox')
+
 function initialMode(): DataMode {
   if (typeof window === 'undefined') return 'demo'
+  if (SANDBOX_FRAME) return 'live'
   const q = new URLSearchParams(location.search)
   // The side-by-side showcase (and its embedded phones) always uses demo data.
   if (location.pathname.startsWith('/demo') || q.has('demo') || q.has('embed') || window.self !== window.top) {

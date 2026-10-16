@@ -5,8 +5,10 @@
  */
 import { initializeApp } from 'firebase/app'
 import {
-  GoogleAuthProvider, getAuth, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut, type User,
+  GoogleAuthProvider, browserPopupRedirectResolver, getAuth, inMemoryPersistence, initializeAuth, onAuthStateChanged,
+  signInWithEmailAndPassword, signInWithPopup, signOut, type User,
 } from 'firebase/auth'
+import { SANDBOX_FRAME } from '../data/mode'
 
 const env = import.meta.env
 const app = initializeApp({
@@ -15,7 +17,23 @@ const app = initializeApp({
   projectId: env.VITE_FIREBASE_PROJECT_ID || 'elderly-3e18c',
   appId: env.VITE_FIREBASE_APP_ID || '1:968215624615:web:63ea777fd96fc9e2d2d482',
 })
-export const auth = getAuth(app)
+// A 'Try with real AI' frame (/try) keeps its sign-in in memory only: the elder and family frames on that page each
+// have their own account, and neither touches the visitor's real sign-in in other tabs.
+export const auth = SANDBOX_FRAME
+  ? initializeAuth(app, { persistence: inMemoryPersistence, popupRedirectResolver: browserPopupRedirectResolver })
+  : getAuth(app)
+
+/** Sandbox frames sign in from the link's #e=…&p=… (a throwaway account; the fragment never reaches a server). */
+let sandboxSigningIn = false
+export const isSandboxSigningIn = () => sandboxSigningIn
+export const sandboxSignIn: Promise<void> | null = SANDBOX_FRAME ? (() => {
+  const h = new URLSearchParams(location.hash.slice(1))
+  const email = h.get('e'), pw = h.get('p')
+  history.replaceState(history.state, '', location.pathname + location.search)  // don't leave it in the address
+  if (!email || !pw) return Promise.reject(new Error('This sandbox link is missing its sign-in — start again from /try'))
+  sandboxSigningIn = true
+  return signInWithEmailAndPassword(auth, email, pw).then(() => undefined).finally(() => { sandboxSigningIn = false })
+})() : null
 
 /** Caretakers must use Google (the backend rejects caretaker password logins). */
 export const signInCaretaker = () => signInWithPopup(auth, new GoogleAuthProvider())

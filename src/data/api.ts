@@ -5,7 +5,7 @@ import { API_URL } from './mode'
  */
 import type {
   ActionCard, ActionStatus, Address, Assessment, AutonomyRules, Caretaker, CheckInRecord, CheckInStatus, Contact, Currency, EmergencyContact, FamilyMessage, HelpRequest,
-  Language, LogEntry, Message, Mood, Reminder, SharingTier,
+  Insights, Language, LogEntry, Message, Mood, Reminder, SharingTier,
 } from '../lib/types'
 
 const BASE = API_URL
@@ -32,7 +32,7 @@ export function createApi(getToken: TokenFn) {
     createElder: (b: { name: string; phone: string; language: Language }) =>
       req<{ elderId: string; email: string; tempPassword: string }>('POST', '/elders', b),
     myElders: () => req<{ elderId: string; name: string; language: Language; assessed: boolean }[]>('GET', '/elders'),
-    elder: (id: string) => req<{ elderId: string; name: string; phone: string; language: Language; sharingTier: SharingTier; assessment: Assessment | null }>('GET', e(id)),
+    elder: (id: string) => req<{ elderId: string; name: string; phone: string; language: Language; sharingTier: SharingTier; assessment: Assessment | null; caretakerNames?: string[] }>('GET', e(id)),
     saveAssessment: (id: string, a: Assessment) => req<Assessment>('PUT', `${e(id)}/assessment`, a),
     // settings (app/routers/settings.py)
     rules: (id: string) => req<AutonomyRules>('GET', `${e(id)}/rules`),
@@ -46,6 +46,7 @@ export function createApi(getToken: TokenFn) {
     // check-ins, logs, family (app/routers/checkins.py)
     checkinToday: (id: string) => req<TodayCheckIn>('GET', `${e(id)}/checkins/today`),
     checkins: (id: string, days = 7) => req<CheckInRecord[]>('GET', `${e(id)}/checkins?days=${days}`),
+    insights: (id: string) => req<Insights>('GET', `${e(id)}/insights`),
     logs: (id: string, limit = 20) => req<LogEntry[]>('GET', `${e(id)}/logs?limit=${limit}`),
     family: (id: string, limit = 30) => req<FamilyMessage[]>('GET', `${e(id)}/family?limit=${limit}`),
     // reminders (app/routers/reminders.py)
@@ -64,6 +65,15 @@ export function createApi(getToken: TokenFn) {
     sos: (id: string) => req<{ alert: { id: string; status: string }; emergencyNumber: string;
       firstContact: { name: string; phone: string } | null }>('POST', `${e(id)}/sos`),
     resolveAlert: (id: string, alertId: string) => req<unknown>('POST', `${e(id)}/alerts/${encodeURIComponent(alertId)}`, { action: 'resolve' }),
+    /** Natural read-aloud voice (app/routers/voice_api.py): MP3 of the text. */
+    tts: async (text: string, language: Language): Promise<Blob> => {
+      const res = await fetch(`${BASE}/tts`, {
+        method: 'POST', body: JSON.stringify({ text, language }), signal: AbortSignal.timeout(8_000),
+        headers: { Authorization: `Bearer ${await getToken()}`, 'Content-Type': 'application/json' },
+      })
+      if (!res.ok) throw new ApiError(res.status, 'Voice unavailable')
+      return res.blob()
+    },
     inviteCaretaker: (id: string, email: string) => req<{ status: 'added' | 'invited' }>('POST', `${e(id)}/caretakers`, { email }),
   }
 }
@@ -100,7 +110,7 @@ export type ServerFrame =
   | { type: 'checkin'; checkin: TodayCheckIn | null }
   | { type: 'message'; message: Message }
   | { type: 'action_update'; messageId: string; action: ActionCard }
-  | { type: 'typing' }
+  | { type: 'typing'; tool?: string }   // tool: an action is running
   | { type: 'error'; message: string }
 
 export function connectChat(elderId: string, getToken: TokenFn, onFrame: (f: ServerFrame) => void,
@@ -135,4 +145,22 @@ export function connectChat(elderId: string, getToken: TokenFn, onFrame: (f: Ser
     familyReply: (text: string) => send({ type: 'family_reply', text }),           // elder → caretakers
     familyAction: (messageId: string, chip: number) => send({ type: 'family_action', messageId, chip }), // ⏰ remind chip
   }
+}
+
+// ---------- 'Try with real AI' (app/routers/sandbox_api.py) — no sign-in ----------
+export type SandboxLanguage = 'en-US' | 'hi-IN' | 'hi-Latn' | 'th-TH'
+export interface Sandbox {
+  elderId: string; language: SandboxLanguage; expiresAt: string
+  elder: { name: string; email: string; password: string }
+  caretaker: { name: string; email: string; password: string }
+}
+
+export async function createSandbox(language: SandboxLanguage): Promise<Sandbox> {
+  const res = await fetch(`${BASE}/demo/sandbox`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ language }),
+    signal: AbortSignal.timeout(30_000),
+  }).catch(() => { throw new ApiError(0, 'Can’t reach the Elderly server right now.') })
+  if (res.status === 429) throw new ApiError(429, 'You’ve started a few sandboxes already — please wait a little, or use the offline demo.')
+  if (!res.ok) throw new ApiError(res.status, (await res.json().catch(() => ({}))).detail ?? 'The live demo isn’t available right now.')
+  return res.json()
 }

@@ -62,7 +62,7 @@ export function Login() {
       {(err || s.live.status === 'error') && <p className="err" role="alert">{err || s.live.error}</p>}
       {s.live.status === 'error' && <button className="btn" onClick={() => void loadSession()}>Try again</button>}
       <p className="small muted" style={{ textAlign: 'center' }}>
-        Just looking? <button className="linkish" onClick={() => switchMode('demo', '/')}>Try the demo</button> — no sign-in needed.
+        Just looking? <Link to="/try">Try it with real AI</Link> or <button className="linkish" onClick={() => switchMode('demo', '/')}>the offline demo</button> — no sign-in needed.
       </p>
       <p className="small muted" style={{ textAlign: 'center' }}><Link to="/">Back</Link></p>
     </div></div></div>

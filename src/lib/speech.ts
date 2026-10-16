@@ -1,6 +1,6 @@
 /**
- * Speech-to-text and text-to-speech via the browser's Web Speech API (best in Chrome/Edge/Safari).
- * Production plan: swap for a server-side STT/TTS provider behind the same functions.
+ * Speech-to-text via the browser's Web Speech API (best in Chrome/Edge/Safari). Read-aloud uses Google's natural
+ * voices (Cloud Text-to-Speech, via the backend) when signed in, else the device's own voices.
  */
 import type { Language } from './types'
 
@@ -18,10 +18,13 @@ export const canSpeak = () => typeof window !== 'undefined' && 'speechSynthesis'
 
 let active: SR | null = null
 
+/** Browser speech locale: Hinglish is spoken Hindi (the hi-IN recognizer and voices handle the mix). */
+export const speechLocale = (lang: Language): string => lang === 'hi-Latn' ? 'hi-IN' : lang
+
 export function listen(lang: Language, onText: (t: string) => void, onEnd: (err?: string) => void): () => void {
   if (!SRCtor) { onEnd('unsupported'); return () => {} }
   const r = new SRCtor()
-  r.lang = lang; r.interimResults = false; r.maxAlternatives = 1
+  r.lang = speechLocale(lang); r.interimResults = false; r.maxAlternatives = 1
   // onerror and onend both fire on errors — report the end exactly once.
   let ended = false
   const finish = (err?: string) => {
@@ -75,19 +78,62 @@ export const hasVoiceFor = (lang: string) => voicesFor(lang).length > 0
 // Chrome garbage-collects an in-flight utterance (speech stops or never starts) unless something holds it.
 let current: SpeechSynthesisUtterance | null = null
 
+// ---------- natural voice (live mode) ----------
+/** Fetches an MP3 of `text` (POST /tts). Registered by data/live.ts; demo mode has none and uses the device voice. */
+export type CloudVoice = (text: string, lang: Language) => Promise<Blob>
+let cloud: CloudVoice | null = null
+export const setCloudVoice = (fn: CloudVoice | null) => { cloud = fn }
+
+const CLIPS_KEPT = 30          // replays ("Listen to this message") don't fetch again
+const clips = new Map<string, string>()  // `${lang}|${text}` → object URL
+let audio: HTMLAudioElement | null = null
+let seq = 0                    // a newer speak()/stopSpeaking() wins over a clip still loading
+
+function remember(key: string, url: string) {
+  clips.set(key, url)
+  if (clips.size > CLIPS_KEPT) {
+    const [oldest, old] = clips.entries().next().value as [string, string]
+    clips.delete(oldest); URL.revokeObjectURL(old)
+  }
+}
+
+function stopAudio() { if (audio) { audio.pause(); audio = null } }
+
+function speakCloud(fetchClip: CloudVoice, clean: string, lang: Language, rate: number) {
+  const my = ++seq
+  stopAudio()
+  if (canSpeak() && (speechSynthesis.speaking || speechSynthesis.pending)) speechSynthesis.cancel()
+  const fallback = () => { if (my === seq) speakDevice(clean, lang, rate) }
+  const play = (url: string) => {
+    if (my !== seq) return
+    audio = new Audio(url)
+    audio.play().catch(fallback)  // e.g. autoplay blocked before the first tap
+  }
+  const key = `${lang}|${clean}`
+  const hit = clips.get(key)
+  if (hit) { clips.delete(key); clips.set(key, hit); play(hit); return }
+  fetchClip(clean, lang).then(blob => { const url = URL.createObjectURL(blob); remember(key, url); play(url) }, fallback)
+}
+
 /**
- * Read text aloud, slowly (0.85× per spec), in the elder's language. Returns false and stays SILENT when the device
- * has no voice for that language — an English voice reading Thai or Hindi is worse than silence.
+ * Read text aloud in the elder's language: Google's natural voice when available, else the device voice (slowly,
+ * 0.85×). Returns false and stays SILENT when neither can speak that language — an English voice reading Thai or
+ * Hindi is worse than silence.
  */
 export function speak(text: string, lang: Language = 'en-US', rate = 0.85): boolean {
-  if (!canSpeak()) return false
   const clean = text.replace(/<[^>]+>/g, '').replace(/\p{Extended_Pictographic}/gu, '').trim()
   if (!clean) return false
+  if (cloud && typeof Audio !== 'undefined') { speakCloud(cloud, clean, lang, rate); return true }
+  return speakDevice(clean, lang, rate)
+}
+
+function speakDevice(clean: string, lang: Language, rate: number): boolean {
+  if (!canSpeak()) return false
   const voices = voicesFor(lang)
   const voice = voices.find(v => v.voiceURI === savedVoiceURI(lang)) ?? voices[0]
   if (!voice) return false
   const u = new SpeechSynthesisUtterance(clean)
-  u.lang = lang; u.rate = rate; u.voice = voice
+  u.lang = speechLocale(lang); u.rate = rate; u.voice = voice
   u.onend = () => { if (current === u) current = null }
   current = u
   const go = () => {
@@ -103,4 +149,4 @@ export function speak(text: string, lang: Language = 'en-US', rate = 0.85): bool
   return true
 }
 
-export const stopSpeaking = () => { if (canSpeak()) { current = null; speechSynthesis.cancel() } }
+export const stopSpeaking = () => { seq++; stopAudio(); if (canSpeak()) { current = null; speechSynthesis.cancel() } }
