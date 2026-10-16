@@ -136,6 +136,7 @@ export type ServerFrame =
   // app/alerts.py raise_alert: SOS button or an emergency the helper detected — sent to the family the moment it happens
   // app/agent/voice_push.py: a reply's voice, first sentence first (seq 0, 1…), base64 MP3
   | { type: 'audio'; messageId: string; seq: number; last: boolean; mime: string; data: string }
+  | { type: 'rules'; rules: AutonomyRules }   // the family changed what the helper may do
   | { type: 'checkin_done'; kind: 'ok' | 'warn' | 'alert'; summary: string }   // to family: refresh now
   | { type: 'device_settings'; settings: DeviceSettings }   // the family changed the elder app's settings
   | { type: 'alert'; alert: { id: string; source: 'sos_button' | 'agent'; description: string; status: string } }

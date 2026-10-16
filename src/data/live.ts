@@ -23,6 +23,7 @@ let pollTimer: number | undefined
 let retryTimer: number | undefined
 let rulesTimer: number | undefined
 let pendingRules: { elderId: string; rules: DemoState['rules'] } | null = null
+let rulesEdits = 0
 function flushRules() {
   window.clearTimeout(rulesTimer)
   const p = pendingRules
@@ -101,8 +102,10 @@ export async function refresh(full = true) {
   const { elderId, role } = getState().live
   if (!elderId) return
   const ct = role === 'caretaker'
-  const deviceAt = deviceSaves  // a settings change made while this loads wins over what it loads
+  // A change made while this loads wins over what it loads (a slow load must not undo the family's edit).
+  const deviceAt = deviceSaves, rulesAt = rulesEdits
   const get = <T,>(p: Promise<T>) => p.catch((e: unknown) => { if (!(e instanceof ApiError && (e.status === 403 || e.status === 409))) console.warn(e); return undefined })
+  const insightsLoad = ct ? get(api.insights(elderId)) : undefined  // started now, applied when it arrives (below)
   const [elder, profile, rules, actions, approvals, today, history, reminders, logs, contacts, requests, caretakers, family, insights, device] = await Promise.all([
     full ? get(api.elder(elderId)) : undefined,
     full ? get(api.profile(elderId)) : undefined,
@@ -118,10 +121,13 @@ export async function refresh(full = true) {
     ct && full ? get(api.caretakers(elderId)) : undefined,
     // The socket sends the family thread too; REST covers the first paint and a dropped socket.
     !chatOpen() ? get(api.family(elderId, 40)) : undefined,
-    ct ? get(api.insights(elderId)) : undefined,  // drift + weekly note (backend caches the note per day)
+    undefined,  // insights load on their own below (the weekly note can take seconds to write)
     get(api.deviceSettings(elderId)),  // the elder app's voice/loudness/speed/text size
   ])
   if (getState().live.elderId !== elderId) return  // switched elder while loading
+  // Insights separately: the Gemini-written weekly note can take a few seconds the first time each day, and the
+  // family home shouldn't wait for it.
+  void insightsLoad?.then(ins => { if (ins && getState().live.elderId === elderId) update(d => { d.insights = ins }) })
   update(d => {
     if (elder) {
       d.elder.name = elder.name; d.elder.phone = elder.phone; d.elder.language = elder.language
@@ -130,7 +136,7 @@ export async function refresh(full = true) {
     }
     if (profile) applyProfile(d, profile)
     if (device && deviceAt === deviceSaves) applyDevice(d, device)
-    if (rules) d.rules = rules
+    if (rules && rulesAt === rulesEdits && !pendingRules) d.rules = rules
     if (actions || approvals) {
       const cards = [...(approvals ?? []), ...(actions ?? [])].map(toCard)
       const seen = new Set<string>()
@@ -196,6 +202,7 @@ function onFrame(f: ServerFrame) {
         d.messages.forEach(m => { if (m.id === f.messageId || m.action?.id === f.action.id) m.action = f.action })
         break
       case 'device_settings': applyDevice(d, f.settings); break
+      case 'rules': d.rules = f.rules; break
       case 'typing': d.elderUi.typing = true; d.elderUi.activity = f.tool ?? null; break
       case 'error': d.elderUi.typing = false; d.elderUi.activity = null; break
     }
@@ -390,6 +397,7 @@ export const live = {
   saveRulesSoon: () => {
     // Capture WHO and WHAT now: if the caretaker switches elder before the timer fires, these rules still go to
     // the elder they were edited for (never to the newly selected one, and never the reset defaults).
+    rulesEdits++
     pendingRules = { elderId: eid(), rules: structuredClone(getState().rules) }
     window.clearTimeout(rulesTimer)
     rulesTimer = window.setTimeout(flushRules, 600)
