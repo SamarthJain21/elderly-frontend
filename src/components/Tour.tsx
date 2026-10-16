@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 
 export interface TourStep { target: string; title: string; body: ReactNode; /** Plain text read aloud in `big` (elder) tours. */ say?: string }
 
@@ -19,6 +19,10 @@ export function Tour({ steps: all, onDone, big = false, onStep, labels = EN_LABE
   useLayoutEffect(() => { setSteps(all.filter(s => document.querySelector(`[data-tour="${s.target}"]`))) }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [i, setI] = useState(0)
   const [rect, setRect] = useState<DOMRect | null>(null)
+  const card = useRef<HTMLDivElement>(null)
+  const [cardH, setCardH] = useState(0)
+  // Real card height (text length varies by language) so it can be placed where it fully fits.
+  useLayoutEffect(() => { const h = card.current?.offsetHeight ?? 0; if (h && h !== cardH) setCardH(h) })
   const step = steps?.[i]
   const count = steps?.length ?? 0
   const next = () => (i < count - 1 ? setI(i + 1) : onDone())
@@ -54,16 +58,19 @@ export function Tour({ steps: all, onDone, big = false, onStep, labels = EN_LABE
   const cardW = Math.min(big ? 360 : 320, window.innerWidth - 24)
   // Never place the card over the elder's SOS bar: treat its top edge as the bottom of the usable screen.
   const floor = (big && document.querySelector('.sosbar')?.getBoundingClientRect().top) || window.innerHeight
-  const below = !rect || rect.bottom + (big ? 260 : 190) < floor
-  // Below: pin the card's top under the spotlight. Above: pin its bottom just over it.
-  const vertical = !rect ? { top: window.innerHeight / 2 - 90 } : below ? { top: rect.bottom + 16 } : { bottom: window.innerHeight - rect.top + 16 }
+  const h = cardH || (big ? 260 : 190)
+  const fitsBelow = !!rect && rect.bottom + 16 + h < floor
+  const fitsAbove = !!rect && rect.top - 16 - h > 8
+  // Below the spotlight if it fits, else above it; if neither (a tall target), pin to the top of the screen.
+  const vertical = !rect ? { top: window.innerHeight / 2 - 90 } : fitsBelow ? { top: rect.bottom + 16 }
+    : fitsAbove ? { top: rect.top - 16 - h } : { top: 8 }
   const cardLeft = !rect ? (window.innerWidth - cardW) / 2 : Math.min(Math.max(12, rect.left + rect.width / 2 - cardW / 2), window.innerWidth - cardW - 12)
   const last = i === count - 1
 
   return (
     <div className={`tour ${big ? 'big' : ''}`} role="dialog" aria-modal="true" aria-label={`Tour step ${i + 1} of ${count}: ${step.title}`}>
       {box ? <><div className="tour-spot" style={box} /><div className="tour-pulse" style={box} key={`p${i}`} /></> : <div className="tour-dim" />}
-      <div className="tour-card" style={{ ...vertical, left: cardLeft, width: cardW }} key={i}>
+      <div ref={card} className="tour-card" style={{ ...vertical, left: cardLeft, width: cardW }} key={i}>
         <div className="row"><span className="eyebrow grow">{big ? labels.of(i + 1, count) : `Step ${i + 1} of ${count}`}</span>
           <button className="btn ghost sm" onClick={onDone}>{big ? labels.close : 'Skip tour'}</button></div>
         <h3 className="tour-title">{step.title}</h3>
