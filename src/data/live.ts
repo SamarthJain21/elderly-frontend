@@ -14,7 +14,7 @@ import { auth, getToken, isSandboxSigningIn, onUser, sandboxSignIn, signOutUser 
 import { emptyLive, getState, restoreSeen, update, type DemoState } from './store'
 import { formatMoney } from '../lib/money'
 import { notify } from '../components/ui'
-import type { ActionCard, Contact, Message, Mood } from '../lib/types'
+import type { ActionCard, Contact, Message, Mood, DeviceSettings } from '../lib/types'
 
 export const api = createApi(getToken)
 let chat: ReturnType<typeof connectChat> | null = null
@@ -69,6 +69,11 @@ function applyToday(d: DemoState, t: TodayCheckIn | null) {
   if (c && c.status === 'done' && !d.checkinHistory.some(h => h.id === c.id)) d.checkinHistory.unshift(c)
 }
 
+function applyDevice(d: DemoState, s: DeviceSettings) {
+  d.elderUi.voice = s.voice
+  d.device = { volume: s.volume, rate: s.rate, textSize: s.textSize }
+}
+
 function applyProfile(d: DemoState, p: Profile) {
   d.elder.name = p.name; d.elder.phone = p.phone; d.elder.language = p.language; d.elder.sharingTier = p.sharingTier
   d.elder.address = p.address; d.elder.emergencyContacts = p.emergencyContacts
@@ -96,8 +101,9 @@ export async function refresh(full = true) {
   const { elderId, role } = getState().live
   if (!elderId) return
   const ct = role === 'caretaker'
+  const deviceAt = deviceSaves  // a settings change made while this loads wins over what it loads
   const get = <T,>(p: Promise<T>) => p.catch((e: unknown) => { if (!(e instanceof ApiError && (e.status === 403 || e.status === 409))) console.warn(e); return undefined })
-  const [elder, profile, rules, actions, approvals, today, history, reminders, logs, contacts, requests, caretakers, family, insights] = await Promise.all([
+  const [elder, profile, rules, actions, approvals, today, history, reminders, logs, contacts, requests, caretakers, family, insights, device] = await Promise.all([
     full ? get(api.elder(elderId)) : undefined,
     full ? get(api.profile(elderId)) : undefined,
     full ? get(api.rules(elderId)) : undefined,
@@ -113,6 +119,7 @@ export async function refresh(full = true) {
     // The socket sends the family thread too; REST covers the first paint and a dropped socket.
     !chatOpen() ? get(api.family(elderId, 40)) : undefined,
     ct ? get(api.insights(elderId)) : undefined,  // drift + weekly note (backend caches the note per day)
+    get(api.deviceSettings(elderId)),  // the elder app's voice/loudness/speed/text size
   ])
   if (getState().live.elderId !== elderId) return  // switched elder while loading
   update(d => {
@@ -122,6 +129,7 @@ export async function refresh(full = true) {
       if (elder.assessment) d.assessment = elder.assessment
     }
     if (profile) applyProfile(d, profile)
+    if (device && deviceAt === deviceSaves) applyDevice(d, device)
     if (rules) d.rules = rules
     if (actions || approvals) {
       const cards = [...(approvals ?? []), ...(actions ?? [])].map(toCard)
@@ -187,6 +195,7 @@ function onFrame(f: ServerFrame) {
         upsertCard(d, f.action)
         d.messages.forEach(m => { if (m.id === f.messageId || m.action?.id === f.action.id) m.action = f.action })
         break
+      case 'device_settings': applyDevice(d, f.settings); break
       case 'typing': d.elderUi.typing = true; d.elderUi.activity = f.tool ?? null; break
       case 'error': d.elderUi.typing = false; d.elderUi.activity = null; break
     }
@@ -332,6 +341,27 @@ export async function signOut() {
 
 // ---------- writes used by actions.ts ----------
 const eid = () => getState().live.elderId!
+
+/** Save the elder app's settings (the elder's own voice toggle, or the family's Phone page). */
+let deviceSaves = 0
+let deviceInFlight: Promise<unknown> = Promise.resolve()
+let deviceLatest: DeviceSettings | null = null
+/** Applied here at once; sent one at a time, latest only — two quick changes must not reach the server out of order. */
+export function saveDevice(s: DeviceSettings): Promise<void> {
+  deviceSaves++
+  update(d => applyDevice(d, s))
+  deviceLatest = s
+  const elderId = eid()
+  const send = deviceInFlight.catch(() => undefined).then(async () => {
+    const latest = deviceLatest
+    if (!latest) return  // an earlier queued send already carried it
+    deviceLatest = null
+    await api.saveDeviceSettings(elderId, latest)
+  })
+  deviceInFlight = send
+  return send
+}
+export const deviceOf = (d: DemoState): DeviceSettings => ({ voice: d.elderUi.voice, ...d.device })
 
 export const live = {
   /** Raise an SOS on the backend. Resolves only once the family has really been alerted; throws otherwise. */

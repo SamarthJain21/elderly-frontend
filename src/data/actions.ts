@@ -15,7 +15,7 @@ import { decide } from '../lib/policy'
 import { formatMoney } from '../lib/money'
 import { CREDIT, formatBalance, formatUsd, planById, priceFor, type Billing, type PlanId } from '../lib/plans'
 import { isLive } from './mode'
-import { live } from './live'
+import { deviceOf, live, saveDevice } from './live'
 import type { Contact } from '../lib/types'
 
 /** Open the phone dialler (live mode: real calls go through the phone, not the app). */
@@ -666,7 +666,11 @@ export const toggleTrusted = (id: string) => {
 /** Marks alerts handled. The backend has no endpoint for this yet, so live mode remembers it on this device. */
 export const ackAlerts = () => update(d => { d.logs.forEach(l => { l.ack = true; if (!d.ackedLogs.includes(l.id)) d.ackedLogs.push(l.id) }) })
 export const markCaretakerRead = () => { if (getState().caretakerUnread) update(d => { d.caretakerUnread = 0 }) }
-export const setVoice = (v: boolean) => update(d => { d.elderUi.voice = v })
+/** The elder's 🔊 toggle. Live: saved, so the family's Phone page shows the same thing. */
+export const setVoice = (v: boolean) => {
+  if (isLive()) { void saveDevice({ ...deviceOf(getState()), voice: v }).catch(() => { /* applied here anyway */ }); return }
+  update(d => { d.elderUi.voice = v })
+}
 
 // ---------- billing ----------
 /** Add prepaid care credit. A negative (emergency) balance is repaid first, automatically. */

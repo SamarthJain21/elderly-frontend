@@ -5,14 +5,14 @@ import { Link, useNavigate } from 'react-router-dom'
 import { nick, resetDemo, update, useDemo } from '../data/store'
 import { addContact, addReminder, caretakerDecide, deleteReminder, helperVisitsLeft, quotaLeft, setElderLanguage, setNickname, setRuleLimit, setRuleMode, setSharingTier, setTrustedOnly, toggleTrusted } from '../data/actions'
 import { EMBEDDED, isLive } from '../data/mode'
-import { selectElder, signOut } from '../data/live'
+import { deviceOf, saveDevice, selectElder, signOut } from '../data/live'
 import { ComingSoon } from '../components/ui'
 import { Face } from '../components/Face'
 import { MockQR, Sheet, Switch, timeAgo, useToast } from '../components/ui'
 import { formatMoney, minorToInput, parseToMinor } from '../lib/money'
 import { MODE_LABEL, SPENDING_TOOLS, TOOL_META } from '../lib/policy'
 import { CREDIT, formatBalance, formatUsd, planById } from '../lib/plans'
-import type { ContactKind, Currency, Mode, SharingTier, ToolName } from '../lib/types'
+import type { ContactKind, Currency, Mode, SharingTier, ToolName, DeviceSettings } from '../lib/types'
 import { CHead } from './CaretakerApp'
 import { ProfileExtras } from './Screens'
 import { addressLine } from '../lib/types'
@@ -257,6 +257,7 @@ export function More() {
     ['/caretaker/family', '👪', 'Family members', `${s.caretakers.length} active${s.invites.length ? ` · ${s.invites.length} invited` : ''}`],
     ['/caretaker/requests', '🤝', 'Help requests', `${s.requests.filter(r => ['open', 'notified', 'confirmed'].includes(r.status)).length} in progress`],
     ['/caretaker/checkins', '😊', 'Check-in history', 'The last 7 days'],
+    ['/caretaker/phone', '📱', `${nick(s)}’s phone`, 'Voice, loudness, speed, text size'],
     ['/caretaker/routine', '⏰', 'Routine & reminders', `${s.assessment.medications.length} medicines · ${s.assessment.checkIn.enabled === false ? 'no daily check-in' : `check-in ${s.assessment.checkIn.time}`}`],
     ['/caretaker/settings', '⚙️', `${nick(s)}’s profile & privacy`, 'Address, emergency contacts, language, sharing'],
   ]
@@ -377,5 +378,43 @@ function LimitInput({ minor, currency, onValid }: { minor: number; currency: Cur
         const m = parseToMinor(e.target.value, currency)
         if (m !== null) onValid(m)
       }} />
+  )
+}
+
+/** "Mum's phone": the elder app's voice, loudness, speed and text size — applied on their phone straight away. */
+export function ElderPhone() {
+  const s = useDemo()
+  const toast = useToast()
+  const nk = nick(s)
+  const cur = deviceOf(s)
+  const set = (patch: Partial<DeviceSettings>) => {
+    const next = { ...cur, ...patch }
+    if (!isLive()) { update(d => { d.elderUi.voice = next.voice; d.device = { volume: next.volume, rate: next.rate, textSize: next.textSize } }); return }
+    saveDevice(next).then(() => toast(`Updated on ${nk}’s phone`), () => toast(`Couldn’t reach ${nk}’s phone — try again`))
+  }
+  const SPEEDS: [number, string][] = [[0.85, 'Slower'], [1, 'Normal'], [1.15, 'Faster']]
+  const SIZES: [DeviceSettings['textSize'], string][] = [['normal', 'Normal'], ['large', 'Large'], ['xlarge', 'Extra large']]
+  return (
+    <>
+      <CHead title={`${nk}’s phone`} sub="Changes apply on their phone straight away" back="/caretaker/more" />
+      <div className="scroll"><div className="c-body">
+        <div className="card stack" style={{ gap: 14 }}>
+          <div className="row"><span className="grow"><b>Read aloud</b><span className="small muted" style={{ display: 'block' }}>Replies and family messages are spoken</span></span>
+            <Switch checked={cur.voice} onChange={v => set({ voice: v })} label="Read messages and replies aloud" /></div>
+          <label className="field">Voice loudness · {Math.round(cur.volume * 100)}%
+            <input type="range" min={10} max={100} step={10} value={Math.round(cur.volume * 100)} disabled={!cur.voice}
+              onChange={e => set({ volume: Number(e.target.value) / 100 })} />
+          </label>
+          <div className="field">Speaking speed
+            <div className="segbar">{SPEEDS.map(([r, l]) => <button key={l} className={cur.rate === r ? 'on' : ''} disabled={!cur.voice} onClick={() => set({ rate: r })}>{l}</button>)}</div>
+          </div>
+          <div className="field">Text size
+            <div className="segbar">{SIZES.map(([z, l]) => <button key={z} className={cur.textSize === z ? 'on' : ''} onClick={() => set({ textSize: z })}>{l}</button>)}</div>
+          </div>
+        </div>
+        <p className="small muted">The phone’s own volume, brightness and other settings can only be changed on the phone itself — a web app isn’t allowed to.
+          These settings control the Elderly app on {nk}’s phone.</p>
+      </div></div>
+    </>
   )
 }

@@ -10,7 +10,7 @@ import { Face } from '../components/Face'
 import { MicIcon, Wave, useToast } from '../components/ui'
 import { Tour, type TourStep } from '../components/Tour'
 import { update } from '../data/store'
-import { canListen, listen, onSoundBlockedChange, soundBlocked, speak, speakMessage, stopListening, stopSpeaking } from '../lib/speech'
+import { canListen, listen, onSoundBlockedChange, setPlayback, soundBlocked, speak, speakMessage, stopListening, stopSpeaking } from '../lib/speech'
 import { activityLabel } from '../lib/activity'
 import { partOfDay, strings, type Strings } from '../lib/i18n'
 import type { ActionCard, FamilyMessage, Message } from '../lib/types'
@@ -26,6 +26,8 @@ export default function ElderApp({ framed = true }: { framed?: boolean }) {
   const lang = s.elder.language
   const t = strings(lang)
   const [blocked, setBlocked] = useState(soundBlocked)
+  // Loudness and speed: the elder's settings, which their family can also set from the Phone page.
+  useEffect(() => { setPlayback({ volume: s.device.volume, rate: s.device.rate }) }, [s.device.volume, s.device.rate])
   useEffect(() => onSoundBlockedChange(setBlocked), [])
 
   // One timeline: assistant conversation + family thread (elder sees both).
@@ -66,7 +68,7 @@ export default function ElderApp({ framed = true }: { framed?: boolean }) {
   if (isLive() && !s.elder.name) return <div className={`shell ${framed ? 'framed' : ''}`}><div className="center-msg"><div className="spinner" aria-hidden /></div></div>
 
   return (
-    <div className={`shell ${framed ? 'framed' : ''}`}>
+    <div className={`shell ${framed ? 'framed' : ''} text-${s.device.textSize}`}>
       {screen === 'home' && <Home s={s} onMic={mic} listening={listening} say={say} go={setScreen} />}
       {screen === 'talk' && <Talk s={s} items={items} onMic={mic} listening={listening} say={say} back={() => setScreen('home')} />}
       {screen === 'reminders' && <Reminders s={s} back={() => setScreen('home')} />}

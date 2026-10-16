@@ -98,6 +98,11 @@ export const hasVoiceFor = (lang: string) => voicesFor(lang).length > 0
 // Chrome garbage-collects an in-flight utterance (speech stops or never starts) unless something holds it.
 let current: SpeechSynthesisUtterance | null = null
 
+// ---------- loudness & speed (the elder app's settings, also set by family) ----------
+let playback = { volume: 1, rate: 1 }
+export function setPlayback(p: { volume: number; rate: number }) { playback = p; if (audio) { audio.volume = p.volume; audio.playbackRate = p.rate } }
+function tune(a: HTMLAudioElement) { a.volume = playback.volume; a.playbackRate = playback.rate; return a }
+
 // ---------- natural voice (live mode) ----------
 /** Fetches an MP3 of `text` (POST /tts). Registered by data/live.ts; demo mode has none and uses the device voice. */
 export type CloudVoice = (text: string, lang: Language) => Promise<Blob>
@@ -126,7 +131,7 @@ function speakCloud(fetchClip: CloudVoice, clean: string, lang: Language, rate: 
   const fallback = () => { if (my === seq) speakDevice(clean, lang, rate) }
   const play = (url: string) => {
     if (my !== seq) return
-    audio = new Audio(url)
+    audio = tune(new Audio(url))
     audio.play().catch(fallback)  // e.g. autoplay blocked before the first tap
   }
   const key = `${lang}|${clean}`
@@ -181,7 +186,7 @@ function playNext(id: string, text: string, lang: Language) {
   if (!blob) return  // not here yet; addPushedClip calls us again
   clearTimeout(p.timer)
   const url = URL.createObjectURL(blob)
-  const a = new Audio(url)
+  const a = tune(new Audio(url))
   audio = a; p.playing = true
   a.onended = () => {
     URL.revokeObjectURL(url); p.playing = false; p.next++
@@ -236,7 +241,7 @@ function speakDevice(clean: string, lang: Language, rate: number): boolean {
   const voice = voices.find(v => v.voiceURI === savedVoiceURI(lang)) ?? voices[0]
   if (!voice) return false
   const u = new SpeechSynthesisUtterance(clean)
-  u.lang = speechLocale(lang); u.rate = rate; u.voice = voice
+  u.lang = speechLocale(lang); u.rate = rate * playback.rate; u.volume = playback.volume; u.voice = voice
   u.onend = () => { if (current === u) current = null }
   current = u
   const go = () => {

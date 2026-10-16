@@ -103,6 +103,9 @@ export interface Address {
   /** Picked from Google address search: the server re-reads this place for its exact location. */
   placeId?: string | null
 }
+/** The elder app's own settings (app/routers/device_api.py) — managed by the elder and their family. */
+export interface DeviceSettings { voice: boolean; volume: number; rate: number; textSize: 'normal' | 'large' | 'xlarge' }
+export const DEFAULT_DEVICE: DeviceSettings = { voice: true, volume: 1, rate: 1, textSize: 'normal' }
 export interface EmergencyContact { name: string; phone: string; relationship: string; face?: string | null }
 export const addressLine = (a: Address | null | undefined) =>
   a ? [a.line1, a.line2, a.landmark, a.city, a.postcode].filter(Boolean).join(', ') : ''
