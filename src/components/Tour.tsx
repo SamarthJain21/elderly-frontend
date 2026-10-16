@@ -31,7 +31,10 @@ export function Tour({ steps: all, onDone, big = false, onStep, labels = EN_LABE
     if (!step) return
     const el = document.querySelector<HTMLElement>(`[data-tour="${step.target}"]`)
     if (!el) { setRect(null); return }
-    el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    // Elder tour cards are big: bring the target to the top so the card fits below it instead of covering it
+    // (on a short phone screen, centred targets left no room either side).
+    el.style.scrollMarginTop = '12px'
+    el.scrollIntoView({ block: big ? 'start' : 'center', behavior: 'smooth' })
     const measure = () => setRect(el.getBoundingClientRect())
     measure()
     const t = window.setTimeout(measure, 380)  // after the smooth scroll settles

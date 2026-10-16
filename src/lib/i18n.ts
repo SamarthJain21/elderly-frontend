@@ -74,6 +74,7 @@ const EN = {
   },
   signingIn: 'Signing you in…',
   voiceBrowser: 'Voice works in Chrome or Edge — tap a button or type instead', micError: (e: string) => `Microphone: ${e}`,
+  tapToHear: '🔊 Tap anywhere to hear me', calling2: (n: string) => `Calling ${n}…`, demoCall: 'This is a demo — no real call is made.', notPhone: 'Calls start from a phone. On this device, dial:',
 }
 export type Strings = typeof EN
 
@@ -142,6 +143,7 @@ const HI: Strings = {
   },
   signingIn: 'आपको साइन इन कर रहे हैं…',
   voiceBrowser: 'आवाज़ Chrome या Edge में चलती है — बटन दबाइए या लिखिए', micError: e => `माइक्रोफ़ोन: ${e}`,
+  tapToHear: '🔊 मेरी आवाज़ सुनने के लिए कहीं भी दबाइए', calling2: n => `${n} को फ़ोन लगा रहे हैं…`, demoCall: 'यह डेमो है — असली कॉल नहीं होगी।', notPhone: 'कॉल फ़ोन से होती है। इस डिवाइस पर यह नंबर मिलाइए:',
 }
 
 const HL: Strings = {
@@ -209,11 +211,12 @@ const HL: Strings = {
   },
   signingIn: 'Aapko sign in kar rahe hain…',
   voiceBrowser: 'Awaaz Chrome ya Edge mein chalti hai — button dabaiye ya likhiye', micError: e => `Microphone: ${e}`,
+  tapToHear: '🔊 Meri awaaz sunne ke liye kahin bhi dabaiye', calling2: n => `${n} ko phone laga rahe hain…`, demoCall: 'Yeh demo hai — asli call nahi hogi.', notPhone: 'Call phone se hoti hai. Is device par yeh number milaiye:',
 }
 
 /** Thai doesn't space between words, but a Latin-script name ("Nok") reads better set off by spaces. */
 const thName = (n: string) => /[A-Za-z]/.test(n) ? ` ${n} ` : n
-const tidy = (t: string) => t.replace(/ {2,}/g, ' ').replace(/ ([”!?.,])/g, '$1').replace(/“ /g, '“').trim()
+const tidy = (t: string) => t.replace(/ {2,}/g, ' ').replace(/ ([”!?.,…])/g, '$1').replace(/“ /g, '“').trim()
 
 const TH: Strings = {
   locale: 'th-TH',
@@ -280,6 +283,7 @@ const TH: Strings = {
   },
   signingIn: 'กำลังเข้าสู่ระบบ…',
   voiceBrowser: 'ใช้เสียงได้ใน Chrome หรือ Edge — แตะปุ่มหรือพิมพ์แทนได้ค่ะ', micError: e => `ไมโครโฟน: ${e}`,
+  tapToHear: '🔊 แตะตรงไหนก็ได้เพื่อฟังเสียง', calling2: n => tidy(`กำลังโทรหา${thName(n)}…`), demoCall: 'นี่เป็นเดโม — ไม่ได้โทรจริงค่ะ', notPhone: 'การโทรต้องทำจากโทรศัพท์ บนเครื่องนี้กดเบอร์:',
 }
 
 const BY_LANG: Partial<Record<Language, Strings>> = { 'en-US': EN, 'hi-IN': HI, 'hi-Latn': HL, 'th-TH': TH }

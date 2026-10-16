@@ -2,6 +2,8 @@
  * Caretaker screens for features the backend already has (app/routers/people.py, settings.py, checkins.py).
  */
 import { InsightsCard } from './InsightsCard'
+import { PhoneField } from '../components/PhoneField'
+import { countryForTimezone, phoneError } from '../lib/phone'
 import { useState } from 'react'
 import { nick, useDemo } from '../data/store'
 import { isLive } from '../data/mode'
@@ -62,12 +64,12 @@ function EmergencyContactsCard() {
         <div key={i} className="stack" style={{ gap: 6, borderTop: i ? '1px solid var(--line)' : 0, paddingTop: i ? 10 : 0 }}>
           <div className="row"><label className="field grow">Name<input value={c.name} onChange={e => set(i, 'name', e.target.value)} /></label>
             <button className="btn sm ghost" style={{ marginTop: 18 }} aria-label="Remove" onClick={() => setList(l => l.filter((_, j) => j !== i))}>✕</button></div>
-          <div className="row"><label className="field grow">Phone<input value={c.phone} inputMode="tel" onChange={e => set(i, 'phone', e.target.value)} /></label>
+          <div className="row"><div className="grow"><PhoneField label="Phone" value={c.phone} onChange={v => set(i, 'phone', v)} defaultCountry={countryForTimezone(s.assessment.timezone)} /></div>
             <label className="field grow">Relationship<input value={c.relationship} onChange={e => set(i, 'relationship', e.target.value)} /></label></div>
         </div>
       ))}
       {list.length < 10 && <button className="btn" onClick={() => setList(l => [...l, { name: '', phone: '', relationship: '' }])}>＋ Add contact</button>}
-      <button className="btn pri" disabled={list.some(c => !c.name.trim() || c.phone.trim().length < 5)}
+      <button className="btn pri" disabled={list.some(c => !c.name.trim() || !!phoneError(c.phone))}
         onClick={() => { saveEmergencyContacts(list); toast('Emergency contacts saved') }}>Save contacts</button>
     </div>
   )

@@ -3,17 +3,17 @@ import { Navigate } from 'react-router-dom'
 import { isLive } from '../data/mode'
 import { useDemo, type DemoState } from '../data/store'
 import {
-  answerCall, closeEmergency, retrySos, declineCall, elderCallContact, elderConfirm, elderSay, emergencyCancel, emergencyFire, emergencyNumber, isAnswered, tapChip,
+  answerCall, closeEmergency, isPretendNumber, retrySos, declineCall, elderCallContact, elderConfirm, elderSay, emergencyCancel, emergencyFire, emergencyNumber, isAnswered, tapChip,
   endCall, helperVisitsLeft, setVoice, startCheckin, triggerHelp,
 } from '../data/actions'
 import { Face } from '../components/Face'
 import { MicIcon, Wave, useToast } from '../components/ui'
 import { Tour, type TourStep } from '../components/Tour'
 import { update } from '../data/store'
-import { canListen, listen, speak, speakMessage, stopListening, stopSpeaking } from '../lib/speech'
+import { canListen, listen, onSoundBlockedChange, soundBlocked, speak, speakMessage, stopListening, stopSpeaking } from '../lib/speech'
 import { activityLabel } from '../lib/activity'
 import { partOfDay, strings, type Strings } from '../lib/i18n'
-import type { ActionCard, Chip, FamilyMessage, Message } from '../lib/types'
+import type { ActionCard, FamilyMessage, Message } from '../lib/types'
 
 type Screen = 'home' | 'talk' | 'reminders'
 type Item = { kind: 'agent'; m: Message } | { kind: 'fam'; m: FamilyMessage }
@@ -25,6 +25,8 @@ export default function ElderApp({ framed = true }: { framed?: boolean }) {
   const [listening, setListening] = useState(false)
   const lang = s.elder.language
   const t = strings(lang)
+  const [blocked, setBlocked] = useState(soundBlocked)
+  useEffect(() => onSoundBlockedChange(setBlocked), [])
 
   // One timeline: assistant conversation + family thread (elder sees both).
   const items: Item[] = useMemo(() => [
@@ -44,7 +46,7 @@ export default function ElderApp({ framed = true }: { framed?: boolean }) {
     // Live: the server pushes the reply's voice as soon as it's ready (falls back to fetching it).
     if (last.kind === 'agent' && last.m.sender === 'agent') { if (isLive()) speakMessage(last.m.id, last.m.text, lang); else speak(last.m.text, lang) }
     if (last.kind === 'fam' && last.m.sender === 'caretaker') {
-      speak(`${t.messageFrom(last.m.senderName)} ${last.m.text}. ${spokenChips(t, last.m.chips)}`, lang)
+      speak(`${t.messageFrom(last.m.senderName)} ${last.m.text}`, lang)  // the answer buttons are shown, not read
     }
   }, [items, s.elderUi.voice, lang]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -60,6 +62,8 @@ export default function ElderApp({ framed = true }: { framed?: boolean }) {
   }
 
   if (!s.onboarded.elder) return <Navigate to="/onboarding/elder" replace />
+  // Live: wait for the profile so the app appears in the elder's language (no English flash first).
+  if (isLive() && !s.elder.name) return <div className={`shell ${framed ? 'framed' : ''}`}><div className="center-msg"><div className="spinner" aria-hidden /></div></div>
 
   return (
     <div className={`shell ${framed ? 'framed' : ''}`}>
@@ -67,6 +71,8 @@ export default function ElderApp({ framed = true }: { framed?: boolean }) {
       {screen === 'talk' && <Talk s={s} items={items} onMic={mic} listening={listening} say={say} back={() => setScreen('home')} />}
       {screen === 'reminders' && <Reminders s={s} back={() => setScreen('home')} />}
       <Overlay s={s} />
+      {/* Not during the tour: its first tap turns sound on anyway, and the hint would cover its card. */}
+      {blocked && s.elderUi.voice && s.tours.elder && <div className="tap-to-hear" aria-live="polite">{t.tapToHear}</div>}
     </div>
   )
 }
@@ -116,7 +122,7 @@ function Home({ s, onMic, listening, say, go }: { s: DemoState; onMic: () => voi
         </div>
       </div>
       <SosBar t={t} aboveTour={!s.tours.elder && loaded} />
-      {!s.tours.elder && loaded && <Tour big labels={t.tourUi} steps={elderTour(t, s.caretaker.name || t.yourFamily)} onDone={() => update(d => { d.tours.elder = true })}
+      {!s.tours.elder && loaded && <Tour big labels={t.tourUi} steps={elderTour(t, s.caretaker.name || t.yourFamily)} onDone={() => { stopSpeaking(); update(d => { d.tours.elder = true }) }}
         onStep={st => st.say && s.elderUi.voice && speak(`${st.title}. ${st.say}`, s.elder.language)} />}
     </>
   )
@@ -134,7 +140,7 @@ function FamilyQuestion({ s }: { s: DemoState }) {
   if (!m) return null
   const t = strings(s.elder.language)
   const sender = s.contacts.find(c => c.name === m.senderName)
-  const play = () => { setPlaying(true); speak(`${m.text}. ${spokenChips(t, m.chips)}`, s.elder.language); setTimeout(() => setPlaying(false), 4000) }
+  const play = () => { setPlaying(true); speak(m.text, s.elder.language); setTimeout(() => setPlaying(false), 4000) }
   return (
     <div className="fam-q" data-tour="e-family">
       <div className="who"><Face k={sender?.face ?? 'emma'} name={m.senderName} size={88} /><div><b>{m.senderName}</b><span>{t.sentYou}</span></div></div>
@@ -292,7 +298,6 @@ function ChipButtons({ m, t }: { m: FamilyMessage; t: Strings }) {
     </div>
   )
 }
-const spokenChips = (t: Strings, chips: Chip[]) => chips.length ? `${t.youCanAnswer} ` + chips.map(c => c.label.replace(/^[^\p{L}]+/u, '')).join(t.or) : ''
 
 // ---------------- Reminders ("My day") ----------------
 function Reminders({ s, back }: { s: DemoState; back: () => void }) {
@@ -397,6 +402,20 @@ function Overlay({ s }: { s: DemoState }) {
       <button className="bb dark" onClick={declineCall}>{t.notNow}</button>
     </div>
   )
+  if (o.phone !== undefined) {  // live: the phone's dialer does the call; this screen says who and how
+    const pretend = isPretendNumber(o.phone), touch = matchMedia('(pointer: coarse)').matches
+    return (
+      <div className="ov call" role="dialog" aria-label={t.calling2(o.who)}>
+        <div className="ring" style={{ marginTop: 16 }}><Face k={o.face} name={o.who} size={176} /></div>
+        <h2>{t.calling2(o.who)}</h2>
+        {pretend ? <p style={{ opacity: .85 }}>{t.demoCall}</p>
+          : !touch && <p style={{ opacity: .85 }}>{t.notPhone} <b style={{ whiteSpace: 'nowrap' }}>{o.phone}</b></p>}
+        <div className="spacer" />
+        {!pretend && <a className="bb white" style={{ textDecoration: 'none', display: 'block' }} href={`tel:${o.phone.replace(/[^\d+]/g, '')}`}>{t.callNum(o.who)}</a>}
+        <button className="bb dark" onClick={endCall}>{t.close}</button>
+      </div>
+    )
+  }
   return (
     <div className="ov call" role="dialog" aria-label={`Call with ${o.who}`}>
       <p style={{ opacity: .85, fontSize: 18 }}>{o.live ? t.onCall : t.calling}</p>
