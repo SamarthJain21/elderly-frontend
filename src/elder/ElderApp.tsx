@@ -13,7 +13,7 @@ import { update } from '../data/store'
 import { canListen, listen, onSoundBlockedChange, setPlayback, soundBlocked, speak, speakMessage, stopListening, stopSpeaking } from '../lib/speech'
 import { activityLabel } from '../lib/activity'
 import { partOfDay, strings, type Strings } from '../lib/i18n'
-import type { ActionCard, FamilyMessage, Message } from '../lib/types'
+import type { ActionCard, FamilyMessage, Message, ToolName } from '../lib/types'
 import type { CheckinAnswers } from '../data/api'
 
 type Screen = 'home' | 'talk' | 'reminders'
@@ -88,6 +88,7 @@ function Home({ s, onMic, listening, say, go }: { s: DemoState; onMic: () => voi
   const care = s.caretaker.name || t.myFamily
   // Live: wait for the elder's profile, so the tour is shown (and read aloud) in their language.
   const loaded = !isLive() || !!s.elder.name
+  const on = (tool: ToolName) => s.rules.tools[tool]?.mode !== 'blocked'
   return (
     <>
       <div className="scroll">
@@ -114,11 +115,12 @@ function Home({ s, onMic, listening, say, go }: { s: DemoState; onMic: () => voi
           </div>
           <h2 className="e-sec">{t.whatNeed}</h2>
           <div className="tiles" data-tour="e-tiles">
-            <button className="tile" onClick={() => say(t.sayMedicine)}><span className="ic">💊</span>{t.tileMedicine}</button>
-            <button className="tile" onClick={() => say(t.sayFood)}><span className="ic">🍲</span>{t.tileFood}</button>
-            <button className="tile" onClick={() => say(t.sayRide)}><span className="ic">🚕</span>{t.tileRide}</button>
-            <button className="tile" onClick={() => say(t.sayFix)}><span className="ic">🔧</span>{t.tileFix}</button>
-            <button className="tile" onClick={() => say(t.tileOk(care))}><span className="ic">💬</span>{t.tileOk(care)}</button>
+            {/* Features the family switched off (Rules) aren't offered. */}
+            {on('order_medicine') && <button className="tile" onClick={() => say(t.sayMedicine)}><span className="ic">💊</span>{t.tileMedicine}</button>}
+            {on('order_food') && <button className="tile" onClick={() => say(t.sayFood)}><span className="ic">🍲</span>{t.tileFood}</button>}
+            {on('book_ride') && <button className="tile" onClick={() => say(t.sayRide)}><span className="ic">🚕</span>{t.tileRide}</button>}
+            {on('notify_volunteer') && <button className="tile" onClick={() => say(t.sayFix)}><span className="ic">🔧</span>{t.tileFix}</button>}
+            {on('send_message_to_caretaker') && <button className="tile" onClick={() => say(t.tileOk(care))}><span className="ic">💬</span>{t.tileOk(care)}</button>}
             <button className="tile" onClick={() => go('reminders')}><span className="ic">⏰</span>{t.tileDay}</button>
           </div>
           {!isLive() && <p className="muted center" style={{ marginTop: 18, fontSize: 16 }}>{t.helperVisits} <b>{helperVisitsLeft(s)}</b></p>}
@@ -250,7 +252,8 @@ function Talk({ s, items, onMic, listening, say, back }: { s: DemoState; items: 
       </div>
       <div className="e-input">
         <div className="e-quick">
-          {([['📞', t.callAria(care), t.sayCall(care)], ['💬', t.tileOk(care), t.tileOk(care)], ['💊', t.tileMedicine, t.sayMedicine], ['🔧', t.tileFix, t.sayFix]] as const).map(([i, l, said]) => (
+          {([['📞', t.callAria(care), t.sayCall(care), null], ['💬', t.tileOk(care), t.tileOk(care), 'send_message_to_caretaker'], ['💊', t.tileMedicine, t.sayMedicine, 'order_medicine'],
+            ['🔧', t.tileFix, t.sayFix, 'notify_volunteer']] as const).filter(([, , , tool]) => !tool || s.rules.tools[tool]?.mode !== 'blocked').map(([i, l, said]) => (
             <button key={l} onClick={() => say(said)}><span>{i}</span>{l}</button>
           ))}
         </div>

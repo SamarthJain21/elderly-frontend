@@ -93,17 +93,26 @@ export function Rules() {
   const nk = nick(s)
   const cur = s.rules.currency
   const tools = Object.keys(TOOL_META) as ToolName[]
+  // Off = the old "Never" mode. Turning it back on restores what it was (or "Ask {nick} first").
+  const [before, setBefore] = useState<Partial<Record<ToolName, Mode>>>({})
+  const toggle = (t: ToolName, on: boolean) => {
+    if (!on) { setBefore(b => ({ ...b, [t]: s.rules.tools[t].mode })); setRuleMode(t, 'blocked'); return }
+    const prev = before[t]
+    setRuleMode(t, prev && prev !== 'blocked' ? prev : 'elder_confirm')
+  }
   return (
     <>
-      <CHead title="Helper rules" sub={`What the helper may do when ${nk} asks`} />
+      <CHead title="Helper rules" sub={`What the helper may do when ${nk} asks — switch off anything you don’t want`} />
       <div className="scroll"><div className="c-body">
         {tools.map(t => {
           const r = s.rules.tools[t]; const meta = TOOL_META[t]
           return (
             <div key={t} className="card stack" style={{ gap: 10 }}>
-              <div className="row"><span style={{ fontSize: 24 }}>{meta.ic}</span><div className="grow"><b>{meta.label}</b><p className="small muted">{nk} says: {meta.ex}</p></div></div>
+              <div className="row"><span style={{ fontSize: 24 }}>{meta.ic}</span><div className="grow"><b>{meta.label}</b><p className="small muted">{nk} says: {meta.ex}</p></div>
+                <Switch checked={r.mode !== 'blocked'} onChange={on => toggle(t, on)} label={`${meta.label}: ${r.mode === 'blocked' ? 'off' : 'on'}`} /></div>
+              {r.mode === 'blocked' ? <p className="small muted">Off — the helper won’t do this, and its button is hidden on {nk}’s phone. If {nk} asks, you’re told.</p> : <>
               <div className="seg" role="radiogroup" aria-label={meta.label}>
-                {(Object.keys(MODE_LABEL) as Mode[]).map(m => (
+                {(Object.keys(MODE_LABEL) as Mode[]).filter(m => m !== 'blocked').map(m => (
                   <button key={m} role="radio" aria-checked={r.mode === m} className={r.mode === m ? 'on' : ''} onClick={() => setRuleMode(t, m)}>
                     {MODE_LABEL[m].l.replace('{nick}', nk)}<small>{MODE_LABEL[m].s.replace('{nick}', nk)}</small>
                   </button>
@@ -114,7 +123,7 @@ export function Rules() {
                   <div className="row"><span style={{ fontWeight: 700 }}>{cur}</span>
                     <LimitInput minor={r.limitMinor ?? 0} currency={cur} onValid={m => setRuleLimit(t, m)} /></div>
                 </label>
-              )}
+              )}</>}
             </div>
           )
         })}
