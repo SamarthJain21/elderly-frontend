@@ -11,7 +11,7 @@ import type { Billing } from '../lib/plans'
 function TopBar({ children }: { children?: React.ReactNode }) {
   return (
     <div className="topbar">
-      <Link to="/" className="brand"><span className="logo">♥</span>Elderly</Link>
+      <Link to="/about" className="brand"><span className="logo">♥</span>Elderly</Link>
       <span className="grow" />
       {children}
     </div>

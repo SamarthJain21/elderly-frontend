@@ -526,3 +526,7 @@ a { color: inherit }
 .ci-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--line) }
 .ci-dots i.on { background: var(--accent) } .ci-dots i.now { background: var(--ink) }
 .ci-skip { display: block; margin: 10px auto 0; font-size: 16px }
+
+/* Sign-in page: the way in for visitors and judges */
+.login-new { display: grid; gap: 8px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); width: 100% }
+.login-new .eyebrow { text-align: center }

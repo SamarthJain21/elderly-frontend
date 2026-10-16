@@ -280,7 +280,7 @@ export function More() {
           <Link to="/caretaker" className="list-row" onClick={() => update(d => { d.tours.caretaker = false })}><span style={{ fontSize: 24, width: 32, textAlign: 'center' }}>🧭</span><div className="grow"><p className="t">Take the tour again</p><p className="s">A 1-minute walk through the app</p></div><span className="chev">›</span></Link>
           {s.live.admin && <Link to="/admin" className="list-row"><span style={{ fontSize: 24, width: 32, textAlign: 'center' }}>📊</span><div className="grow"><p className="t">API costs</p><p className="s">Admins only</p></div><span className="chev">›</span></Link>}
           {/* Developer showcase links: only in the standalone demo, never for real users or inside /demo, /try. */}
-          {!isLive() && !EMBEDDED && <Link to="/" className="list-row"><span style={{ fontSize: 24, width: 32, textAlign: 'center' }}>🧪</span><div className="grow"><p className="t">Showcase menu</p><p className="s">Side-by-side demo, onboarding, pricing</p></div><span className="chev">›</span></Link>}
+          {!isLive() && !EMBEDDED && <Link to="/about" className="list-row"><span style={{ fontSize: 24, width: 32, textAlign: 'center' }}>🧪</span><div className="grow"><p className="t">Showcase menu</p><p className="s">Side-by-side demo, onboarding, pricing</p></div><span className="chev">›</span></Link>}
         </div>
       </div></div>
     </>
