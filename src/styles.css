@@ -530,3 +530,5 @@ a { color: inherit }
 /* Sign-in page: the way in for visitors and judges */
 .login-new { display: grid; gap: 8px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); width: 100% }
 .login-new .eyebrow { text-align: center }
+
+.push-card { gap: 12px; align-items: center; background: var(--blue-soft); box-shadow: none }

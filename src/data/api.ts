@@ -85,6 +85,7 @@ export function createApi(getToken: TokenFn) {
     saveDeviceSettings: (id: string, s: DeviceSettings) => req<DeviceSettings>('PUT', `${e(id)}/device-settings`, s),
     /** Cost dashboard (app/routers/admin_api.py) — admins only. */
     adminUsage: (days: number) => req<UsageReport>('GET', `/admin/usage?days=${days}`),
+    addPushToken: (token: string) => req<void>('POST', '/me/push-token', { token }),
     inviteCaretaker: (id: string, email: string) => req<{ status: 'added' | 'invited' }>('POST', `${e(id)}/caretakers`, { email }),
   }
 }
