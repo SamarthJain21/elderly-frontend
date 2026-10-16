@@ -12,8 +12,8 @@ const sos = vi.fn()
 const say = vi.fn()
 const saveRules = vi.fn((_elderId: string, _rules: unknown) => Promise.resolve())
 
-vi.mock('./mode', () => ({ isLive: () => true, MODE: 'live', API_URL: '/api', switchMode: () => {} }))
-vi.mock('../lib/firebase', () => ({ auth: { currentUser: null, onAuthStateChanged: () => () => {} }, googleProvider: {}, getToken: () => Promise.resolve('t'), firebaseReady: true }))
+vi.mock('./mode', () => ({ isLive: () => true, MODE: 'live', API_URL: '/api', switchMode: () => {}, SANDBOX_FRAME: false }))
+vi.mock('../lib/firebase', () => ({ auth: { currentUser: null, onAuthStateChanged: () => () => {} }, googleProvider: {}, getToken: () => Promise.resolve('t'), firebaseReady: true, isSandboxSigningIn: () => false, sandboxSignIn: null }))
 vi.mock('./api', async (orig) => ({
   ...(await orig<typeof import('./api')>()),
   createApi: () => new Proxy({ saveRules }, { get: (t, k) => (t as Record<string, unknown>)[k as string] ?? (() => Promise.resolve(null)) }),
