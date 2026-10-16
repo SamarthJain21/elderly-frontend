@@ -32,7 +32,7 @@ export function createApi(getToken: TokenFn) {
     createElder: (b: { name: string; phone: string; language: Language }) =>
       req<{ elderId: string; email: string; tempPassword: string }>('POST', '/elders', b),
     myElders: () => req<{ elderId: string; name: string; language: Language; assessed: boolean }[]>('GET', '/elders'),
-    elder: (id: string) => req<{ elderId: string; name: string; phone: string; language: Language; sharingTier: SharingTier; assessment: Assessment | null; caretakerNames?: string[] }>('GET', e(id)),
+    elder: (id: string) => req<{ elderId: string; name: string; phone: string; language: Language; sharingTier: SharingTier; assessment: Assessment | null; caretakerNames?: string[]; face?: string | null }>('GET', e(id)),
     saveAssessment: (id: string, a: Assessment) => req<Assessment>('PUT', `${e(id)}/assessment`, a),
     // settings (app/routers/settings.py)
     rules: (id: string) => req<AutonomyRules>('GET', `${e(id)}/rules`),
@@ -82,9 +82,9 @@ export function createApi(getToken: TokenFn) {
 export interface Profile { name: string; phone: string; language: Language; sharingTier: SharingTier; address: Address | null; emergencyContacts: EmergencyContact[] }
 
 /** app/contacts.py ContactIn — what the caretaker can set on a contact. */
-export type ContactIn = Pick<Contact, 'name' | 'phone' | 'kind' | 'relationship' | 'skills' | 'trusted' | 'email'>
+export type ContactIn = Pick<Contact, 'name' | 'phone' | 'kind' | 'relationship' | 'skills' | 'trusted' | 'email' | 'face'>
 export const contactIn = (c: Contact): ContactIn =>
-  ({ name: c.name, phone: c.phone, kind: c.kind, relationship: c.relationship, skills: c.skills, trusted: c.trusted, email: c.email })
+  ({ name: c.name, phone: c.phone, kind: c.kind, relationship: c.relationship, skills: c.skills, trusted: c.trusted, email: c.email, face: c.face })
 
 /** app/checkin_store.py TodayCheckIn */
 export interface TodayCheckIn { status: CheckInStatus; date: string; time: string; checkIn: CheckInRecord | null }

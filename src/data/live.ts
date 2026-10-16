@@ -77,6 +77,7 @@ function applyProfile(d: DemoState, p: Profile) {
 /** Elders can't read the contacts list (caretaker-only), so their call buttons come from the emergency contacts. */
 const emergencyAsContacts = (d: DemoState): Contact[] => d.elder.emergencyContacts.map((c, i) => ({
   id: `ec_${i}`, name: c.name, phone: c.phone, kind: 'family', relationship: c.relationship, skills: [], trusted: true, email: '', rating: null,
+  face: c.face ?? undefined,
 }))
 
 function upsertMessage(d: DemoState, m: Message) {
@@ -117,6 +118,7 @@ export async function refresh(full = true) {
   update(d => {
     if (elder) {
       d.elder.name = elder.name; d.elder.phone = elder.phone; d.elder.language = elder.language
+      d.elder.face = elder.face ?? ''
       if (elder.assessment) d.assessment = elder.assessment
     }
     if (profile) applyProfile(d, profile)

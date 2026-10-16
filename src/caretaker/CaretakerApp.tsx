@@ -76,6 +76,13 @@ function Overview({ s }: { s: DemoState }) {
   const toast = useToast()
   const nk = nick(s)
   const [sos, setSos] = useState(false)
+  // Live: until their profile arrives, don't show half-filled status ("? All good — is at home").
+  if (isLive() && !s.elder.name) return (
+    <>
+      <CHead title={`Hi ${s.caretaker.name}`} sub="Connecting…" />
+      <div className="scroll"><div className="c-body center-msg"><div className="spinner" aria-hidden /><p className="muted">Loading the latest…</p></div></div>
+    </>
+  )
   const alerts = s.logs.filter(l => l.kind === 'alert' && !l.ack)
   // Alerts first; otherwise the week's picture, so the headline never says 'all good' above a 'keep an eye' card.
   const week = weekStatus(s)

@@ -8,6 +8,9 @@ const KEY = 'elderly-mode'
 const TAB_KEY = 'elderly-mode-tab'
 
 /** Inside /try: an app frame signed in to a throwaway sandbox account on the real backend (real Gemini). */
+/** Inside the side-by-side showcase (/demo or /try): the app fills an iframe, and tours don't start on their own. */
+export const EMBEDDED = typeof window !== 'undefined' && (new URLSearchParams(location.search).has('embed') || window.self !== window.top)
+
 export const SANDBOX_FRAME = typeof window !== 'undefined' && new URLSearchParams(location.search).has('sandbox')
 
 function initialMode(): DataMode {

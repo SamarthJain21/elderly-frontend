@@ -83,7 +83,7 @@ export type ContactKind = 'family' | 'friend' | 'neighbour' | 'volunteer' | 'doc
 export interface Contact {
   id: string; name: string; phone: string; kind: ContactKind; relationship: string
   skills: string[]; trusted: boolean; email: string; rating: number | null
-  /** Frontend-only: key of the illustrated face (real app: uploaded photo URL). */
+  /** Key of the illustrated face (demo data, live sandbox); real people get initials until photos exist. */
   face?: string
 }
 export interface HelpRequest {
@@ -99,7 +99,7 @@ export interface Address {
   /** Filled by the backend's geocoding on save. */
   lat?: number | null; lng?: number | null; precision?: 'address' | 'street' | 'city' | null
 }
-export interface EmergencyContact { name: string; phone: string; relationship: string }
+export interface EmergencyContact { name: string; phone: string; relationship: string; face?: string | null }
 export const addressLine = (a: Address | null | undefined) =>
   a ? [a.line1, a.line2, a.landmark, a.city, a.postcode].filter(Boolean).join(', ') : ''
 
