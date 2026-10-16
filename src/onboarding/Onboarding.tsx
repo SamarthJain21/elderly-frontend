@@ -1,4 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { PhoneField } from '../components/PhoneField'
+import { countryForTimezone, phoneError } from '../lib/phone'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { isLive } from '../data/mode'
 import { api, loadSession } from '../data/live'
@@ -255,7 +257,7 @@ export function CaretakerOnboarding() {
       <PrivacyConsent />
     </> },
     // 1 — about them (+ nickname, consent, data note)
-    { ok: !!them.nickname.trim() && !!them.name.trim() && them.phone.trim().length >= 5 && addressComplete(address) && consent, body: <>
+    { ok: !!them.nickname.trim() && !!them.name.trim() && !phoneError(them.phone) && addressComplete(address) && consent, body: <>
       <h1>Who are you caring for?</h1>
       <div className="field">What do you call them?
         <div className="chips-pick" role="radiogroup" aria-label="What you call them">
@@ -265,7 +267,7 @@ export function CaretakerOnboarding() {
         {customNick && <input autoFocus value={them.nickname} onChange={e => setThem({ ...them, nickname: e.target.value })} placeholder="e.g. Auntie May, Pop, Ah Ma" />}
       </div>
       <label className="field">Their name<input value={them.name} onChange={e => setThem({ ...them, name: e.target.value })} /></label>
-      <label className="field">Their phone number<input value={them.phone} inputMode="tel" onChange={e => setThem({ ...them, phone: e.target.value })} /></label>
+      <PhoneField label="Their phone number" value={them.phone} onChange={v => setThem({ ...them, phone: v })} defaultCountry={countryForTimezone(them.timezone)} />
       <div className="row">
         <label className="field grow">Language<select value={them.language} onChange={e => setThem({ ...them, language: e.target.value as Language })}>{LANGS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
         <label className="field grow">Lives in<select value={them.timezone} onChange={e => setThem({ ...them, timezone: e.target.value })}>{TIMEZONES.map(t => <option key={t.tz} value={t.tz}>{t.label}</option>)}</select></label>
@@ -276,12 +278,12 @@ export function CaretakerOnboarding() {
       <label className="consent"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} /><span>I’ve talked with {nk} and they’re happy to use Elderly.</span></label>
     </> },
     // 2 — your name
-    { ok: me.name.trim().length > 0 && (!L || me.phone.trim().length >= 5), body: <>
+    { ok: me.name.trim().length > 0 && (!L || !phoneError(me.phone)), body: <>
       <h1>What does {nk} call you?</h1>
       <p className="lead">This name appears on their screen next to your photo.</p>
       <label className="field">Your name<input value={me.name} onChange={e => setMe({ ...me, name: e.target.value })} placeholder="Emma" autoFocus /></label>
-      <label className="field">Your phone number<input value={me.phone} inputMode="tel" onChange={e => setMe({ ...me, phone: e.target.value })} placeholder="+65 9000 1111" />
-        <span className="small muted">So {nk} can call you with one tap, and the helper can reach you in an emergency.</span></label>
+      <PhoneField label="Your phone number" value={me.phone} onChange={v => setMe({ ...me, phone: v })} defaultCountry={countryForTimezone(them.timezone)} />
+      <span className="small muted" style={{ marginTop: -6 }}>So {nk} can call you with one tap, and the helper can reach you in an emergency.</span>
       <div className="field">You are their…
         <div className="chips-pick">{['daughter', 'son', 'granddaughter', 'grandson', 'carer', 'friend'].map(r => (
           <button key={r} className={(me.relationship || relFor(nk)) === r ? 'on' : ''} onClick={() => setMe({ ...me, relationship: r })}>{r}</button>
@@ -359,8 +361,8 @@ export function CaretakerOnboarding() {
       ))}
       <button className="btn" onClick={() => setMeds(ms => [...ms, { id: uid('m'), name: '', dose: '', times: ['20:00'], withFood: true, notes: '' }])}>＋ Add a medicine</button>
     </> },
-    // 5 — faces
-    { body: <>
+    // 5 — faces (a person with a name needs a valid number, or they can't be called)
+    { ok: people.every(p => !p.name.trim() || !phoneError(p.phone)), body: <>
       <h1>Faces {nk} can call</h1>
       <p className="lead">They appear as big photos on {nk}’s home screen — one tap to call.</p>
       <div className="row card"><Face k={faceFor(me.name)} name={me.name} size={52} /><div className="grow"><b>{me.name || 'You'}</b><p className="small muted">You · added automatically</p></div><span className="pill ok">✓</span></div>
@@ -369,7 +371,7 @@ export function CaretakerOnboarding() {
           <div className="row"><Face k={faceFor(p.name)} name={p.name} size={44} />
             <label className="field grow">Name<input value={p.name} onChange={e => setPeople(ps => ps.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} /></label></div>
           <div className="row"><label className="field grow">Relationship<input value={p.relationship} onChange={e => setPeople(ps => ps.map((x, j) => j === i ? { ...x, relationship: e.target.value } : x))} /></label>
-            <label className="field grow">Phone<input value={p.phone} inputMode="tel" onChange={e => setPeople(ps => ps.map((x, j) => j === i ? { ...x, phone: e.target.value } : x))} /></label></div>
+            <div className="grow"><PhoneField label="Phone" value={p.phone} onChange={v => setPeople(ps => ps.map((x, j) => j === i ? { ...x, phone: v } : x))} defaultCountry={countryForTimezone(them.timezone)} /></div></div>
         </div>
       ))}
       <button className="btn" onClick={() => setPeople(ps => [...ps, { name: '', relationship: '', phone: '' }])}>＋ Add someone</button>

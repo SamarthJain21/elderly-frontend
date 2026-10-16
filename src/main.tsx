@@ -14,6 +14,14 @@ import { bootLive } from './data/live'
 
 if (isLive()) bootLive()
 
+// Time and date fields: open the picker on a tap anywhere in the field, not only on the tiny clock icon.
+document.addEventListener('click', e => {
+  const el = e.target
+  if (el instanceof HTMLInputElement && (el.type === 'time' || el.type === 'date') && !el.disabled && !el.readOnly) {
+    try { el.showPicker() } catch { /* older browsers: the field still works by typing */ }
+  }
+})
+
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -44,16 +44,20 @@ export default function CaretakerApp({ framed = true }: { framed?: boolean }) {
         <Tab to="chat" i="💬" l="Chat" badge={s.caretakerUnread} />
         <Tab to="approvals" i="🔐" l="Approvals" badge={pending} />
         <Tab to="rules" i="🧭" l="Rules" />
-        <Tab to="more" i="☰" l="More" />
+        <Tab to="more" i="☰" l="More" also={['people', 'family', 'requests', 'checkins', 'routine', 'settings', 'plan', 'setup-phone', 'checkout']} />
       </nav>}
     </div>
   )
 }
 
-function Tab({ to, i, l, badge, end }: { to: string; i: string; l: string; badge?: number; end?: boolean }) {
+/** `also`: sub-pages opened from this tab keep it highlighted (People, Routine… live under More). */
+function Tab({ to, i, l, badge, end, also = [] }: { to: string; i: string; l: string; badge?: number; end?: boolean; also?: string[] }) {
   const anchor = `nav-${to || 'home'}`
+  const { pathname } = useLocation()
+  const under = also.some(p => pathname.startsWith(`/caretaker/${p}`))
   return (
-    <NavLink to={`/caretaker/${to}`} end={end} data-tour={anchor} className={({ isActive }) => (isActive ? 'active' : '')}>
+    <NavLink to={`/caretaker/${to}`} end={end} data-tour={anchor} aria-current={under ? 'page' : undefined}
+      className={({ isActive }) => (isActive || under ? 'active' : '')}>
       <span className="i" aria-hidden>{i}</span>{l}{badge ? <span className="nbadge">{badge}</span> : null}
     </NavLink>
   )

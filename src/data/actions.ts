@@ -19,6 +19,8 @@ import { live } from './live'
 import type { Contact } from '../lib/types'
 
 /** Open the phone dialler (live mode: real calls go through the phone, not the app). */
+/** Sandbox numbers (+000…) are never dialled or texted (backend app/sms.py). */
+export const isPretendNumber = (phone: string) => phone.replace(/\s/g, '').startsWith('+000')
 const dial = (phone: string) => { if (phone) window.location.href = `tel:${phone.replace(/[^\d+]/g, '')}` }
 
 // ---------- helpers ----------
@@ -510,7 +512,14 @@ export function caretakerCall() {
   update(d => { d.elderUi.overlay = { type: 'incoming', who: d.caretaker.name, face: 'emma' } })
 }
 export function elderCallContact(contactId: string) {
-  if (isLive()) { const c = getState().contacts.find(x => x.id === contactId); if (c) dial(c.phone); return }
+  if (isLive()) {
+    // Show who's being called (a bare tel: link does nothing on a laptop, or with a sandbox's pretend number),
+    // and open the phone's dialer when there is one.
+    const c = getState().contacts.find(x => x.id === contactId); if (!c) return
+    update(d => { d.elderUi.overlay = { type: 'call', who: c.name, face: c.face, phone: c.phone } })
+    if (!isPretendNumber(c.phone) && matchMedia('(pointer: coarse)').matches) dial(c.phone)
+    return
+  }
   update(d => {
     const c = d.contacts.find(x => x.id === contactId); if (!c) return
     d.elderUi.overlay = { type: 'call', who: c.name, face: c.face }

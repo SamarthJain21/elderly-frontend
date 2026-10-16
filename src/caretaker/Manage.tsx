@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { PhoneField } from '../components/PhoneField'
+import { countryForTimezone, phoneError } from '../lib/phone'
 import { Link, useNavigate } from 'react-router-dom'
 import { nick, resetDemo, update, useDemo } from '../data/store'
 import { addContact, addReminder, caretakerDecide, deleteReminder, helperVisitsLeft, quotaLeft, setElderLanguage, setNickname, setRuleLimit, setRuleMode, setSharingTier, setTrustedOnly, toggleTrusted } from '../data/actions'
@@ -144,7 +146,8 @@ export function People() {
   const [form, setForm] = useState({ name: '', phone: '', kind: 'family' as ContactKind, relationship: '' })
   const fam = s.contacts.filter(c => c.kind !== 'volunteer'), vols = s.contacts.filter(c => c.kind === 'volunteer')
   const save = () => {
-    if (!form.name.trim() || form.phone.trim().length < 5) { toast('Add a name and phone number'); return }
+    const bad = !form.name.trim() ? 'Add their name' : phoneError(form.phone)
+    if (bad) { toast(bad); return }
     addContact({ ...form, skills: [], trusted: form.kind !== 'volunteer', email: '' })
     setAdding(false); setForm({ name: '', phone: '', kind: 'family', relationship: '' }); toast(`${form.name} added — ${nk} can tap their face to call`)
   }
@@ -178,7 +181,7 @@ export function People() {
         <h2 style={{ fontSize: 24, marginBottom: 12 }}>Add someone {nk} knows</h2>
         <div className="stack">
           <label className="field">Name<input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Grace" /></label>
-          <label className="field">Phone<input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} inputMode="tel" placeholder="+65 9123 4567" /></label>
+          <PhoneField label="Phone" value={form.phone} onChange={v => setForm({ ...form, phone: v })} defaultCountry={countryForTimezone(s.assessment.timezone)} />
           <label className="field">Who are they?
             <select value={form.kind} onChange={e => setForm({ ...form, kind: e.target.value as ContactKind })}>
               {['family', 'friend', 'neighbour', 'doctor', 'volunteer'].map(k => <option key={k}>{k}</option>)}

@@ -11,7 +11,7 @@
 import { connectChat, contactIn, createApi, ApiError, type BackendAction, type Profile, type ServerFrame, type TodayCheckIn } from './api'
 import { addPushedClip, setCloudVoice } from '../lib/speech'
 import { auth, getToken, isSandboxSigningIn, onUser, sandboxSignIn, signOutUser } from '../lib/firebase'
-import { emptyLive, getState, update, type DemoState } from './store'
+import { emptyLive, getState, restoreSeen, update, type DemoState } from './store'
 import { formatMoney } from '../lib/money'
 import { notify } from '../components/ui'
 import type { ActionCard, Contact, Message, Mood } from '../lib/types'
@@ -317,6 +317,7 @@ export function bootLive() {
     update(d => {
       if (d.live.uid && d.live.uid !== u.uid) Object.assign(d, emptyLive())  // someone else signed in on this device
       d.live = { ...d.live, uid: u.uid, email: u.email, displayName: u.displayName }
+      restoreSeen(d, u.uid)
     })
     void loadSession()
   })

@@ -17,7 +17,7 @@ import { EMBEDDED, SANDBOX_FRAME, isLive } from './mode'
 export interface LedgerEntry { id: string; date: string; description: string; amount: number; kind: 'topup' | 'included' | 'call' | 'emergency' }
 export interface Invoice { id: string; date: string; description: string; amountMinor: number; method: string }
 export type Overlay =
-  | { type: 'call'; who: string; face?: string; live?: boolean }
+  | { type: 'call'; who: string; face?: string; live?: boolean; /** live mode: the number being dialled */ phone?: string }
   | { type: 'incoming'; who: string; face?: string }
   /** Countdown, then `alerted`: family told + a button to call the local emergency number (backend never auto-dials). */
   // alerted = the backend CONFIRMED the alert. sending/failed track the request; never claim help without it.
@@ -249,7 +249,28 @@ const listeners = new Set<() => void>()
 const channel = SYNC_ACROSS_TABS && typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('elderly-demo') : null
 channel?.addEventListener('message', () => { state = load() ?? seed(); listeners.forEach(l => l()) })
 
+// Live mode keeps no data in the browser, except which intros this account has finished on this device — so the
+// elder's walkthrough and the tours don't start again at every sign-in.
+const seenKey = (uid: string) => `elderly.seen.${uid}`
+let lastSeen = ''
+function saveSeen() {
+  if (!isLive() || !state.live.uid) return
+  const seen = JSON.stringify({ elder: state.onboarded.elder, tours: state.tours })
+  if (seen === lastSeen) return
+  lastSeen = seen
+  try { localStorage.setItem(seenKey(state.live.uid), seen) } catch { /* private mode: they'll just see it again */ }
+}
+/** After sign-in: mark the intros this account already finished here. */
+export function restoreSeen(d: DemoState, uid: string) {
+  try {
+    const v = JSON.parse(localStorage.getItem(seenKey(uid)) ?? 'null') as { elder?: boolean; tours?: DemoState['tours'] } | null
+    if (v?.elder) d.onboarded.elder = true
+    if (v?.tours) d.tours = { caretaker: d.tours.caretaker || !!v.tours.caretaker, elder: d.tours.elder || !!v.tours.elder }
+  } catch { /* nothing saved */ }
+}
+
 function persist() {
+  saveSeen()
   if (SYNC_ACROSS_TABS) {
     try { localStorage.setItem(KEY, JSON.stringify(state)) } catch { /* private mode: in-memory only */ }
     channel?.postMessage('sync')

@@ -4,8 +4,8 @@
  */
 import type { Language } from './types'
 
-type SR = { lang: string; interimResults: boolean; maxAlternatives: number; start(): void; stop(): void
-  onresult: ((e: { results: { 0: { transcript: string } }[] }) => void) | null
+type SR = { lang: string; interimResults: boolean; continuous: boolean; maxAlternatives: number; start(): void; stop(): void
+  onresult: ((e: { resultIndex: number; results: ArrayLike<{ isFinal: boolean; 0: { transcript: string } }> }) => void) | null
   onerror: ((e: { error: string }) => void) | null; onend: (() => void) | null }
 
 const SRCtor: (new () => SR) | undefined =
@@ -21,19 +21,39 @@ let active: SR | null = null
 /** Browser speech locale: Hinglish is spoken Hindi (the hi-IN recognizer and voices handle the mix). */
 export const speechLocale = (lang: Language): string => lang === 'hi-Latn' ? 'hi-IN' : lang
 
+/** Older people often pause mid-sentence: keep listening until this much silence after they last spoke. */
+export const SILENCE_MS = 2000
+const MAX_LISTEN_MS = 30_000
+
 export function listen(lang: Language, onText: (t: string) => void, onEnd: (err?: string) => void): () => void {
   if (!SRCtor) { onEnd('unsupported'); return () => {} }
   const r = new SRCtor()
-  r.lang = speechLocale(lang); r.interimResults = false; r.maxAlternatives = 1
+  // Continuous: the browser's default stops at the first short pause and cuts people off.
+  r.lang = speechLocale(lang); r.interimResults = true; r.continuous = true; r.maxAlternatives = 1
+  const finals: string[] = []
+  let interim = ''
+  let silence: ReturnType<typeof setTimeout> | undefined
+  const cap = setTimeout(() => { try { r.stop() } catch { /* already stopped */ } }, MAX_LISTEN_MS)
   // onerror and onend both fire on errors — report the end exactly once.
   let ended = false
   const finish = (err?: string) => {
     if (ended) return
     ended = true
     if (active === r) active = null  // a late end from an OLD recognizer must not clear the current one
-    onEnd(err)
+    clearTimeout(silence); clearTimeout(cap)
+    const said = [...finals, interim].join(' ').replace(/\s+/g, ' ').trim()
+    if (said) onText(said)
+    onEnd(said ? undefined : err)
   }
-  r.onresult = e => onText(e.results[0][0].transcript)
+  r.onresult = e => {
+    interim = ''
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const res = e.results[i]
+      if (res.isFinal) finals.push(res[0].transcript.trim()); else interim += res[0].transcript
+    }
+    clearTimeout(silence)
+    silence = setTimeout(() => { try { r.stop() } catch { /* already stopped */ } }, SILENCE_MS)
+  }
   r.onerror = e => finish(e.error)
   r.onend = () => finish()
   try { active?.stop() } catch { /* previous already stopped */ }
@@ -115,6 +135,29 @@ function speakCloud(fetchClip: CloudVoice, clean: string, lang: Language, rate: 
   fetchClip(clean, lang).then(blob => { const url = URL.createObjectURL(blob); remember(key, url); play(url) }, fallback)
 }
 
+// ---------- before the first tap ----------
+// Browsers block sound until the person has touched the page once. An elder who opens the setup link is signed in
+// without touching anything, so the first things the helper says would be silently dropped: hold the latest one
+// and say it on the first tap instead.
+let held: (() => void) | null = null
+const listeners = new Set<(blocked: boolean) => void>()
+export const soundBlocked = () => typeof navigator !== 'undefined' && !!navigator.userActivation && !navigator.userActivation.hasBeenActive
+/** For the "Tap anywhere to hear me" hint. */
+export function onSoundBlockedChange(fn: (blocked: boolean) => void) { listeners.add(fn); return () => { listeners.delete(fn) } }
+function holdUntilTap(say: () => void) {
+  if (!held) {
+    const go = () => {
+      document.removeEventListener('pointerdown', go, true); document.removeEventListener('keydown', go, true)
+      const h = held; held = null
+      listeners.forEach(f => f(false))
+      h?.()
+    }
+    document.addEventListener('pointerdown', go, true); document.addEventListener('keydown', go, true)
+    listeners.forEach(f => f(true))
+  }
+  held = say  // only the newest line matters
+}
+
 // ---------- pushed voice: the server sends a reply's audio over the chat socket (no round trip) ----------
 /** How long a shown reply waits for the server's audio before fetching the voice itself. */
 export const PUSH_WAIT_MS = 2500
@@ -163,6 +206,7 @@ const reading = new Map<string, { text: string; lang: Language }>()
  * backend, a failure), fetch the voice the usual way. A newer speak/stop wins, and a late clip is then ignored.
  */
 export function speakMessage(messageId: string, text: string, lang: Language) {
+  if (soundBlocked()) { holdUntilTap(() => speakMessage(messageId, text, lang)); return }
   const my = ++seq
   stopAudio()
   if (canSpeak() && (speechSynthesis.speaking || speechSynthesis.pending)) speechSynthesis.cancel()
@@ -181,6 +225,7 @@ export function speakMessage(messageId: string, text: string, lang: Language) {
 export function speak(text: string, lang: Language = 'en-US', rate = 0.85): boolean {
   const clean = text.replace(/<[^>]+>/g, '').replace(/\p{Extended_Pictographic}/gu, '').trim()
   if (!clean) return false
+  if (soundBlocked()) { holdUntilTap(() => speak(text, lang, rate)); return true }
   if (cloud && typeof Audio !== 'undefined') { speakCloud(cloud, clean, lang, rate); return true }
   return speakDevice(clean, lang, rate)
 }
@@ -207,4 +252,4 @@ function speakDevice(clean: string, lang: Language, rate: number): boolean {
   return true
 }
 
-export const stopSpeaking = () => { seq++; stopAudio(); if (canSpeak()) { current = null; speechSynthesis.cancel() } }
+export const stopSpeaking = () => { seq++; held = null; stopAudio(); if (canSpeak()) { current = null; speechSynthesis.cancel() } }

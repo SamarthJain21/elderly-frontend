@@ -86,3 +86,21 @@ describe('family app', () => {
     expect(notify).not.toHaveBeenCalled()
   })
 })
+
+describe('intros only once per account', () => {
+  it('remembers that the elder finished the walkthrough, and restores it at the next sign-in', async () => {
+    const mem = new Map<string, string>()
+    vi.stubGlobal('localStorage', { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => { mem.set(k, v) }, removeItem: (k: string) => { mem.delete(k) } })
+    update(d => { d.live.uid = 'elder-uid'; d.onboarded.elder = true; d.tours.elder = true })
+    const { restoreSeen, emptyLive } = await import('./store')
+    const fresh = emptyLive()  // what a new sign-in starts from
+    expect(fresh.onboarded.elder).toBe(false)
+    restoreSeen(fresh, 'elder-uid')
+    expect(fresh.onboarded.elder).toBe(true)
+    expect(fresh.tours.elder).toBe(true)
+    const other = emptyLive()
+    restoreSeen(other, 'someone-else')
+    expect(other.onboarded.elder).toBe(false)
+    vi.unstubAllGlobals()
+  })
+})
