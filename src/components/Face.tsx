@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useId, useState } from 'react'
 
 /** Illustrated stand-ins for real photos. In production, contacts carry an uploaded photo URL. */
 interface Person { bg: string; skin: string; hair: string; shirt: string; style: 'bun' | 'long' | 'short' | 'pony' | 'curly'; glasses?: boolean; beard?: boolean }
@@ -16,8 +16,14 @@ export const FACES: Record<string, Person> = {
 
 const PALETTE = ['#E9DDF2', '#E2EAF7', '#DDEEE6', '#FBEFD8', '#F2E3F1']
 
-export function Face({ k, name, size = 48, className = '' }: { k?: string; name?: string; size?: number; className?: string }) {
+/** `src`: a real photo (a family member's Google picture) — wins over the illustration; initials if it fails. */
+export function Face({ k, name, size = 48, className = '', src }: { k?: string; name?: string; size?: number; className?: string; src?: string | null }) {
   const id = useId()
+  const [broken, setBroken] = useState(false)
+  if (src && !broken) return (
+    <img className={`face face-photo ${className}`} src={src} alt={name ?? ''} width={size} height={size} referrerPolicy="no-referrer"
+      onError={() => setBroken(true)} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover' }} />
+  )
   const p = k ? FACES[k] : undefined
   if (!p) {
     // Fallback: initials on a soft colour (for contacts without a photo).

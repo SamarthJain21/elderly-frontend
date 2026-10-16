@@ -133,6 +133,7 @@ export async function refresh(full = true) {
       d.elder.name = elder.name; d.elder.phone = elder.phone; d.elder.language = elder.language
       d.elder.face = elder.face ?? ''
       if (elder.appReady) d.onboarded.elder = true  // finished the walkthrough on any device
+      d.familyPhotos = Object.fromEntries((elder.family ?? []).filter(f => f.photo).map(f => [f.name, f.photo!]))
       if (elder.assessment) d.assessment = elder.assessment
     }
     if (profile) applyProfile(d, profile)

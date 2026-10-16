@@ -539,7 +539,7 @@ export function ElderOnboarding() {
       <p className="center" style={{ fontSize: 21 }}>{t.peopleBody}</p>
       <div className="people" style={{ marginTop: 10 }}>{family.map((c, i) => (
         <div key={c.id} className="center" style={{ fontWeight: 700, fontSize: 17, display: 'flex', flexDirection: 'column', alignItems: 'center', animation: `pop .5s ${0.2 + i * 0.2}s both cubic-bezier(.2,1.6,.4,1)` }}>
-          <Face k={c.face} name={c.name} size={74} /><p style={{ marginTop: 6 }}>{c.name}</p>
+          <Face k={c.face} src={s.familyPhotos?.[c.name]} name={c.name} size={74} /><p style={{ marginTop: 6 }}>{c.name}</p>
         </div>
       ))}</div>
     </> },

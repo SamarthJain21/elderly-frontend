@@ -77,6 +77,8 @@ export interface DemoState {
   }
   /** Elder app look & sound (voice on/off lives in elderUi.voice). */
   device: { volume: number; rate: number; textSize: DeviceSettings['textSize'] }
+  /** Live: family members' photos by name (Google pictures), for the elder's faces and messages. */
+  familyPhotos?: Record<string, string>
   elderUi: { typing: boolean; /** tool the agent is running, e.g. 'check_weather' */ activity?: string | null; overlay: Overlay; voice: boolean; lastEmergency?: string }
   caretakerUnread: number
   /** Frontend-only: how the elder's setup link was sent, and which guided tours are finished. */

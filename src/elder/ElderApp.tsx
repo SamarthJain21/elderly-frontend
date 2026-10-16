@@ -81,6 +81,13 @@ export default function ElderApp({ framed = true }: { framed?: boolean }) {
   )
 }
 
+/** A family member's real photo, matched by name (their Google picture), if we have one. */
+function photoOf(s: DemoState, name: string | undefined): string | undefined {
+  if (!name || !s.familyPhotos) return undefined
+  const first = (n: string) => n.trim().split(/\s+/)[0].toLowerCase()
+  return s.familyPhotos[name] ?? Object.entries(s.familyPhotos).find(([n]) => first(n) === first(name))?.[1]
+}
+
 // ---------------- Home ----------------
 function Home({ s, onMic, listening, say, go }: { s: DemoState; onMic: () => void; listening: boolean; say: (t: string) => void; go: (x: Screen) => void }) {
   const t = strings(s.elder.language)
@@ -110,7 +117,7 @@ function Home({ s, onMic, listening, say, go }: { s: DemoState; onMic: () => voi
           <div className="people" data-tour="e-people">
             {people.map(c => (
               <button key={c.id} onClick={() => elderCallContact(c.id)} aria-label={t.callAria(c.name)}>
-                <Face k={c.face} name={c.name} size={74} />{c.name.replace('Dr. ', 'Dr ')}
+                <Face k={c.face} src={photoOf(s, c.name)} name={c.name} size={74} />{c.name.replace('Dr. ', 'Dr ')}
               </button>
             ))}
           </div>
@@ -149,7 +156,7 @@ function FamilyQuestion({ s }: { s: DemoState }) {
   const play = () => { setPlaying(true); speak(m.text, s.elder.language); setTimeout(() => setPlaying(false), 4000) }
   return (
     <div className="fam-q" data-tour="e-family">
-      <div className="who"><Face k={sender?.face ?? 'emma'} name={m.senderName} size={88} /><div><b>{m.senderName}</b><span>{t.sentYou}</span></div></div>
+      <div className="who"><Face k={sender?.face ?? (isLive() ? undefined : 'emma')} src={photoOf(s, m.senderName)} name={m.senderName} size={88} /><div><b>{m.senderName}</b><span>{t.sentYou}</span></div></div>
       {<button className={`vplay ${playing ? 'playing' : ''}`} onClick={play} aria-label={t.playFrom(m.senderName)}><span className="pb">▶</span><Wave /><b>0:0{Math.max(2, Math.min(9, Math.round(m.text.split(' ').length / 2.5)))}</b></button>}
       <p className="q">{m.text}</p>
       <div className="bigbtns">
@@ -321,7 +328,7 @@ function FamilyBubble({ m, s, t }: { m: FamilyMessage; s: DemoState; t: Strings 
   const sender = s.contacts.find(c => c.name === m.senderName)
   return (
     <div className="msg fam">
-      <span className="who-face"><Face k={sender?.face ?? 'emma'} name={m.senderName} size={64} /><span><b>{m.senderName}</b><small>{sender?.relationship ? t.yourRel(sender.relationship) : t.family}</small></span></span>
+      <span className="who-face"><Face k={sender?.face ?? (isLive() ? undefined : 'emma')} src={photoOf(s, m.senderName)} name={m.senderName} size={64} /><span><b>{m.senderName}</b><small>{sender?.relationship ? t.yourRel(sender.relationship) : t.family}</small></span></span>
       <button className="vplay" onClick={() => speak(m.text, s.elder.language)} aria-label={t.listenMsg}><span className="pb">▶</span><Wave /></button>
       {m.text}
       {!isAnswered(s.family, m.id) && m.chips.length > 0 && <ChipButtons m={m} t={t} />}
@@ -440,7 +447,7 @@ function Overlay({ s }: { s: DemoState }) {
   if (o.type === 'incoming') return (
     <div className="ov call" role="alertdialog" aria-label={`${o.who} is calling`}>
       <p style={{ opacity: .85, fontSize: 18 }}>{t.incoming}</p>
-      <div className="ring" style={{ marginTop: 16 }}><Face k={o.face} name={o.who} size={176} /></div>
+      <div className="ring" style={{ marginTop: 16 }}><Face k={o.face} src={photoOf(s, o.who)} name={o.who} size={176} /></div>
       <h2>{o.who}</h2><p style={{ opacity: .85 }}>{(() => { const c = s.contacts.find(x => x.name === o.who); return c?.relationship ? t.yourRel(c.relationship) : t.family })()}</p>
       <div className="spacer" />
       <button className="bb white" onClick={answerCall}>{t.answer}</button>
@@ -451,7 +458,7 @@ function Overlay({ s }: { s: DemoState }) {
     const pretend = isPretendNumber(o.phone), touch = matchMedia('(pointer: coarse)').matches
     return (
       <div className="ov call" role="dialog" aria-label={t.calling2(o.who)}>
-        <div className="ring" style={{ marginTop: 16 }}><Face k={o.face} name={o.who} size={176} /></div>
+        <div className="ring" style={{ marginTop: 16 }}><Face k={o.face} src={photoOf(s, o.who)} name={o.who} size={176} /></div>
         <h2>{t.calling2(o.who)}</h2>
         {pretend ? <p style={{ opacity: .85 }}>{t.demoCall}</p>
           : !touch && <p style={{ opacity: .85 }}>{t.notPhone} <b style={{ whiteSpace: 'nowrap' }}>{o.phone}</b></p>}
