@@ -78,6 +78,24 @@ function PrivacyConsent() {
 }
 
 /** The required agreement — sits at the bottom, right above the button it unlocks. */
+const COUNTRY_NAME: Record<string, string> = { IN: 'India', TH: 'Thailand', SG: 'Singapore', MY: 'Malaysia', AE: 'UAE' }
+
+/** Checks a typed medicine name once typing pauses: "Did you mean…?", or its generic name. Name only — no advice. */
+function MedicineHint({ name, country, onUse }: { name: string; country: string; onUse: (v: string) => void }) {
+  const [res, setRes] = useState<{ for: string; recognised: boolean; suggestion: string | null; generic: string | null } | null>(null)
+  useEffect(() => {
+    const n = name.trim()
+    if (n.length < 3) { setRes(null); return }
+    const t = setTimeout(() => { api.checkMedicine(n, country).then(r => setRes({ ...r, for: n }), () => setRes(null)) }, 700)
+    return () => clearTimeout(t)
+  }, [name, country])
+  if (!res || res.for !== name.trim()) return null
+  if (res.suggestion) return <p className="med-hint">Did you mean <b>{res.suggestion}</b>? <button className="linkish" onClick={() => onUse(res.suggestion!)}>Use it</button></p>
+  if (res.generic) return <p className="med-hint ok">✓ {res.generic}</p>
+  if (!res.recognised) return <p className="med-hint warn">We don’t recognise this name — check the spelling on the box.</p>
+  return <p className="med-hint ok">✓ Recognised</p>
+}
+
 /** "This might be wrong" notes (lib/sanity.ts) — they never block Continue. */
 function Warnings({ items }: { items: string[] }) {
   if (!items.length) return null
@@ -362,7 +380,8 @@ export function CaretakerOnboarding() {
       <p className="lead">We’ll remind them at each time and let you know if one is missed.</p>
       {meds.map((m, i) => (
         <div key={m.id} className="card stack medcard" style={{ gap: 8 }}>
-          <div className="row"><label className="field grow">💊 Medicine<input value={m.name} onChange={e => setMeds(ms => ms.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} /></label>
+          <div className="row"><div className="grow"><label className="field">💊 Medicine<input value={m.name} onChange={e => setMeds(ms => ms.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} /></label>
+            {L && <MedicineHint name={m.name} country={COUNTRY_NAME[countryForTimezone(them.timezone)] ?? 'India'} onUse={v => setMeds(ms => ms.map((x, j) => j === i ? { ...x, name: v } : x))} />}</div>
             <label className="field" style={{ width: 100 }}>Dose<input value={m.dose} onChange={e => setMeds(ms => ms.map((x, j) => j === i ? { ...x, dose: e.target.value } : x))} /></label></div>
           <div className="field">Times each day
             <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
