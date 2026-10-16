@@ -266,6 +266,7 @@ export function More() {
     ['/caretaker/family', '👪', 'Family members', `${s.caretakers.length} active${s.invites.length ? ` · ${s.invites.length} invited` : ''}`],
     ['/caretaker/requests', '🤝', 'Help requests', `${s.requests.filter(r => ['open', 'notified', 'confirmed'].includes(r.status)).length} in progress`],
     ['/caretaker/checkins', '😊', 'Check-in history', 'The last 7 days'],
+    ['/caretaker/places', '📍', 'Saved places', 'Clinic, temple, family homes — for rides'],
     ['/caretaker/phone', '📱', `${nick(s)}’s phone`, 'Voice, loudness, speed, text size'],
     ['/caretaker/routine', '⏰', 'Routine & reminders', `${s.assessment.medications.length} medicines · ${s.assessment.checkIn.enabled === false ? 'no daily check-in' : `check-in ${s.assessment.checkIn.time}`}`],
     ['/caretaker/settings', '⚙️', `${nick(s)}’s profile & privacy`, 'Address, emergency contacts, language, sharing'],

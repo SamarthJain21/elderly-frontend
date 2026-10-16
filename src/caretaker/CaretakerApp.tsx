@@ -10,7 +10,7 @@ import { ComingSoon, Sheet, timeAgo, useToast } from '../components/ui'
 import { CREDIT, formatBalance, planById } from '../lib/plans'
 import Chat from './Chat'
 import SetupPhone from './SetupPhone'
-import { CheckinHistory, FamilyMembers, HelpRequests, weekCheckins } from './Screens'
+import { CheckinHistory, FamilyMembers, HelpRequests, SavedPlaces, weekCheckins } from './Screens'
 import { InsightsCard, weekStatus } from './InsightsCard'
 import { addressLine } from '../lib/types'
 import { Tour, type TourStep } from '../components/Tour'
@@ -32,6 +32,7 @@ export default function CaretakerApp({ framed = true }: { framed?: boolean }) {
         <Route path="rules" element={<Rules />} />
         <Route path="more" element={<More />} />
         <Route path="phone" element={<ElderPhone />} />
+        <Route path="places" element={<SavedPlaces />} />
         <Route path="people" element={<People />} />
         <Route path="routine" element={<Routine />} />
         <Route path="settings" element={<Settings />} />
@@ -47,7 +48,7 @@ export default function CaretakerApp({ framed = true }: { framed?: boolean }) {
         <Tab to="chat" i="💬" l="Chat" badge={s.caretakerUnread} />
         <Tab to="approvals" i="🔐" l="Approvals" badge={pending} />
         <Tab to="rules" i="🧭" l="Rules" />
-        <Tab to="more" i="☰" l="More" also={['phone', 'people', 'family', 'requests', 'checkins', 'routine', 'settings', 'plan', 'setup-phone', 'checkout']} />
+        <Tab to="more" i="☰" l="More" also={['phone', 'places', 'people', 'family', 'requests', 'checkins', 'routine', 'settings', 'plan', 'setup-phone', 'checkout']} />
       </nav>}
     </div>
   )

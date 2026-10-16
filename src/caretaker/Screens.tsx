@@ -13,6 +13,8 @@ import { Face } from '../components/Face'
 import { timeAgo, useToast } from '../components/ui'
 import { planById } from '../lib/plans'
 import type { Address, CheckInRecord, EmergencyContact, HelpRequest, Mood } from '../lib/types'
+import { addressLine } from '../lib/types'
+import type { SavedPlace } from '../data/api'
 import { CHead } from './CaretakerApp'
 
 const MOOD_EMOJI: Record<Mood, string> = { great: '😄', good: '😊', okay: '😐', low: '😕', bad: '😟' }
@@ -229,6 +231,46 @@ export function CheckinHistory() {
             </div>
           )
         })}
+      </div></div>
+    </>
+  )
+}
+
+/** "📍 Saved places": named places the helper can book a ride to — "Take me to the clinic". */
+export function SavedPlaces() {
+  const s = useDemo()
+  const toast = useToast()
+  const nk = nick(s)
+  const [list, setList] = useState<SavedPlace[] | null>(null)
+  const [adding, setAdding] = useState<{ name: string; address: Address } | null>(null)
+  const elderId = s.live.elderId
+  useEffect(() => { if (isLive() && elderId) api.savedPlaces(elderId).then(setList, () => setList([])); else setList([]) }, [elderId])
+  const save = async (next: SavedPlace[], msg: string) => {
+    if (!isLive() || !elderId) { setList(next); toast(msg); return }
+    try { setList(await api.saveSavedPlaces(elderId, next)); toast(msg) } catch (e) { toast(`Couldn’t save: ${(e as Error).message}`) }
+  }
+  return (
+    <>
+      <CHead title="Saved places" sub={`Where ${nk} often goes — the helper books a cab from home to these`} back="/caretaker/more" />
+      <div className="scroll"><div className="c-body">
+        {list === null && <div className="spinner" />}
+        {list?.length === 0 && !adding && <p className="muted">No places yet. Add the clinic, a temple, a friend’s home… Then {nk} can just say “Take me to the clinic”.</p>}
+        {list?.map(p => (
+          <div key={p.id} className="card row" style={{ gap: 12 }}>
+            <span style={{ fontSize: 24 }}>📍</span>
+            <div className="grow" style={{ minWidth: 0 }}><b>{p.name}</b><p className="small muted">{addressLine(p.address)}{p.address.lat == null ? ' · couldn’t find it on the map' : ''}</p></div>
+            <button className="btn sm ghost" aria-label={`Remove ${p.name}`} onClick={() => void save(list.filter(x => x.id !== p.id), `${p.name} removed`)}>✕</button>
+          </div>
+        ))}
+        {adding ? (
+          <div className="card stack" style={{ gap: 10 }}>
+            <label className="field">What {nk} calls it<input value={adding.name} onChange={e => setAdding({ ...adding, name: e.target.value })} placeholder="Clinic, Temple, Priya’s home…" autoFocus /></label>
+            <AddressFields value={adding.address} onChange={a => setAdding({ ...adding, address: a })} country={countryForTimezone(s.assessment.timezone)} />
+            <div className="row"><button className="btn ghost" onClick={() => setAdding(null)}>Cancel</button>
+              <button className="btn pri grow" disabled={!adding.name.trim() || !addressComplete(adding.address)}
+                onClick={() => { void save([...(list ?? []), { id: `pl_${crypto.randomUUID().slice(0, 10)}`, name: adding.name.trim(), address: adding.address }], `${adding.name.trim()} saved`); setAdding(null) }}>Save place</button></div>
+          </div>
+        ) : <button className="btn" onClick={() => setAdding({ name: '', address: EMPTY_ADDRESS })}>＋ Add a place</button>}
       </div></div>
     </>
   )
