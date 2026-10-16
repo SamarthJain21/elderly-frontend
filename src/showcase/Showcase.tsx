@@ -21,6 +21,7 @@ function TopBar({ children }: { children?: React.ReactNode }) {
 export function Launcher() {
   const toast = useToast()
   const cards: [string, string, string, string][] = [
+    ['/try', '✨', 'Try it with real AI', 'Your own private sandbox on the live server: Gemini on Vertex AI, both phones side by side.'],
     ['/demo', '📱📱', 'Live side-by-side', 'Grandma’s phone and Emma’s phone, talking to each other in real time.'],
     ['/elder', '👵', 'Elder app', 'Voice-first home, big buttons, faces to call, hold-for-help.'],
     ['/caretaker', '👩', 'Caretaker app', 'Status, chat, approvals, helper rules, plan & billing.'],
@@ -65,6 +66,7 @@ export function SideBySide() {
       <TopBar>
         <button className="btn sm" onClick={() => { update(d => { d.billing.volunteerUsed = 5; d.billing.balance = 0 }); toast('Free calls used up and credit is $0 — try “Fix something”, then an urgent request') }}>Empty credit</button>
         <button className="btn sm" onClick={() => { resetDemo(); toast('Demo reset') }}>↺ Reset</button>
+        <Link className="btn sm pri" to="/try">Try with real AI ✨</Link>
       </TopBar>
       <div className="duo">
         <div className="col"><b>👵 Grandma’s phone (Elder)</b><iframe src="/elder?embed=1" title="Elder app" /></div>

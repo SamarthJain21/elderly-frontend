@@ -137,3 +137,21 @@ export function connectChat(elderId: string, getToken: TokenFn, onFrame: (f: Ser
     familyAction: (messageId: string, chip: number) => send({ type: 'family_action', messageId, chip }), // ⏰ remind chip
   }
 }
+
+// ---------- 'Try with real AI' (app/routers/sandbox_api.py) — no sign-in ----------
+export type SandboxLanguage = 'en-US' | 'hi-IN' | 'th-TH'
+export interface Sandbox {
+  elderId: string; language: SandboxLanguage; expiresAt: string
+  elder: { name: string; email: string; password: string }
+  caretaker: { name: string; email: string; password: string }
+}
+
+export async function createSandbox(language: SandboxLanguage): Promise<Sandbox> {
+  const res = await fetch(`${BASE}/demo/sandbox`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ language }),
+    signal: AbortSignal.timeout(30_000),
+  }).catch(() => { throw new ApiError(0, 'Can’t reach the Elderly server right now.') })
+  if (res.status === 429) throw new ApiError(429, 'You’ve started a few sandboxes already — please wait a little, or use the offline demo.')
+  if (!res.ok) throw new ApiError(res.status, (await res.json().catch(() => ({}))).detail ?? 'The live demo isn’t available right now.')
+  return res.json()
+}

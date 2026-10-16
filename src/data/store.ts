@@ -11,7 +11,7 @@ import type { Insights,
 import type { Billing, PlanId } from '../lib/plans'
 import { defaultRules } from '../lib/policy'
 import { currencyForTimezone } from '../lib/money'
-import { isLive } from './mode'
+import { SANDBOX_FRAME, isLive } from './mode'
 
 /** amountMinor is US cents — subscriptions and top-ups are billed in USD. */
 export interface LedgerEntry { id: string; date: string; description: string; amount: number; kind: 'topup' | 'included' | 'call' | 'emergency' }
@@ -207,7 +207,8 @@ export function emptyLive(): DemoState {
   const base = seed()
   return {
     ...base,
-    onboarded: { caretaker: true, elder: false },
+    // A /try sandbox skips the elder's first-run walkthrough: visitors came to talk to the helper.
+    onboarded: { caretaker: true, elder: SANDBOX_FRAME },
     caretaker: { uid: '', name: '', email: '' },
     elder: { ...base.elder, elderId: '', name: '', nickname: '', phone: '', face: '', address: null, emergencyContacts: [],
       credentials: { email: '', tempPassword: '' } },
