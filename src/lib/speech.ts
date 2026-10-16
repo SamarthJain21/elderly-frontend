@@ -115,6 +115,64 @@ function speakCloud(fetchClip: CloudVoice, clean: string, lang: Language, rate: 
   fetchClip(clean, lang).then(blob => { const url = URL.createObjectURL(blob); remember(key, url); play(url) }, fallback)
 }
 
+// ---------- pushed voice: the server sends a reply's audio over the chat socket (no round trip) ----------
+/** How long a shown reply waits for the server's audio before fetching the voice itself. */
+export const PUSH_WAIT_MS = 2500
+interface Pushed { clips: (Blob | undefined)[]; last: number | null; next: number; token: number | null; playing: boolean; timer?: number }
+const pushed = new Map<string, Pushed>()  // messageId → clips, oldest dropped after a few messages
+
+function entry(id: string): Pushed {
+  let p = pushed.get(id)
+  if (!p) {
+    p = { clips: [], last: null, next: 0, token: null, playing: false }
+    pushed.set(id, p)
+    if (pushed.size > 8) pushed.delete(pushed.keys().next().value as string)
+  }
+  return p
+}
+
+function playNext(id: string, text: string, lang: Language) {
+  const p = pushed.get(id)
+  if (!p || p.token !== seq || p.playing) return  // superseded, or a clip is still playing (its end calls us)
+  const blob = p.clips[p.next]
+  if (!blob) return  // not here yet; addPushedClip calls us again
+  clearTimeout(p.timer)
+  const url = URL.createObjectURL(blob)
+  const a = new Audio(url)
+  audio = a; p.playing = true
+  a.onended = () => {
+    URL.revokeObjectURL(url); p.playing = false; p.next++
+    if (audio === a) audio = null
+    playNext(id, text, lang)
+  }
+  a.play().catch(() => { if (p.token === seq && p.next === 0) speakDevice(text, lang, 0.85) })  // autoplay blocked
+}
+
+/** A clip of a reply's voice arrived from the server (live.ts, 'audio' frame). Plays if that reply is being read. */
+export function addPushedClip(messageId: string, index: number, last: boolean, blob: Blob) {
+  const p = entry(messageId)
+  p.clips[index] = blob
+  if (last) p.last = index
+  const ctx = reading.get(messageId)
+  if (ctx) playNext(messageId, ctx.text, ctx.lang)
+}
+const reading = new Map<string, { text: string; lang: Language }>()
+
+/**
+ * Read a helper reply aloud using the audio the server pushes for it; if none arrives within PUSH_WAIT_MS (older
+ * backend, a failure), fetch the voice the usual way. A newer speak/stop wins, and a late clip is then ignored.
+ */
+export function speakMessage(messageId: string, text: string, lang: Language) {
+  const my = ++seq
+  stopAudio()
+  if (canSpeak() && (speechSynthesis.speaking || speechSynthesis.pending)) speechSynthesis.cancel()
+  const p = entry(messageId)
+  p.token = my; p.next = 0; p.playing = false
+  reading.clear(); reading.set(messageId, { text, lang })
+  p.timer = setTimeout(() => { if (seq === my && !p.clips[0]) speak(text, lang) }, PUSH_WAIT_MS) as unknown as number
+  playNext(messageId, text, lang)
+}
+
 /**
  * Read text aloud in the elder's language: Google's natural voice when available, else the device voice (slowly,
  * 0.85×). Returns false and stays SILENT when neither can speak that language — an English voice reading Thai or

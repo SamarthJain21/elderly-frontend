@@ -113,6 +113,8 @@ export type ServerFrame =
   | { type: 'typing'; tool?: string }   // tool: an action is running
   | { type: 'error'; message: string }
   // app/alerts.py raise_alert: SOS button or an emergency the helper detected — sent to the family the moment it happens
+  // app/agent/voice_push.py: a reply's voice, first sentence first (seq 0, 1…), base64 MP3
+  | { type: 'audio'; messageId: string; seq: number; last: boolean; mime: string; data: string }
   | { type: 'alert'; alert: { id: string; source: 'sos_button' | 'agent'; description: string; status: string } }
 
 export function connectChat(elderId: string, getToken: TokenFn, onFrame: (f: ServerFrame) => void,

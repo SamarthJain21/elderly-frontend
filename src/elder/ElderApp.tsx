@@ -10,7 +10,7 @@ import { Face } from '../components/Face'
 import { MicIcon, Wave, useToast } from '../components/ui'
 import { Tour, type TourStep } from '../components/Tour'
 import { update } from '../data/store'
-import { canListen, listen, speak, stopListening, stopSpeaking } from '../lib/speech'
+import { canListen, listen, speak, speakMessage, stopListening, stopSpeaking } from '../lib/speech'
 import { activityLabel } from '../lib/activity'
 import { partOfDay, strings, type Strings } from '../lib/i18n'
 import type { ActionCard, Chip, FamilyMessage, Message } from '../lib/types'
@@ -41,7 +41,8 @@ export default function ElderApp({ framed = true }: { framed?: boolean }) {
     if (spoken.current === last.m.id) return
     spoken.current = last.m.id
     if (!s.elderUi.voice) return
-    if (last.kind === 'agent' && last.m.sender === 'agent') speak(last.m.text, lang)
+    // Live: the server pushes the reply's voice as soon as it's ready (falls back to fetching it).
+    if (last.kind === 'agent' && last.m.sender === 'agent') { if (isLive()) speakMessage(last.m.id, last.m.text, lang); else speak(last.m.text, lang) }
     if (last.kind === 'fam' && last.m.sender === 'caretaker') {
       speak(`${t.messageFrom(last.m.senderName)} ${last.m.text}. ${spokenChips(t, last.m.chips)}`, lang)
     }

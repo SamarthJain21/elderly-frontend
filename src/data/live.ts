@@ -9,7 +9,7 @@
  *   Caretakers only get the family thread over the socket, so approvals/logs arrive by polling.
  */
 import { connectChat, contactIn, createApi, ApiError, type BackendAction, type Profile, type ServerFrame, type TodayCheckIn } from './api'
-import { setCloudVoice } from '../lib/speech'
+import { addPushedClip, setCloudVoice } from '../lib/speech'
 import { auth, getToken, isSandboxSigningIn, onUser, sandboxSignIn, signOutUser } from '../lib/firebase'
 import { emptyLive, getState, update, type DemoState } from './store'
 import { formatMoney } from '../lib/money'
@@ -160,6 +160,13 @@ export async function refresh(full = true) {
 const chatOpen = () => !!chat && getState().live.connected
 
 function onFrame(f: ServerFrame) {
+  if (f.type === 'audio') {  // not state: straight to the player (only the elder's app reads replies aloud)
+    if (getState().live.role === 'elder' && getState().elderUi.voice) {
+      const bytes = Uint8Array.from(atob(f.data), ch => ch.charCodeAt(0))
+      addPushedClip(f.messageId, f.seq, f.last, new Blob([bytes], { type: f.mime }))
+    }
+    return
+  }
   update(d => {
     switch (f.type) {
       case 'history': d.messages = f.messages; f.messages.forEach(m => m.action && upsertCard(d, m.action)); break
