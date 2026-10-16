@@ -274,15 +274,15 @@ export function More() {
   const s = useDemo()
   const plan = planById(s.billing.plan)
   const items: [string, string, string, string][] = [
-    ['/caretaker/plan', '💳', 'Care credit & plan', isLive() ? 'Free · credit & plans coming soon' : `${formatBalance(s.billing.balance)} credit · ${plan.name} · ${helperVisitsLeft(s)} calls available`],
+    ['/caretaker/routine', '⏰', 'Routine & medicines', `${s.assessment.medications.length} medicines · ${s.assessment.checkIn.enabled === false ? 'no daily check-in' : `check-in ${s.assessment.checkIn.time}`}`],
+    ['/caretaker/checkins', '😊', 'Check-in history', 'The last 7 days'],
     ['/caretaker/people', '👥', 'People & volunteers', `${s.contacts.length} contacts`],
     ['/caretaker/family', '👪', 'Family members', `${s.caretakers.length} active${s.invites.length ? ` · ${s.invites.length} invited` : ''}`],
-    ['/caretaker/requests', '🤝', 'Help requests', `${s.requests.filter(r => ['open', 'notified', 'confirmed'].includes(r.status)).length} in progress`],
-    ['/caretaker/checkins', '😊', 'Check-in history', 'The last 7 days'],
-    ['/caretaker/places', '📍', 'Saved places', 'Clinic, temple, family homes — for rides'],
     ['/caretaker/phone', '📱', `${nick(s)}’s phone`, 'Voice, loudness, speed, text size'],
-    ['/caretaker/routine', '⏰', 'Routine & reminders', `${s.assessment.medications.length} medicines · ${s.assessment.checkIn.enabled === false ? 'no daily check-in' : `check-in ${s.assessment.checkIn.time}`}`],
+    ['/caretaker/places', '📍', 'Saved places', 'Clinic, temple, family homes — for rides'],
+    ['/caretaker/requests', '🤝', 'Help requests', `${s.requests.filter(r => ['open', 'notified', 'confirmed'].includes(r.status)).length} in progress`],
     ['/caretaker/settings', '⚙️', `${nick(s)}’s profile & privacy`, 'Address, emergency contacts, language, sharing'],
+    ['/caretaker/plan', '💳', 'Care credit & plan', isLive() ? 'Free · credit & plans coming soon' : `${formatBalance(s.billing.balance)} credit · ${plan.name} · ${helperVisitsLeft(s)} calls available`],
   ]
   return (
     <>
