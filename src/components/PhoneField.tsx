@@ -18,7 +18,8 @@ export function PhoneField({ label, value, onChange, defaultCountry = 'IN', opti
           {COUNTRIES.map(x => <option key={x.code} value={x.code}>{x.flag} {x.dial}</option>)}
         </select>
         <input inputMode="tel" autoComplete="tel-national" value={national} placeholder={c.example} aria-invalid={!!err}
-          onChange={e => onChange(formatPhone(country, e.target.value))} onBlur={() => setTouched(true)} />
+          onChange={e => onChange(formatPhone(country, e.target.value.replace(/\D/g, '').replace(/^0+/, '').slice(0, Math.max(...c.digits))))}
+          onBlur={() => setTouched(true)} />
       </span>
       {err && <span className="field-err" role="alert">{err}</span>}
     </label>

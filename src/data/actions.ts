@@ -289,7 +289,7 @@ export function findContact(s: DemoState, who: string) {
 }
 
 export function elderSay(raw: string) {
-  const shown = raw.trim()
+  const shown = raw.trim().slice(0, 1000)
   // Quick-reply buttons start with an emoji ("💬 Tell Emma…"); match intents on the words.
   const text = shown.replace(/^[^\p{L}\p{N}]+/u, '')
   if (!text) return
@@ -460,13 +460,20 @@ function caretakerChips(d: DemoState, text: string): Chip[] {
 }
 
 /** WS family_message (caretaker → elder). Chips are made for the receiver. */
-export function caretakerSend(text: string) {
+/** Messages are 1–1000 characters on the server: trim, cap, and never send an empty one. */
+const sendable = (t: string) => t.trim().slice(0, 1000)
+
+export function caretakerSend(raw: string) {
+  const text = sendable(raw)
+  if (!text) return
   if (isLive()) { live.familyMessage(text); return }
   update(d => pushFamily(d, { sender: 'caretaker', text, chips: elderChips(d, text) }))
 }
 
 /** WS family_reply (elder → caretakers), with next-step chips for the caretakers. */
-export function elderFamilyReply(text: string) {
+export function elderFamilyReply(raw: string) {
+  const text = sendable(raw)
+  if (!text) return
   if (isLive()) { live.familyReply(text); return }
   update(d => pushFamily(d, { sender: 'elder', text, chips: caretakerChips(d, text) }))
 }

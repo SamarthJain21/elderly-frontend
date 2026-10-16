@@ -21,3 +21,11 @@ describe('phone numbers', () => {
     expect([countryForTimezone('Asia/Bangkok'), countryForTimezone('Asia/Kolkata'), countryForTimezone(undefined)]).toEqual(['TH', 'IN', 'IN'])
   })
 })
+
+describe('phone digit limit', () => {
+  it('formatPhone keeps what it is given; the field caps typing at the country’s length', () => {
+    // PhoneField slices to Math.max(...digits) before formatting: India 10, Thailand 9
+    expect(formatPhone('IN', '98765432109999'.slice(0, 10))).toBe('+91 98765 43210')
+    expect(formatPhone('TH', '0812345678999'.replace(/^0+/, '').slice(0, 9))).toBe('+66 81 234 5678')
+  })
+})
