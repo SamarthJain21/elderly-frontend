@@ -31,7 +31,7 @@ export function Login() {
   useEffect(() => { if (!isLive()) switchMode('live', location.pathname + location.search) }, [])
   if (!isLive()) return null
   if (s.live.status === 'ready') return <Navigate to={next || (s.live.role === 'elder' ? '/elder' : '/caretaker')} replace />
-  if (s.live.status === 'needsOnboarding' || s.live.status === 'needsElder') return <Navigate to="/onboarding/caretaker" replace />
+  if (s.live.status === 'needsOnboarding' || s.live.status === 'needsElder') return <Navigate to={next === '/admin' ? next : '/onboarding/caretaker'} replace />
 
   const go = async (fn: () => Promise<unknown>) => {
     setBusy(true); setErr('')
