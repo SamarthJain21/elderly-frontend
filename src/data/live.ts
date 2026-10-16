@@ -8,7 +8,7 @@
  *   WebSocket /ws/{elderId}: agent chat (elders only), family thread, today's check-in, typing, action updates.
  *   Caretakers only get the family thread over the socket, so approvals/logs arrive by polling.
  */
-import { connectChat, contactIn, createApi, ApiError, type BackendAction, type Profile, type ServerFrame, type TodayCheckIn } from './api'
+import { connectChat, contactIn, createApi, ApiError, type CheckinAnswers, type BackendAction, type Profile, type ServerFrame, type TodayCheckIn } from './api'
 import { addPushedClip, setCloudVoice } from '../lib/speech'
 import { auth, getToken, isSandboxSigningIn, onUser, sandboxSignIn, signOutUser } from '../lib/firebase'
 import { emptyLive, getState, restoreSeen, update, type DemoState } from './store'
@@ -201,6 +201,11 @@ function onFrame(f: ServerFrame) {
     }
   })
   if (f.type === 'error') notify(f.message)
+  if (f.type === 'checkin_done' && getState().live.role === 'caretaker') {
+    // A finished check-in: show it now, and say so if something's off (the summary is the family log line).
+    if (f.kind !== 'ok') notify(`${f.kind === 'alert' ? '😟' : '👀'} ${getState().elder.name}: ${f.summary.replace(/^Check-in: /, '')}`)
+    void refresh(false)
+  }
   if (f.type === 'alert' && getState().live.role === 'caretaker') {
     // SOS can't wait for the 15 s poll: tell the family now and load the alert banner immediately.
     const who = getState().elder.name || 'Your family member'
@@ -370,6 +375,7 @@ export const live = {
   say: (text: string) => { update(d => { d.messages.forEach(m => { m.quickReplies = [] }) }); if (send(c => c.say(text))) update(d => { d.elderUi.typing = true }) },
   confirm: (actionId: string, approve: boolean) => send(c => c.confirm(actionId, approve)),
   startCheckin: (mood: Mood) => { if (send(c => c.startCheckin(mood))) update(d => { d.elderUi.typing = true }) },
+  checkinAnswers: (a: CheckinAnswers) => send(c => c.checkinAnswers(a)),
   familyMessage: (text: string) => send(c => c.familyMessage(text)),
   familyReply: (text: string) => send(c => c.familyReply(text)),
   familyAction: (msgId: string, index: number) => send(c => c.familyAction(msgId, index)),
