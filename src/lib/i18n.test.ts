@@ -44,3 +44,15 @@ describe('elder app translations', () => {
     expect([partOfDay(8), partOfDay(14), partOfDay(19)]).toEqual(['morning', 'afternoon', 'evening'])
   })
 })
+
+describe('Thai with a Latin-script name', () => {
+  const t = strings('th-TH')
+  it('sets the name off with spaces, without stray spaces before punctuation', () => {
+    expect(t.tileOk('Nok')).toBe('บอก Nok ว่าสบายดี')
+    expect(t.ob.hi('Somsri')).toBe('สวัสดีค่ะคุณ Somsri!')
+    expect(t.tour('Nok')[0].body).toContain('“โทรหา Nok”')
+  })
+  it('keeps a Thai-script name joined, as Thai is written', () => {
+    expect(t.tileOk('นก')).toBe('บอกนกว่าสบายดี')
+  })
+})
