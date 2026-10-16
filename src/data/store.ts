@@ -28,6 +28,8 @@ export interface LiveInfo {
   status: 'demo' | 'loading' | 'signedOut' | 'needsOnboarding' | 'needsElder' | 'ready' | 'error'
   role: 'caretaker' | 'elder' | null
   uid: string | null; email: string | null; displayName: string | null
+  /** Can open the cost dashboard (/admin). */
+  admin?: boolean
   elderId: string | null
   elders: { elderId: string; name: string; assessed: boolean }[]
   connected: boolean

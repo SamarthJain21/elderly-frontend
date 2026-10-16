@@ -287,7 +287,7 @@ export async function loadSession() {
       if (e instanceof ApiError && e.status === 404) { update(d => { d.live.status = 'needsOnboarding'; d.live.role = 'caretaker' }); return }
       throw e
     }
-    update(d => { d.live.role = me.role })
+    update(d => { d.live.role = me.role; d.live.admin = me.admin })
     if (me.role === 'elder') return selectElder(u.uid)  // elderId == the elder's auth uid
     const elders = await api.myElders()
     update(d => {
