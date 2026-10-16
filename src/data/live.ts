@@ -183,10 +183,19 @@ function onFrame(f: ServerFrame) {
     }
   })
   if (f.type === 'error') notify(f.message)
+  if (f.type === 'alert' && getState().live.role === 'caretaker') {
+    // SOS can't wait for the 15 s poll: tell the family now and load the alert banner immediately.
+    const who = getState().elder.name || 'Your family member'
+    notify(f.alert.source === 'sos_button' ? `🚨 ${who} pressed SOS` : `🚨 ${who} may need urgent help`)
+    void refresh(false)
+  }
   // A new action may need approval or a reminder may have been set — refresh the lists the socket doesn't carry.
   // One agent turn sends several frames; coalesce them into a single refresh.
   if ((f.type === 'message' && f.message.action) || f.type === 'family_update' || f.type === 'action_update') refreshSoon()
 }
+
+/** Tests feed server frames straight in (the socket is stubbed there). */
+export const onFrameForTests = (f: ServerFrame) => onFrame(f)
 
 let refreshTimer: number | undefined
 function refreshSoon() {
