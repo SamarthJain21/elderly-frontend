@@ -5,7 +5,7 @@ import { API_URL } from './mode'
  */
 import type {
   ActionCard, ActionStatus, Address, Assessment, AutonomyRules, Caretaker, CheckInRecord, CheckInStatus, Contact, Currency, EmergencyContact, FamilyMessage, HelpRequest,
-  Insights, Language, LogEntry, Message, Mood, Reminder, SharingTier,
+  DeviceSettings, Insights, Language, LogEntry, Message, Mood, Reminder, SharingTier,
 } from '../lib/types'
 
 const BASE = API_URL
@@ -81,6 +81,8 @@ export function createApi(getToken: TokenFn) {
     /** Spelling + generic name of a typed medicine (app/medicines.py) — no dose or use advice. */
     checkMedicine: (name: string, country: string) =>
       req<{ input: string; recognised: boolean; suggestion: string | null; generic: string | null }>('POST', '/medicines/check', { name, country }),
+    deviceSettings: (id: string) => req<DeviceSettings>('GET', `${e(id)}/device-settings`),
+    saveDeviceSettings: (id: string, s: DeviceSettings) => req<DeviceSettings>('PUT', `${e(id)}/device-settings`, s),
     inviteCaretaker: (id: string, email: string) => req<{ status: 'added' | 'invited' }>('POST', `${e(id)}/caretakers`, { email }),
   }
 }
@@ -122,6 +124,7 @@ export type ServerFrame =
   // app/alerts.py raise_alert: SOS button or an emergency the helper detected — sent to the family the moment it happens
   // app/agent/voice_push.py: a reply's voice, first sentence first (seq 0, 1…), base64 MP3
   | { type: 'audio'; messageId: string; seq: number; last: boolean; mime: string; data: string }
+  | { type: 'device_settings'; settings: DeviceSettings }   // the family changed the elder app's settings
   | { type: 'alert'; alert: { id: string; source: 'sos_button' | 'agent'; description: string; status: string } }
 
 export function connectChat(elderId: string, getToken: TokenFn, onFrame: (f: ServerFrame) => void,

@@ -504,3 +504,7 @@ a { color: inherit }
 .med-hint { font-size: 13.5px; margin: 4px 0 0; color: var(--ink2) }
 .med-hint.ok { color: var(--accent); font-weight: 600 }
 .med-hint.warn { color: var(--amber) }
+
+/* Elder app text size (set by the elder's family on the Phone page) */
+.shell.text-large :is(.scroll, .e-top, .e-input) { zoom: 1.12 }
+.shell.text-xlarge :is(.scroll, .e-top, .e-input) { zoom: 1.25 }

@@ -6,8 +6,7 @@
 import { useSyncExternalStore } from 'react'
 import type { Insights,
   ActionCard, Address, Assessment, AutonomyRules, Caretaker, CheckInRecord, CheckInStatus, Contact, EmergencyContact,
-  FamilyMessage, HelpRequest, Language, LogEntry, Message, Mood, Reminder, SharingTier,
-} from '../lib/types'
+  FamilyMessage, HelpRequest, Language, LogEntry, Message, Mood, Reminder, SharingTier, DeviceSettings } from '../lib/types'
 import type { Billing, PlanId } from '../lib/plans'
 import { defaultRules } from '../lib/policy'
 import { currencyForTimezone } from '../lib/money'
@@ -74,6 +73,8 @@ export interface DemoState {
     invoices: Invoice[]
     paymentMethod: { kind: 'card'; brand: string; last4: string } | { kind: 'wallet'; label: string } | null
   }
+  /** Elder app look & sound (voice on/off lives in elderUi.voice). */
+  device: { volume: number; rate: number; textSize: DeviceSettings['textSize'] }
   elderUi: { typing: boolean; /** tool the agent is running, e.g. 'check_weather' */ activity?: string | null; overlay: Overlay; voice: boolean; lastEmergency?: string }
   caretakerUnread: number
   /** Frontend-only: how the elder's setup link was sent, and which guided tours are finished. */
@@ -168,6 +169,7 @@ export function seed(): DemoState {
       ledger: [{ id: 'led_seed', date: minsAgo(60 * 24 * 6), description: 'Starter top-up', amount: 500, kind: 'topup' }],
       invoices: [{ id: 'INV-100231', date: minsAgo(60 * 24 * 6), description: 'Care credit top-up', amountMinor: 500, method: 'Visa •••• 4242' }],
     },
+    device: { volume: 1, rate: 1, textSize: 'normal' },
     elderUi: { typing: false, overlay: null, voice: true },
     caretakerUnread: 0,
     setup: { sentVia: 'SMS', sentAt: minsAgo(60 * 24 * 6) },

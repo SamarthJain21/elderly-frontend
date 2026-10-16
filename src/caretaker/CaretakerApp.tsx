@@ -13,7 +13,7 @@ import { InsightsCard, weekStatus } from './InsightsCard'
 import { addressLine } from '../lib/types'
 import { Tour, type TourStep } from '../components/Tour'
 import { update } from '../data/store'
-import { Approvals, More, People, Routine, Rules, Settings } from './Manage'
+import { Approvals, More, People, Routine, Rules, Settings, ElderPhone } from './Manage'
 import { Checkout, PlanPage } from '../billing/Billing'
 
 export default function CaretakerApp({ framed = true }: { framed?: boolean }) {
@@ -29,6 +29,7 @@ export default function CaretakerApp({ framed = true }: { framed?: boolean }) {
         <Route path="approvals" element={<Approvals />} />
         <Route path="rules" element={<Rules />} />
         <Route path="more" element={<More />} />
+        <Route path="phone" element={<ElderPhone />} />
         <Route path="people" element={<People />} />
         <Route path="routine" element={<Routine />} />
         <Route path="settings" element={<Settings />} />
@@ -44,7 +45,7 @@ export default function CaretakerApp({ framed = true }: { framed?: boolean }) {
         <Tab to="chat" i="💬" l="Chat" badge={s.caretakerUnread} />
         <Tab to="approvals" i="🔐" l="Approvals" badge={pending} />
         <Tab to="rules" i="🧭" l="Rules" />
-        <Tab to="more" i="☰" l="More" also={['people', 'family', 'requests', 'checkins', 'routine', 'settings', 'plan', 'setup-phone', 'checkout']} />
+        <Tab to="more" i="☰" l="More" also={['phone', 'people', 'family', 'requests', 'checkins', 'routine', 'settings', 'plan', 'setup-phone', 'checkout']} />
       </nav>}
     </div>
   )
