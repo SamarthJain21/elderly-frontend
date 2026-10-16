@@ -494,3 +494,8 @@ a { color: inherit }
 .rhy-x { border: 0; background: none; color: var(--muted); font-size: 13px; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; display: grid; place-items: center }
 .rhy-x:hover, .rhy-x:focus-visible { background: var(--line); color: var(--ink) }
 .rhy-x.corner { position: absolute; top: 4px; right: -2px }
+
+/* Setup: "this might be wrong" notes */
+.warn-card { background: var(--amber-soft); border-radius: 14px; padding: 12px 14px; color: var(--ink) }
+.warn-card b { color: var(--amber) }
+.warn-card ul { margin: 6px 0 4px; padding-left: 18px; font-size: 14.5px; line-height: 1.5 }

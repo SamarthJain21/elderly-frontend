@@ -14,6 +14,7 @@ import { currencyForTimezone, TIMEZONES } from '../lib/money'
 import { defaultRules } from '../lib/policy'
 import { canListen, listen, speak } from '../lib/speech'
 import { strings } from '../lib/i18n'
+import { routineWarnings } from '../lib/sanity'
 import type { Address, Contact, Day, Language, Medication, Mode, ToolName } from '../lib/types'
 import { CycleToggle, PlanCards, TopUpPicker } from '../billing/Billing'
 import { CREDIT, formatUsd, planById } from '../lib/plans'
@@ -77,6 +78,18 @@ function PrivacyConsent() {
 }
 
 /** The required agreement — sits at the bottom, right above the button it unlocks. */
+/** "This might be wrong" notes (lib/sanity.ts) — they never block Continue. */
+function Warnings({ items }: { items: string[] }) {
+  if (!items.length) return null
+  return (
+    <div className="warn-card" role="note">
+      <b>⚠️ Worth a second look</b>
+      <ul>{items.map(w => <li key={w}>{w}</li>)}</ul>
+      <p className="small muted">You can carry on — these are just checks.</p>
+    </div>
+  )
+}
+
 function ConsentCheck({ agreed, onChange }: { agreed: boolean; onChange: (v: boolean) => void }) {
   return (
     <label className={`cf-agree ${agreed ? 'on' : ''}`}>
@@ -143,6 +156,12 @@ export function CaretakerOnboarding() {
   }, [rowOrder])
   const [notes, setNotes] = useState(L ? '' : 'Low vision — prefers voice.')
   const [meds, setMeds] = useState<Medication[]>(L ? [] : [{ id: 'm1', name: 'Amlodipine', dose: '5 mg', times: ['08:00'], withFood: false, notes: 'Blood pressure' }])
+  const warnings = routineWarnings({
+    wake: skip.wake ? null : rhythm.wake, bed: skip.bed ? null : rhythm.bed,
+    meals: (['breakfast', 'lunch', 'dinner'] as const).map(k => ({ label: k.charAt(0).toUpperCase() + k.slice(1), time: skip[k] ? null : rhythm[k] })),
+    checkIns: skip.checkIn ? [] : [rhythm.checkIn, ...extraCheckins.map(c => c.time)],
+    meds: meds.map(m => ({ name: m.name, times: m.times, withFood: m.withFood })),
+  })
   const [people, setPeople] = useState<{ name: string; relationship: string; phone: string }[]>(L ? [] : [
     { name: 'Tom', relationship: 'grandson', phone: '+44 20 7946 0000' }, { name: 'David', relationship: 'neighbour next door', phone: '+65 9000 2222' },
   ])
@@ -327,6 +346,7 @@ export function CaretakerOnboarding() {
         })}
       </div>
       <p className="small muted" style={{ marginTop: -4 }}>Tap ✕ on anything that isn’t part of {nk}’s day, or you’re not sure of.</p>
+      <Warnings items={warnings} />
       <button className="btn" style={{ alignSelf: 'flex-start' }} onClick={addCheckin}>＋ Add another check-in</button>
       <div className="field">Check-in days
         <div className="chips-pick">{(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as Day[]).map(d => (
@@ -360,6 +380,7 @@ export function CaretakerOnboarding() {
             <button className="btn sm ghost" onClick={() => setMeds(ms => ms.filter((_, j) => j !== i))}>Remove medicine</button></div>
         </div>
       ))}
+      <Warnings items={warnings} />
       <button className="btn" onClick={() => setMeds(ms => [...ms, { id: uid('m'), name: '', dose: '', times: ['20:00'], withFood: true, notes: '' }])}>＋ Add a medicine</button>
     </> },
     // 5 — faces (a person with a name needs a valid number, or they can't be called)
