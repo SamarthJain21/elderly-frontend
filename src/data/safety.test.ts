@@ -14,6 +14,8 @@ const saveRules = vi.fn((_elderId: string, _rules: unknown) => Promise.resolve()
 
 vi.mock('./mode', () => ({ isLive: () => true, MODE: 'live', API_URL: '/api', switchMode: () => {}, SANDBOX_FRAME: false }))
 vi.mock('../lib/firebase', () => ({ auth: { currentUser: null, onAuthStateChanged: () => () => {} }, googleProvider: {}, getToken: () => Promise.resolve('t'), firebaseReady: true, isSandboxSigningIn: () => false, sandboxSignIn: null }))
+const notify = vi.fn()
+vi.mock('../components/ui', async (orig) => ({ ...(await orig<typeof import('../components/ui')>()), notify: (m: string) => notify(m) }))
 vi.mock('./api', async (orig) => ({
   ...(await orig<typeof import('./api')>()),
   createApi: () => new Proxy({ saveRules }, { get: (t, k) => (t as Record<string, unknown>)[k as string] ?? (() => Promise.resolve(null)) }),
@@ -68,5 +70,19 @@ describe('rules', () => {
     expect((saveRules.mock.calls[0][1] as unknown as { tools: { order_food: { limitMinor: number } } }).tools.order_food.limitMinor).toBe(12_300)
     vi.advanceTimersByTime(1000)
     expect(saveRules).toHaveBeenCalledTimes(1)  // nothing else saved to B
+  })
+})
+
+describe('family app', () => {
+  it('shows an SOS the moment it happens, not on the next 15 s poll', () => {
+    update(d => { d.live.role = 'caretaker'; d.elder.name = 'Rose' })
+    live.onFrameForTests({ type: 'alert', alert: { id: 'a1', source: 'sos_button', description: '', status: 'active' } })
+    expect(notify).toHaveBeenCalledWith('🚨 Rose pressed SOS')
+  })
+
+  it('the elder\'s own app doesn\'t toast their own alert', () => {
+    update(d => { d.live.role = 'elder' })
+    live.onFrameForTests({ type: 'alert', alert: { id: 'a2', source: 'agent', description: 'fell', status: 'active' } })
+    expect(notify).not.toHaveBeenCalled()
   })
 })

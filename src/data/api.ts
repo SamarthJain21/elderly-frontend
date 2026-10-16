@@ -112,6 +112,8 @@ export type ServerFrame =
   | { type: 'action_update'; messageId: string; action: ActionCard }
   | { type: 'typing'; tool?: string }   // tool: an action is running
   | { type: 'error'; message: string }
+  // app/alerts.py raise_alert: SOS button or an emergency the helper detected — sent to the family the moment it happens
+  | { type: 'alert'; alert: { id: string; source: 'sos_button' | 'agent'; description: string; status: string } }
 
 export function connectChat(elderId: string, getToken: TokenFn, onFrame: (f: ServerFrame) => void,
   on: { open?: () => void; close?: (code: number, reason: string) => void } = {}) {
