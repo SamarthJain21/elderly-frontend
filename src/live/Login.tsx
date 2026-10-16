@@ -1,3 +1,4 @@
+import { Splash } from '../components/Splash'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useDemo } from '../data/store'
@@ -30,6 +31,8 @@ export function Login() {
   // A tab left in demo mode (a ?demo link) signs in live: switch back and reload here.
   useEffect(() => { if (!isLive()) switchMode('live', location.pathname + location.search) }, [])
   if (!isLive()) return null
+  // Until we know whether they're signed in, show the splash — not a sign-in form that then jumps to their app.
+  if (s.live.status === 'loading' || s.live.status === 'demo') return <Splash />
   if (s.live.status === 'ready') return <Navigate to={next || (s.live.role === 'elder' ? '/elder' : '/caretaker')} replace />
   if (s.live.status === 'needsOnboarding' || s.live.status === 'needsElder') return <Navigate to={next === '/admin' ? next : '/onboarding/caretaker'} replace />
 
@@ -100,7 +103,7 @@ export function LiveGate({ app, children }: { app: 'elder' | 'caretaker'; childr
   // Live data must never carry demo state; if it somehow does, reload the real session.
   useEffect(() => { if (isLive() && st === 'demo') void loadSession() }, [st])
   if (!isLive()) return <>{children}</>
-  if (st === 'loading' || st === 'demo') return <Center><div className="spinner" aria-hidden /><p className="muted">Connecting to Elderly…</p></Center>
+  if (st === 'loading' || st === 'demo') return <Splash />
   if (st === 'signedOut') return <Navigate to={`/login?next=${encodeURIComponent(pathname)}${app === 'elder' ? '&as=elder' : ''}`} replace />
   if (st === 'error') return (
     <Center>

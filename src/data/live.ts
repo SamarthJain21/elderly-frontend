@@ -132,6 +132,7 @@ export async function refresh(full = true) {
     if (elder) {
       d.elder.name = elder.name; d.elder.phone = elder.phone; d.elder.language = elder.language
       d.elder.face = elder.face ?? ''
+      if (elder.appReady) d.onboarded.elder = true  // finished the walkthrough on any device
       if (elder.assessment) d.assessment = elder.assessment
     }
     if (profile) applyProfile(d, profile)
@@ -277,7 +278,8 @@ export async function selectElder(elderId: string) {
   update(d => {
     if (d.elder.elderId !== elderId) {
       // Different person: drop the previous one's data (keep the session and the device-only extras).
-      const keep = { live: d.live, caretaker: d.caretaker, tours: d.tours, ackedLogs: d.ackedLogs }
+      // (onboarded too: the 'seen the walkthrough' flag restored at sign-in must survive this reset)
+      const keep = { live: d.live, caretaker: d.caretaker, tours: d.tours, ackedLogs: d.ackedLogs, onboarded: d.onboarded }
       Object.assign(d, emptyLive(), keep)
       d.elder.elderId = elderId
     }

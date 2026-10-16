@@ -1,3 +1,4 @@
+import { Splash } from '../components/Splash'
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { PhoneField } from '../components/PhoneField'
 import { countryForTimezone, phoneError } from '../lib/phone'
@@ -542,7 +543,7 @@ export function ElderOnboarding() {
         </div>
       ))}</div>
     </> },
-    { say: t.setSay, cta: t.startUsing, next: () => { if (isLive()) { update(d => { d.onboarded.elder = true }); nav('/elder'); return } update(d => { d.onboarded.elder = true; d.logs.unshift({ id: uid('log_'), timestamp: new Date().toISOString(), actor: 'elder', message: `${d.elder.nickname || d.elder.name}’s phone is connected — you can chat now 🎉`, kind: 'ok', ack: true, checkInId: null }) }); nav('/elder') }, body: <>
+    { say: t.setSay, cta: t.startUsing, next: () => { if (isLive()) { update(d => { d.onboarded.elder = true }); void api.appReady(getState().live.elderId!).catch(() => { /* remembered on this device anyway */ }); nav('/elder'); return } update(d => { d.onboarded.elder = true; d.logs.unshift({ id: uid('log_'), timestamp: new Date().toISOString(), actor: 'elder', message: `${d.elder.nickname || d.elder.name}’s phone is connected — you can chat now 🎉`, kind: 'ok', ack: true, checkInId: null }) }); nav('/elder') }, body: <>
       <Confetti />
       <div className="center" style={{ fontSize: 90, marginTop: 30, animation: 'pop .6s both cubic-bezier(.2,1.6,.4,1)' }}>🎉</div>
       <h1 className="center" style={{ fontSize: 36 }}>{t.setTitle}</h1>
@@ -550,7 +551,12 @@ export function ElderOnboarding() {
     </> },
   ]
   const sc = steps[step]
-  useEffect(() => { if (getState().elderUi.voice) speak(sc.say, lang) }, [step]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Speak once the profile is in (so it's in their language), and on each new step.
+  const profileIn = !isLive() || !!s.elder.name
+  useEffect(() => { if (profileIn && getState().elderUi.voice) speak(sc.say, lang) }, [step, profileIn]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Live: wait for the profile (language + whether this was already done on another device); done → the app.
+  if (isLive() && !s.elder.name) return <Splash />
+  if (isLive() && s.onboarded.elder) return <Navigate to="/elder" replace />
   return (
     <div className="shell framed" style={{ position: 'relative' }}>
       <Frame step={step} total={steps.length} onBack={step > 0 ? () => setStep(x => x - 1) : undefined}
@@ -580,9 +586,9 @@ function JoinLive() {
     signInElder(creds.email, creds.password).catch((e: { code?: string }) =>
       setErr(e.code?.includes('invalid-credential') ? 'This link has already been used or has expired. Ask your family to send a new one.' : 'Couldn’t sign in — check your internet and try again.'))
   }, [code])
-  useEffect(() => {
-    if (s.live.status === 'ready' && s.live.role === 'elder') nav(s.onboarded.elder ? '/elder' : '/onboarding/elder', { replace: true })
-  }, [s.live.status, s.live.role]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {  // once the profile is in: walkthrough done (any device) → straight to the app
+    if (s.live.status === 'ready' && s.live.role === 'elder' && s.elder.name) nav(s.onboarded.elder ? '/elder' : '/onboarding/elder', { replace: true })
+  }, [s.live.status, s.live.role, s.elder.name]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="shell framed">
       <div className="success" style={{ margin: 'auto' }}>

@@ -1,3 +1,4 @@
+import { Splash } from '../components/Splash'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { isLive } from '../data/mode'
@@ -64,9 +65,9 @@ export default function ElderApp({ framed = true }: { framed?: boolean }) {
     listen(lang, t => { setListening(false); say(t) }, err => { setListening(false); if (err && err !== 'no-speech' && err !== 'aborted') toast(t.micError(err)) })
   }
 
+  // Live: wait for the profile — it says which language, and whether the walkthrough is done (no flashes).
+  if (isLive() && !s.elder.name) return <Splash framed={framed} />
   if (!s.onboarded.elder) return <Navigate to="/onboarding/elder" replace />
-  // Live: wait for the profile so the app appears in the elder's language (no English flash first).
-  if (isLive() && !s.elder.name) return <div className={`shell ${framed ? 'framed' : ''}`}><div className="center-msg"><div className="spinner" aria-hidden /></div></div>
 
   return (
     <div className={`shell ${framed ? 'framed' : ''} text-${s.device.textSize}`}>
