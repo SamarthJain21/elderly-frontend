@@ -488,3 +488,9 @@ a { color: inherit }
   padding: 10px; border-radius: 8px; font: inherit; cursor: pointer; min-height: 48px }
 .addr-hits button:hover, .addr-hits button:focus-visible { background: var(--accent-soft) }
 .addr-hits span { font-size: 13px; color: var(--muted) }
+
+/* Routine: a small ✕ in the corner skips a row (meals, wake-up, bedtime, check-in) */
+.rhy-row:has(.rhy-x.corner) { padding-right: 26px }
+.rhy-x { border: 0; background: none; color: var(--muted); font-size: 13px; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; display: grid; place-items: center }
+.rhy-x:hover, .rhy-x:focus-visible { background: var(--line); color: var(--ink) }
+.rhy-x.corner { position: absolute; top: 4px; right: -2px }

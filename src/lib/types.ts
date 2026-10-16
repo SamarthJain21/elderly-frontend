@@ -24,10 +24,12 @@ export type Day = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'
 export interface Medication { id: string; name: string; dose: string; times: string[]; withFood: boolean; notes: string }
 export interface Assessment {
   timezone: string
-  sleep: { bedtime: string; wakeTime: string }
+  /** null = skipped during setup (not known) */
+  sleep: { bedtime: string | null; wakeTime: string | null }
   meals: { breakfast: string | null; lunch: string | null; dinner: string | null }
   medications: Medication[]
-  checkIn: { time: string; days: Day[] }
+  /** enabled false = the family switched the daily check-in off */
+  checkIn: { enabled?: boolean; time: string; days: Day[] }
   healthNotes: string
 }
 export interface Reminder {

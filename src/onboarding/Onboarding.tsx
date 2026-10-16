@@ -9,7 +9,7 @@ import { ComingSoon } from '../components/ui'
 import { decodeSetup } from '../caretaker/SetupPhone'
 import { getState, medicationReminders, resetDemo, seed, update, useDemo, uid } from '../data/store'
 import { Face } from '../components/Face'
-import { MicIcon, Switch, useToast } from '../components/ui'
+import { MicIcon, useToast } from '../components/ui'
 import { currencyForTimezone, TIMEZONES } from '../lib/money'
 import { defaultRules } from '../lib/policy'
 import { canListen, listen, speak } from '../lib/speech'
@@ -104,7 +104,8 @@ export function CaretakerOnboarding() {
   const [dataOk, setDataOk] = useState(false)
   // Same fields as the backend Assessment: one check-in time + days; a skipped meal is null.
   const [rhythm, setRhythm] = useState({ wake: '06:30', breakfast: '08:00', checkIn: '09:00', lunch: '12:30', dinner: '19:00', bed: '21:30' })
-  const [skip, setSkip] = useState<Record<'breakfast' | 'lunch' | 'dinner', boolean>>({ breakfast: false, lunch: false, dinner: false })
+  // ✕ on any row = not part of their day (or not known): saved as empty, never guessed.
+  const [skip, setSkip] = useState<Record<'wake' | 'breakfast' | 'checkIn' | 'lunch' | 'dinner' | 'bed', boolean>>({ wake: false, breakfast: false, checkIn: false, lunch: false, dinner: false, bed: false })
   const [days, setDays] = useState<Day[]>(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'])
   // Extra check-ins: the backend has one check-in time, so these become daily "Quick check-in" reminders (POST /reminders).
   const [extraCheckins, setExtraCheckins] = useState<{ id: string; time: string }[]>([])
@@ -166,10 +167,10 @@ export function CaretakerOnboarding() {
     const p = PRESETS.find(x => x.id === preset)!
     ;(Object.keys(p.modes) as ToolName[]).forEach(t => { rules.tools[t].mode = p.modes[t] })
     const assessment = {
-      timezone: them.timezone, sleep: { bedtime: rhythm.bed, wakeTime: rhythm.wake },
+      timezone: them.timezone, sleep: { bedtime: skip.bed ? null : rhythm.bed, wakeTime: skip.wake ? null : rhythm.wake },
       meals: { breakfast: skip.breakfast ? null : rhythm.breakfast, lunch: skip.lunch ? null : rhythm.lunch, dinner: skip.dinner ? null : rhythm.dinner },
       medications: meds.filter(m => m.name.trim()).map(m => ({ ...m, times: [...new Set(m.times)].sort() })),
-      checkIn: { time: rhythm.checkIn, days }, healthNotes: notes,
+      checkIn: { enabled: !skip.checkIn, time: rhythm.checkIn, days }, healthNotes: notes,
     }
     const myRel = me.relationship || relFor(nk)
     let elderId = ''
@@ -218,10 +219,10 @@ export function CaretakerOnboarding() {
       ...base.contacts.filter(c => c.kind === 'volunteer' || c.kind === 'doctor'),
     ]
     const assessment = {
-      timezone: them.timezone, sleep: { bedtime: rhythm.bed, wakeTime: rhythm.wake },
+      timezone: them.timezone, sleep: { bedtime: skip.bed ? null : rhythm.bed, wakeTime: skip.wake ? null : rhythm.wake },
       meals: { breakfast: skip.breakfast ? null : rhythm.breakfast, lunch: skip.lunch ? null : rhythm.lunch, dinner: skip.dinner ? null : rhythm.dinner },
       medications: meds.filter(m => m.name.trim()).map(m => ({ ...m, times: [...new Set(m.times)].sort() })),
-      checkIn: { time: rhythm.checkIn, days }, healthNotes: notes,
+      checkIn: { enabled: !skip.checkIn, time: rhythm.checkIn, days }, healthNotes: notes,
     }
     resetDemo({
       caretaker: { uid: 'ct_me', name: me.name, email: me.email },
@@ -294,7 +295,7 @@ export function CaretakerOnboarding() {
     // 3 — daily rhythm
     { body: <>
       <h1>{Nk}’s daily rhythm</h1>
-      <p className="lead">From waking up to bedtime. The helper uses this for reminders and a friendly check-in. Skip any meal {nk} doesn’t usually have.</p>
+      <p className="lead">From waking up to bedtime. The helper uses this for reminders and a friendly check-in.</p>
       <div className="card rhythm" ref={rhythmList}>
         {rowOrder.map(k => {
           const extra = extraCheckins.find(c => c.id === k)
@@ -310,22 +311,22 @@ export function CaretakerOnboarding() {
           const key = k as keyof typeof rhythm
           const [ic, label] = ({ wake: ['☀️', 'Wake up'], breakfast: ['🍳', 'Breakfast'], checkIn: ['💬', 'Check-in'],
             lunch: ['🍱', 'Lunch'], dinner: ['🍲', 'Dinner'], bed: ['🌙', 'Bedtime'] } as const)[key]
-          const meal = key === 'breakfast' || key === 'lunch' || key === 'dinner'
-          const off = meal && skip[key]
+          const off = skip[key]
           return (
             <div key={k} data-row={k} className={`rhy-row ${off ? 'off' : ''}`}>
               <span className="rhy-ic" aria-hidden>{ic}</span>
               <div className="grow"><b>{label}</b>{off ? <span className="rhy-note">Skipped</span> : key === 'checkIn' ? <span className="rhy-note">Daily</span> : null}</div>
-              <input type="time" aria-label={`${label} time`} value={rhythm[key]} disabled={off} onBlur={commitOrder}
-                onChange={e => e.target.value && setRhythm({ ...rhythm, [key]: e.target.value })} />
-              <span className="rhy-end">
-                {meal && <Switch checked={!skip[key]} onChange={on => setSkip({ ...skip, [key]: !on })} label={`${nk} usually has ${label.toLowerCase()}`} />}
-              </span>
+              {off
+                ? <button className="btn sm ghost" onClick={() => setSkip(sk => ({ ...sk, [key]: false }))}>＋ Add back</button>
+                : <input type="time" aria-label={`${label} time`} value={rhythm[key]} onBlur={commitOrder}
+                    onChange={e => e.target.value && setRhythm({ ...rhythm, [key]: e.target.value })} />}
+              {!off && <button className="rhy-x corner" aria-label={`Skip ${label.toLowerCase()}`} title={`Skip ${label.toLowerCase()}`}
+                onClick={() => setSkip(sk => ({ ...sk, [key]: true }))}>✕</button>}
             </div>
           )
         })}
       </div>
-      <p className="small muted" style={{ marginTop: -4 }}>Switch a meal off if {nk} doesn’t usually have it.</p>
+      <p className="small muted" style={{ marginTop: -4 }}>Tap ✕ on anything that isn’t part of {nk}’s day, or you’re not sure of.</p>
       <button className="btn" style={{ alignSelf: 'flex-start' }} onClick={addCheckin}>＋ Add another check-in</button>
       <div className="field">Check-in days
         <div className="chips-pick">{(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as Day[]).map(d => (
