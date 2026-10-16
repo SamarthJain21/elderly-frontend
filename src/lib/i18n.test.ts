@@ -1,0 +1,38 @@
+import { describe, expect, it } from 'vitest'
+import { partOfDay, strings, type Strings } from './i18n'
+
+const THAI = /[฀-๿]/
+const DEVANAGARI = /[ऀ-ॿ]/
+
+/** Every plain-text value in a dictionary (functions are called with a sample name). */
+function texts(t: Strings): string[] {
+  const out: string[] = []
+  const walk = (v: unknown): void => {
+    if (typeof v === 'string') out.push(v)
+    else if (typeof v === 'function') walk((v as (...a: unknown[]) => unknown)('Nok', 'Nok'))
+    else if (Array.isArray(v)) v.forEach(walk)
+    else if (v && typeof v === 'object') Object.values(v).forEach(walk)
+  }
+  walk({ ...t, locale: undefined })
+  return out
+}
+
+describe('elder app translations', () => {
+  it.each([['th-TH', THAI], ['hi-IN', DEVANAGARI]] as const)('%s: every label is actually translated', (lang, script) => {
+    // Short codes like "Elderly" may stay; anything with 3+ letters and none of the script is a missed string.
+    const missed = texts(strings(lang)).filter(s => !script.test(s) && /[A-Za-z]{3,}/.test(s.replace(/Elderly|Chrome|Edge|Nok|SOS/g, '')))
+    expect(missed).toEqual([])
+  })
+
+  it('the tour has the same six steps in every language', () => {
+    for (const lang of ['en-US', 'hi-IN', 'th-TH'] as const) expect(strings(lang).tour('Nok')).toHaveLength(6)
+  })
+
+  it('languages without a translation fall back to English', () => {
+    expect(strings('ja-JP').tileFood).toBe('Food')
+  })
+
+  it('greets by time of day', () => {
+    expect([partOfDay(8), partOfDay(14), partOfDay(19)]).toEqual(['morning', 'afternoon', 'evening'])
+  })
+})
