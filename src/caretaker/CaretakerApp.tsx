@@ -1,8 +1,10 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { enablePush, pushState, type PushState } from '../lib/push'
+import { api } from '../data/live'
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { nick, useDemo, type DemoState } from '../data/store'
 import { ackAlerts, caretakerCall, dispatchHelp, emergencyNumber, quotaLeft, quotaTotal } from '../data/actions'
-import { isLive } from '../data/mode'
+import { EMBEDDED, isLive } from '../data/mode'
 import { Face } from '../components/Face'
 import { ComingSoon, Sheet, timeAgo, useToast } from '../components/ui'
 import { CREDIT, formatBalance, planById } from '../lib/plans'
@@ -137,6 +139,7 @@ function Overview({ s }: { s: DemoState }) {
           </Link>
         )}
 
+        <PushPrompt />
         <InsightsCard s={s} compact />
 
         <div className="metrics">
@@ -223,4 +226,34 @@ function caretakerTour(nk: string, name: string): TourStep[] {
     { target: 'nav-rules', title: 'Helper rules', body: <>Decide what the helper may do on its own, what {nk} confirms, and what needs you. Set spending limits.</> },
     { target: 'nav-more', title: 'Everything else', body: <>Family members, help requests, check-in history, {nk}’s routine, profile & privacy, and care credit.</> },
   ]
+}
+
+/** "Get alerts on this phone" — once, until turned on or dismissed. Live family app only (not inside /try frames). */
+function PushPrompt() {
+  const [state, setState] = useState<PushState | 'dismissed' | null>(null)
+  const toast = useToast()
+  useEffect(() => {
+    if (!isLive() || EMBEDDED) return
+    let dismissed = false
+    try { dismissed = localStorage.getItem('elderly.push.dismissed') === '1' } catch { /* ignore */ }
+    if (dismissed) { setState('dismissed'); return }
+    void pushState().then(setState)
+  }, [])
+  if (state !== 'off') return null
+  const turnOn = async () => {
+    try {
+      const r = await enablePush(t => api.addPushToken(t))
+      setState(r)
+      toast(r === 'on' ? '🔔 Alerts are on for this phone' : r === 'blocked' ? 'Notifications are blocked — allow them in your browser settings' : 'Not turned on')
+    } catch { toast('Couldn’t turn on alerts on this device') }
+  }
+  const dismiss = () => { try { localStorage.setItem('elderly.push.dismissed', '1') } catch { /* ignore */ } setState('dismissed') }
+  return (
+    <div className="card row push-card">
+      <span style={{ fontSize: 26 }}>🔔</span>
+      <div className="grow"><b>Get alerts on this phone</b><p className="small muted">SOS, worrying check-ins, approvals and messages — even when the app is closed.</p></div>
+      <div className="stack" style={{ gap: 4 }}><button className="btn sm pri" onClick={() => void turnOn()}>Turn on</button>
+        <button className="btn sm ghost" onClick={dismiss}>Not now</button></div>
+    </div>
+  )
 }

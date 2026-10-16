@@ -16,7 +16,9 @@ const app = initializeApp({
   authDomain: env.VITE_FIREBASE_AUTH_DOMAIN || 'elderly-3e18c.firebaseapp.com',
   projectId: env.VITE_FIREBASE_PROJECT_ID || 'elderly-3e18c',
   appId: env.VITE_FIREBASE_APP_ID || '1:968215624615:web:63ea777fd96fc9e2d2d482',
+  messagingSenderId: '968215624615',  // push notifications (lib/push.ts)
 })
+export const firebaseApp = app
 // A 'Try with real AI' frame (/try) keeps its sign-in in memory only: the elder and family frames on that page each
 // have their own account, and neither touches the visitor's real sign-in in other tabs.
 export const auth = SANDBOX_FRAME
