@@ -66,7 +66,7 @@ export function TrySandbox() {
           <div className="card try-steps">
             <p className="eyebrow">Things to try — every reply is Gemini, live</p>
             <ol>
-              <li>On {sb.caretaker.name}’s phone: <b>“Keep an eye”</b> — Gemini noticed {sb.elder.name}’s mood has been low for two days, compared with {sb.elder.name}’s usual.</li>
+              <li>On {sb.caretaker.name}’s phone: <b>“Keep an eye”</b> — Gemini noticed {sb.elder.name}’s mood has been low for two days, compared with {sb.elder.name}’s usual. Tap it and <b>ask about {sb.elder.name}</b> in your own words — “Has she been sleeping well?”</li>
               <li>On {sb.elder.name}’s phone, tap a mood to start today’s <b>check-in</b> — a short chat; {sb.caretaker.name} sees the summary.</li>
               <li>Ask <b>“Will it rain today?”</b> or <b>“Order me breakfast”</b> — it acts within {sb.caretaker.name}’s rules and asks before spending.</li>
               <li>Tap the mic and speak, in {LANGS.find(([l]) => l === sb.language)?.[1]} or any language — it answers in {sb.elder.name}’s language.</li>
