@@ -545,3 +545,7 @@ a { color: inherit }
 .splash { margin: auto; display: grid; justify-items: center; gap: 22px; animation: fadeIn .3s both .15s }
 .splash-logo { width: 72px; height: 72px; border-radius: 22px; font-size: 36px; display: grid; place-items: center }
 @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+
+/* Family chat across languages */
+.linkish.orig { margin-left: 8px; font-size: 13px; opacity: .7; vertical-align: middle }
+.pm .meta.tr { display: block; margin-top: 4px }

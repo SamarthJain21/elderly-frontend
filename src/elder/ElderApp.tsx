@@ -50,7 +50,7 @@ export default function ElderApp({ framed = true }: { framed?: boolean }) {
     // Live: the server pushes the reply's voice as soon as it's ready (falls back to fetching it).
     if (last.kind === 'agent' && last.m.sender === 'agent') { if (isLive()) speakMessage(last.m.id, last.m.text, lang); else speak(last.m.text, lang) }
     if (last.kind === 'fam' && last.m.sender === 'caretaker') {
-      speak(`${t.messageFrom(last.m.senderName)} ${last.m.text}`, lang)  // the answer buttons are shown, not read
+      speak(`${t.messageFrom(last.m.senderName)} ${shownText(last.m)}`, lang)  // the answer buttons are shown, not read
     }
   }, [items, s.elderUi.voice, lang]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -153,12 +153,12 @@ function FamilyQuestion({ s }: { s: DemoState }) {
   if (!m) return null
   const t = strings(s.elder.language)
   const sender = s.contacts.find(c => c.name === m.senderName)
-  const play = () => { setPlaying(true); speak(m.text, s.elder.language); setTimeout(() => setPlaying(false), 4000) }
+  const play = () => { setPlaying(true); speak(shownText(m), s.elder.language); setTimeout(() => setPlaying(false), 4000) }
   return (
     <div className="fam-q" data-tour="e-family">
       <div className="who"><Face k={sender?.face ?? (isLive() ? undefined : 'emma')} src={photoOf(s, m.senderName)} name={m.senderName} size={88} /><div><b>{m.senderName}</b><span>{t.sentYou}</span></div></div>
       {<button className={`vplay ${playing ? 'playing' : ''}`} onClick={play} aria-label={t.playFrom(m.senderName)}><span className="pb">▶</span><Wave /><b>0:0{Math.max(2, Math.min(9, Math.round(m.text.split(' ').length / 2.5)))}</b></button>}
-      <p className="q">{m.text}</p>
+      <p className="q"><Translated m={m} /></p>
       <div className="bigbtns">
         <ChipButtons m={m} t={t} />
       </div>
@@ -329,11 +329,19 @@ function FamilyBubble({ m, s, t }: { m: FamilyMessage; s: DemoState; t: Strings 
   return (
     <div className="msg fam">
       <span className="who-face"><Face k={sender?.face ?? (isLive() ? undefined : 'emma')} src={photoOf(s, m.senderName)} name={m.senderName} size={64} /><span><b>{m.senderName}</b><small>{sender?.relationship ? t.yourRel(sender.relationship) : t.family}</small></span></span>
-      <button className="vplay" onClick={() => speak(m.text, s.elder.language)} aria-label={t.listenMsg}><span className="pb">▶</span><Wave /></button>
-      {m.text}
+      <button className="vplay" onClick={() => speak(shownText(m), s.elder.language)} aria-label={t.listenMsg}><span className="pb">▶</span><Wave /></button>
+      <Translated m={m} />
       {!isAnswered(s.family, m.id) && m.chips.length > 0 && <ChipButtons m={m} t={t} />}
     </div>
   )
+}
+
+/** A family message in the elder's language (translated by the server), with a small way to see the original. */
+const shownText = (m: FamilyMessage) => (m.sender === 'caretaker' && m.translated) || m.text
+function Translated({ m }: { m: FamilyMessage }) {
+  const [orig, setOrig] = useState(false)
+  if (m.sender !== 'caretaker' || !m.translated) return <>{m.text}</>
+  return <>{orig ? m.text : m.translated}<button className="linkish orig" onClick={() => setOrig(o => !o)} aria-pressed={orig}>{orig ? '↺' : 'Aa'}</button></>
 }
 
 /** Chips from the backend (app/agent/chips.py): message → reply; ⏰ remind → sets a reminder once; 📞 call → phone. */
