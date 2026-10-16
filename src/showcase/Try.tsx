@@ -72,6 +72,11 @@ export function TrySandbox() {
               <li>Tap the mic and speak, in {LANGS.find(([l]) => l === sb.language)?.[1]} or any language — it answers in {sb.elder.name}’s language.</li>
               <li>In {sb.caretaker.name}’s Chat, tap <b>“Did you take your medicine?”</b> — {sb.elder.name} hears it and answers with one tap.</li>
               <li>Say <b>“I fell in the bathroom”</b> or hold the red button — {sb.caretaker.name}’s phone shows the alert straight away.</li>
+              <li>Say <b>“The bank called and asked for my OTP”</b> — the helper warns {sb.elder.name} kindly and alerts {sb.caretaker.name} (scam guard).</li>
+              {sb.language === 'en-US'
+                ? <li><b>Family chat across languages:</b> start over in हिन्दी or ไทย — {sb.caretaker.name} writes English, {sb.elder.name} reads (and hears) their own language, and replies come back in English.</li>
+                : <li><b>Family chat across languages:</b> type to {sb.elder.name} in English — they read and hear it in {LANGS.find(([l]) => l === sb.language)?.[1]}; the reply reaches {sb.caretaker.name} in English.</li>}
+              <li>On {sb.caretaker.name}’s phone: More → Routine → Medicines → <b>📷 Scan a prescription</b> — Gemini reads “1-0-1”, AC/PC and SOS, and flags a medicine that doubles one already on the list.</li>
             </ol>
           </div>
         </>
