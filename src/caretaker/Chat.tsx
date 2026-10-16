@@ -70,7 +70,7 @@ export default function Chat() {
           {PRESETS.map(t => <button key={t} className="btn sm" style={{ flex: 'none', borderRadius: 999 }} onClick={() => send(t)}>{t}</button>)}
         </div>
         <form className="p-form" onSubmit={e => { e.preventDefault(); if (text.trim()) { send(text.trim()); setText('') } }}>
-          <input value={text} onChange={e => setText(e.target.value)} placeholder={`Message ${nk}…`} aria-label={`Message ${nk}`} />
+          <input value={text} maxLength={1000} onChange={e => setText(e.target.value)} placeholder={`Message ${nk}…`} aria-label={`Message ${nk}`} />
           <button className="btn pri" type="submit">Send</button>
         </form>
       </div>

@@ -259,7 +259,7 @@ function Talk({ s, items, onMic, listening, say, back }: { s: DemoState; items: 
           ))}
         </div>
         <form className="e-form" onSubmit={e => { e.preventDefault(); if (text.trim()) { say(text); setText('') } }}>
-          <input value={text} onChange={e => setText(e.target.value)} placeholder={t.typeHere} aria-label={t.typeAria} />
+          <input value={text} maxLength={1000} onChange={e => setText(e.target.value)} placeholder={t.typeHere} aria-label={t.typeAria} />
           <button type="button" className={`mic sm ${listening ? 'on' : ''}`} onClick={onMic} aria-label={t.speak}><MicIcon /></button>
         </form>
       </div>
