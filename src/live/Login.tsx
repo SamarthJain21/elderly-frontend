@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useDemo } from '../data/store'
-import { isLive } from '../data/mode'
+import { isLive, switchMode } from '../data/mode'
 import { loadSession, signOut } from '../data/live'
 import { signInCaretaker, signInElder } from '../lib/firebase'
 import { WaveHand } from '../onboarding/Scenes'
@@ -27,7 +27,9 @@ export function Login() {
   const [err, setErr] = useState('')
   const next = q.get('next')
 
-  if (!isLive()) return <Navigate to="/" replace />
+  // A tab left in demo mode (a ?demo link) signs in live: switch back and reload here.
+  useEffect(() => { if (!isLive()) switchMode('live', location.pathname + location.search) }, [])
+  if (!isLive()) return null
   if (s.live.status === 'ready') return <Navigate to={next || (s.live.role === 'elder' ? '/elder' : '/caretaker')} replace />
   if (s.live.status === 'needsOnboarding' || s.live.status === 'needsElder') return <Navigate to="/onboarding/caretaker" replace />
 
@@ -62,9 +64,13 @@ export function Login() {
       {(err || s.live.status === 'error') && <p className="err" role="alert">{err || s.live.error}</p>}
       {s.live.status === 'error' && <button className="btn" onClick={() => void loadSession()}>Try again</button>}
       <p className="small muted" style={{ textAlign: 'center' }}>
-        Just looking? <Link to="/try">Try it with real AI</Link> — no sign-in needed.
+
       </p>
-      <p className="small muted" style={{ textAlign: 'center' }}><Link to="/">Back</Link></p>
+      <div className="login-new">
+        <p className="eyebrow">New here?</p>
+        <Link className="btn acc block" to="/try">✨ Try it live <span className="small">(for judges)</span> — no sign-in</Link>
+        <Link className="btn block" to="/about">Learn about Elderly →</Link>
+      </div>
     </div></div></div>
   )
 }

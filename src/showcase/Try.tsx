@@ -39,7 +39,7 @@ export function TrySandbox() {
   return (
     <div style={{ minHeight: '100dvh' }}>
       <div className="topbar">
-        <Link to="/" className="brand"><span className="logo">♥</span>Elderly</Link>
+        <Link to="/about" className="brand"><span className="logo">♥</span>Elderly</Link>
         <span className="grow" />
         {sb && <button className="btn sm" onClick={startOver}>Start over</button>}
       </div>

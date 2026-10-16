@@ -29,7 +29,9 @@ createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <ToastProvider>
         <Routes>
-          <Route path="/" element={<Launcher />} />
+          {/* The web app opens on sign-in (with "Try it live" for judges); the product page is /about. */}
+          <Route path="/" element={<Login />} />
+          <Route path="/about" element={<Launcher />} />
           {/* The scripted offline demo is hidden; old links go to the live one. */}
           <Route path="/demo" element={<Navigate to="/try" replace />} />
           <Route path="/try" element={<TrySandbox />} />
@@ -41,7 +43,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/onboarding/caretaker" element={<CaretakerOnboarding />} />
           <Route path="/onboarding/elder" element={<ElderOnboarding />} />
           <Route path="/join/:code" element={<JoinLink />} />
-          <Route path="*" element={<Launcher />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </ToastProvider>
     </BrowserRouter>
