@@ -9,6 +9,7 @@
  *   Caretakers only get the family thread over the socket, so approvals/logs arrive by polling.
  */
 import { connectChat, contactIn, createApi, ApiError, type BackendAction, type Profile, type ServerFrame, type TodayCheckIn } from './api'
+import { setCloudVoice } from '../lib/speech'
 import { auth, getToken, isSandboxSigningIn, onUser, sandboxSignIn, signOutUser } from '../lib/firebase'
 import { emptyLive, getState, update, type DemoState } from './store'
 import { formatMoney } from '../lib/money'
@@ -277,6 +278,7 @@ let booted = false
 export function bootLive() {
   if (booted) return
   booted = true
+  setCloudVoice((text, lang) => api.tts(text, lang))  // natural voice; speak() falls back to the device voice
   // Firebase normally answers in well under a second; if it never does, say so instead of spinning.
   let authAnswered = false
   window.setTimeout(() => {
