@@ -545,3 +545,11 @@ a { color: inherit }
 .splash { margin: auto; display: grid; justify-items: center; gap: 22px; animation: fadeIn .3s both .15s }
 .splash-logo { width: 72px; height: 72px; border-radius: 22px; font-size: 36px; display: grid; place-items: center }
 @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+/* Prescription scan (components/Medicines.tsx) */
+.rx { border: 1.5px dashed var(--accent); box-shadow: none; background: var(--accent-soft) }
+.rx-reading { display: flex; align-items: center; gap: 10px; font-weight: 700; margin: 4px 0 }
+.rx .spin { width: 18px; height: 18px; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--accent); animation: spin .8s linear infinite; flex: none }
+.rx-row { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-top: 1px solid var(--line); cursor: pointer }
+.rx-row:first-of-type { border-top: 0 }
+.rx-row input { margin-top: 4px; width: 20px; height: 20px; accent-color: var(--accent) }
+.rx-row.unsure b { color: var(--amber) }

@@ -81,6 +81,9 @@ export function createApi(getToken: TokenFn) {
     /** Spelling + generic name of a typed medicine (app/medicines.py) — no dose or use advice. */
     checkMedicine: (name: string, country: string) =>
       req<{ input: string; recognised: boolean; suggestion: string | null; generic: string | null }>('POST', '/medicines/check', { name, country }),
+    /** Prescription / strip photo → draft medicines for the family to tick (app/rx_scan.py). base64 without the data: prefix. */
+    scanPrescription: (image: string, mimeType: string, meals: { breakfast: string | null; lunch: string | null; dinner: string | null }, existing: string[]) =>
+      req<{ medicines: ScannedMedicine[]; unreadable: boolean }>('POST', '/medicines/scan', { image, mimeType, meals, existing }),
     deviceSettings: (id: string) => req<DeviceSettings>('GET', `${e(id)}/device-settings`),
     saveDeviceSettings: (id: string, s: DeviceSettings) => req<DeviceSettings>('PUT', `${e(id)}/device-settings`, s),
     /** Cost dashboard (app/routers/admin_api.py) — admins only. */
@@ -92,6 +95,9 @@ export function createApi(getToken: TokenFn) {
     inviteCaretaker: (id: string, email: string) => req<{ status: 'added' | 'invited' }>('POST', `${e(id)}/caretakers`, { email }),
   }
 }
+
+/** app/rx_scan.py DraftMedicine — shaped like Medication, plus how sure Gemini was. */
+export interface ScannedMedicine { name: string; dose: string; times: string[]; withFood: boolean; notes: string; unsure: boolean; asNeeded: boolean; sameAs: string | null }
 
 /** app/routers/places_saved_api.py — 'Clinic', 'Temple'… the helper books rides to them by name. */
 export interface SavedPlace { id: string; name: string; address: Address }

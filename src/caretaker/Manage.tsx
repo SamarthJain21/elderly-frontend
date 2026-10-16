@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { PhoneField } from '../components/PhoneField'
-import { countryForTimezone, phoneError } from '../lib/phone'
+import { COUNTRY_NAME, countryForTimezone, phoneError } from '../lib/phone'
 import { Link, useNavigate } from 'react-router-dom'
 import { nick, resetDemo, update, useDemo } from '../data/store'
-import { addContact, addReminder, caretakerDecide, deleteReminder, helperVisitsLeft, quotaLeft, setElderLanguage, setNickname, setRuleLimit, setRuleMode, setSharingTier, setTrustedOnly, toggleTrusted } from '../data/actions'
+import { addContact, addReminder, saveMedications, caretakerDecide, deleteReminder, helperVisitsLeft, quotaLeft, setElderLanguage, setNickname, setRuleLimit, setRuleMode, setSharingTier, setTrustedOnly, toggleTrusted } from '../data/actions'
 import { EMBEDDED, isLive } from '../data/mode'
 import { deviceOf, saveDevice, selectElder, signOut } from '../data/live'
 import { ComingSoon } from '../components/ui'
@@ -12,7 +12,8 @@ import { MockQR, Sheet, Switch, timeAgo, useToast } from '../components/ui'
 import { formatMoney, minorToInput, parseToMinor } from '../lib/money'
 import { MODE_LABEL, SPENDING_TOOLS, TOOL_META } from '../lib/policy'
 import { CREDIT, formatBalance, formatUsd, planById } from '../lib/plans'
-import type { ContactKind, Currency, Mode, SharingTier, ToolName, DeviceSettings } from '../lib/types'
+import type { ContactKind, Currency, Mode, SharingTier, ToolName, DeviceSettings, Medication } from '../lib/types'
+import { MedEditor } from '../components/Medicines'
 import { CHead } from './CaretakerApp'
 import { ProfileExtras } from './Screens'
 import { addressLine } from '../lib/types'
@@ -212,6 +213,8 @@ export function Routine() {
   const [adding, setAdding] = useState(false)
   const [title, setTitle] = useState(''), [time, setTime] = useState('17:00')
   const custom = s.reminders.filter(r => r.kind !== 'medication')
+  const toast = useToast()
+  const [meds, setMeds] = useState<Medication[] | null>(null)  // editing when set
   return (
     <>
       <CHead title={`${nk}’s routine`} sub="Drives reminders and the daily check-in" back="/caretaker/more" />
@@ -224,10 +227,11 @@ export function Routine() {
           <div className="metric"><p className="k">Meals</p><p className="v" style={{ fontSize: 18 }}>{[a.meals.breakfast, a.meals.lunch, a.meals.dinner].filter(Boolean).join(' · ') || '—'}</p></div>
         </div>
         <div className="card">
-          <p className="eyebrow">Medicines</p>
+          <div className="row"><p className="eyebrow grow">Medicines</p><button className="btn sm" onClick={() => setMeds(a.medications.map(m => ({ ...m })))}>{a.medications.length ? 'Edit' : '＋ Add'}</button></div>
+          {a.medications.length === 0 && <p className="small muted" style={{ marginTop: 8 }}>None yet — add them by hand or scan a prescription.</p>}
           {a.medications.map(m => (
             <div key={m.id} className="list-row"><span style={{ fontSize: 22 }}>💊</span>
-              <div className="grow"><p className="t">{m.name} {m.dose}</p><p className="s">{m.times.join(', ')}{m.withFood ? ' · with food' : ''}{m.notes ? ` · ${m.notes}` : ''}</p></div></div>
+              <div className="grow"><p className="t">{[m.name, m.dose].filter(Boolean).join(" ")}</p><p className="s">{m.times.join(', ')}{m.withFood ? ' · with food' : ''}{m.notes ? ` · ${m.notes}` : ''}</p></div></div>
           ))}
         </div>
         <div className="card">
@@ -241,6 +245,15 @@ export function Routine() {
         </div>
         {a.healthNotes && <div className="card"><p className="eyebrow">Health notes for the helper</p><p style={{ marginTop: 6 }}>{a.healthNotes}</p></div>}
       </div></div>
+      <Sheet open={meds !== null} onClose={() => setMeds(null)} label="Edit medicines">
+        <h2 style={{ fontSize: 24, marginBottom: 12 }}>{nk}’s medicines</h2>
+        {meds && <div className="stack" style={{ gap: 12 }}>
+          <MedEditor meds={meds} setMeds={v => setMeds(m => typeof v === 'function' ? v(m ?? []) : v)} live={isLive()}
+            country={COUNTRY_NAME[countryForTimezone(a.timezone)] ?? 'India'} meals={a.meals} />
+          <button className="btn pri block" disabled={meds.some(m => m.name.trim() && !m.times.length)}
+            onClick={() => { saveMedications(meds); setMeds(null); if (!isLive()) toast('Medicines saved — reminders updated') }}>Save medicines</button>
+        </div>}
+      </Sheet>
       <Sheet open={adding} onClose={() => setAdding(false)} label="Add reminder">
         <h2 style={{ fontSize: 24, marginBottom: 12 }}>New reminder</h2>
         <div className="stack">
