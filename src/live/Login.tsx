@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useDemo } from '../data/store'
-import { isLive, switchMode } from '../data/mode'
+import { isLive } from '../data/mode'
 import { loadSession, signOut } from '../data/live'
 import { signInCaretaker, signInElder } from '../lib/firebase'
 import { WaveHand } from '../onboarding/Scenes'
@@ -62,7 +62,7 @@ export function Login() {
       {(err || s.live.status === 'error') && <p className="err" role="alert">{err || s.live.error}</p>}
       {s.live.status === 'error' && <button className="btn" onClick={() => void loadSession()}>Try again</button>}
       <p className="small muted" style={{ textAlign: 'center' }}>
-        Just looking? <Link to="/try">Try it with real AI</Link> or <button className="linkish" onClick={() => switchMode('demo', '/')}>the offline demo</button> — no sign-in needed.
+        Just looking? <Link to="/try">Try it with real AI</Link> — no sign-in needed.
       </p>
       <p className="small muted" style={{ textAlign: 'center' }}><Link to="/">Back</Link></p>
     </div></div></div>
@@ -94,14 +94,12 @@ export function LiveGate({ app, children }: { app: 'elder' | 'caretaker'; childr
   // Live data must never carry demo state; if it somehow does, reload the real session.
   useEffect(() => { if (isLive() && st === 'demo') void loadSession() }, [st])
   if (!isLive()) return <>{children}</>
-  if (st === 'loading' || st === 'demo') return <Center><div className="spinner" aria-hidden /><p className="muted">Connecting to Elderly…</p>
-    <button className="btn ghost sm" onClick={() => switchMode('demo', pathname)}>Taking long? Continue in the demo</button></Center>
+  if (st === 'loading' || st === 'demo') return <Center><div className="spinner" aria-hidden /><p className="muted">Connecting to Elderly…</p></Center>
   if (st === 'signedOut') return <Navigate to={`/login?next=${encodeURIComponent(pathname)}${app === 'elder' ? '&as=elder' : ''}`} replace />
   if (st === 'error') return (
     <Center>
       <h2>Can’t reach Elderly</h2><p className="muted">{s.live.error}</p>
       <button className="btn pri" onClick={() => void loadSession()}>Try again</button>
-      <button className="btn ghost" onClick={() => switchMode('demo', '/')}>Open the demo instead</button>
     </Center>
   )
   if (st === 'needsOnboarding' || st === 'needsElder') {

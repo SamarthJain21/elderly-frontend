@@ -164,7 +164,7 @@ export async function createSandbox(language: SandboxLanguage): Promise<Sandbox>
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ language }),
     signal: AbortSignal.timeout(30_000),
   }).catch(() => { throw new ApiError(0, 'Can’t reach the Elderly server right now.') })
-  if (res.status === 429) throw new ApiError(429, 'You’ve started a few sandboxes already — please wait a little, or use the offline demo.')
+  if (res.status === 429) throw new ApiError(429, 'You’ve started a lot of sandboxes in the last hour — please wait a little and try again.')
   if (!res.ok) throw new ApiError(res.status, (await res.json().catch(() => ({}))).detail ?? 'The live demo isn’t available right now.')
   return res.json()
 }

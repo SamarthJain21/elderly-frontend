@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { nick, resetDemo, update, useDemo } from '../data/store'
 import { addContact, addReminder, caretakerDecide, deleteReminder, helperVisitsLeft, quotaLeft, setElderLanguage, setNickname, setRuleLimit, setRuleMode, setSharingTier, setTrustedOnly, toggleTrusted } from '../data/actions'
-import { EMBEDDED, isLive, switchMode } from '../data/mode'
+import { EMBEDDED, isLive } from '../data/mode'
 import { selectElder, signOut } from '../data/live'
 import { ComingSoon } from '../components/ui'
 import { Face } from '../components/Face'
@@ -357,7 +357,6 @@ function AccountCard() {
       ))}
       <button className="btn" onClick={() => nav('/onboarding/caretaker?add=1')}>＋ Care for another person</button>
       <button className="btn" onClick={() => { void signOut().then(() => nav('/login')) }}>Sign out</button>
-      <button className="btn ghost" onClick={() => switchMode('demo', '/')}>Open the demo instead</button>
     </div>
   )
 }

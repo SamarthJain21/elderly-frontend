@@ -42,7 +42,6 @@ export function TrySandbox() {
         <Link to="/" className="brand"><span className="logo">♥</span>Elderly</Link>
         <span className="grow" />
         {sb && <button className="btn sm" onClick={startOver}>Start over</button>}
-        <Link className="btn sm" to="/demo">Offline demo</Link>
       </div>
       {!sb ? (
         <div className="launch try-intro">
