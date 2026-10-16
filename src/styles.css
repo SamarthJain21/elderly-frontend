@@ -540,3 +540,8 @@ a { color: inherit }
 .acard, .msg, .card { overflow-wrap: anywhere }
 .e-quick { grid-template-columns: repeat(2, minmax(0, 1fr)) }
 .e-quick button { min-width: 0; font-size: clamp(15px, 4.4vw, 18px) }
+
+/* Loading: brand mark + spinner, no text */
+.splash { margin: auto; display: grid; justify-items: center; gap: 22px; animation: fadeIn .3s both .15s }
+.splash-logo { width: 72px; height: 72px; border-radius: 22px; font-size: 36px; display: grid; place-items: center }
+@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
