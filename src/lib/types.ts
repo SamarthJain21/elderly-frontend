@@ -98,6 +98,8 @@ export interface Address {
   line1: string; line2: string; landmark: string; city: string; postcode: string
   /** Filled by the backend's geocoding on save. */
   lat?: number | null; lng?: number | null; precision?: 'address' | 'street' | 'city' | null
+  /** Picked from Google address search: the server re-reads this place for its exact location. */
+  placeId?: string | null
 }
 export interface EmergencyContact { name: string; phone: string; relationship: string; face?: string | null }
 export const addressLine = (a: Address | null | undefined) =>

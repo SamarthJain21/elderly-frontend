@@ -74,6 +74,10 @@ export function createApi(getToken: TokenFn) {
       if (!res.ok) throw new ApiError(res.status, 'Voice unavailable')
       return res.blob()
     },
+    // Address search (app/routers/places_api.py)
+    placesSearch: (q: string, country: string, session: string) =>
+      req<{ placeId: string; main: string; secondary: string; text: string }[]>('GET', `/places/autocomplete?q=${encodeURIComponent(q)}&country=${country}&session=${session}`),
+    place: (placeId: string, session: string) => req<Address>('GET', `/places/${encodeURIComponent(placeId)}?session=${session}`),
     inviteCaretaker: (id: string, email: string) => req<{ status: 'added' | 'invited' }>('POST', `${e(id)}/caretakers`, { email }),
   }
 }

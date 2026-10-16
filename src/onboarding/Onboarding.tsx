@@ -273,7 +273,7 @@ export function CaretakerOnboarding() {
         <label className="field grow">Lives in<select value={them.timezone} onChange={e => setThem({ ...them, timezone: e.target.value })}>{TIMEZONES.map(t => <option key={t.tz} value={t.tz}>{t.label}</option>)}</select></label>
       </div>
       <p className="eyebrow" style={{ marginTop: 4 }}>Home address · for deliveries & rides</p>
-      <AddressFields value={address} onChange={setAddress} />
+      <AddressFields value={address} onChange={setAddress} country={countryForTimezone(them.timezone)} />
       <p className="note-lock"><span>🔒</span><span>Only used to call, deliver and speak their language. {Nk} can see and change all of it, and nothing is shared beyond the family they choose.</span></p>
       <label className="consent"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} /><span>I’ve talked with {nk} and they’re happy to use Elderly.</span></label>
     </> },
