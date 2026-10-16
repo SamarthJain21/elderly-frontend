@@ -8,6 +8,7 @@ import CaretakerApp from './caretaker/CaretakerApp'
 import { CaretakerOnboarding, ElderOnboarding, JoinLink } from './onboarding/Onboarding'
 import { Launcher, Pricing, SideBySide } from './showcase/Showcase'
 import { LiveGate, Login } from './live/Login'
+import { TrySandbox } from './showcase/Try'
 import { isLive } from './data/mode'
 import { bootLive } from './data/live'
 
@@ -23,6 +24,7 @@ createRoot(document.getElementById('root')!).render(
         <Routes>
           <Route path="/" element={<Launcher />} />
           <Route path="/demo" element={<SideBySide />} />
+          <Route path="/try" element={<TrySandbox />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/elder" element={<LiveGate app="elder"><ElderApp framed={!embedded} /></LiveGate>} />

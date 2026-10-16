@@ -9,7 +9,7 @@
  *   Caretakers only get the family thread over the socket, so approvals/logs arrive by polling.
  */
 import { connectChat, contactIn, createApi, ApiError, type BackendAction, type Profile, type ServerFrame, type TodayCheckIn } from './api'
-import { auth, getToken, onUser, signOutUser } from '../lib/firebase'
+import { auth, getToken, isSandboxSigningIn, onUser, sandboxSignIn, signOutUser } from '../lib/firebase'
 import { emptyLive, getState, update, type DemoState } from './store'
 import { formatMoney } from '../lib/money'
 import { notify } from '../components/ui'
@@ -282,7 +282,9 @@ export function bootLive() {
   window.setTimeout(() => {
     if (!authAnswered) update(d => { d.live.status = 'error'; d.live.error = `Sign-in didn’t start on ${location.host}. If this is a phone on your Wi-Fi, add this address to Firebase → Authentication → Authorized domains, or use the demo.` })
   }, 10_000)
+  sandboxSignIn?.catch((e: unknown) => update(d => { d.live.status = 'error'; d.live.error = (e as Error)?.message || 'Couldn’t open the sandbox' }))
   onUser(u => {
+    if (!u && isSandboxSigningIn()) return  // sandbox frame: its sign-in is still on the way
     authAnswered = true
     stopAll()
     if (!u) {
