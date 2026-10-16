@@ -208,10 +208,11 @@ export function Routine() {
       <CHead title={`${nk}’s routine`} sub="Drives reminders and the daily check-in" back="/caretaker/more" />
       <div className="scroll"><div className="c-body">
         <div className="card metrics" style={{ boxShadow: 'none' }}>
-          <div className="metric"><p className="k">Wakes</p><p className="v">{a.sleep.wakeTime}</p></div>
-          <div className="metric"><p className="k">Bedtime</p><p className="v">{a.sleep.bedtime}</p></div>
-          <div className="metric"><p className="k">Check-in</p><p className="v">{a.checkIn.time}</p><p className="small muted">{a.checkIn.days.length === 7 ? 'Every day' : a.checkIn.days.join(', ')}</p></div>
-          <div className="metric"><p className="k">Meals</p><p className="v" style={{ fontSize: 18 }}>{[a.meals.breakfast, a.meals.lunch, a.meals.dinner].filter(Boolean).join(' · ')}</p></div>
+          <div className="metric"><p className="k">Wakes</p><p className="v">{a.sleep.wakeTime ?? '—'}</p></div>
+          <div className="metric"><p className="k">Bedtime</p><p className="v">{a.sleep.bedtime ?? '—'}</p></div>
+          <div className="metric"><p className="k">Check-in</p>{a.checkIn.enabled === false ? <p className="v">Off</p> : <>
+            <p className="v">{a.checkIn.time}</p><p className="small muted">{a.checkIn.days.length === 7 ? 'Every day' : a.checkIn.days.join(', ')}</p></>}</div>
+          <div className="metric"><p className="k">Meals</p><p className="v" style={{ fontSize: 18 }}>{[a.meals.breakfast, a.meals.lunch, a.meals.dinner].filter(Boolean).join(' · ') || '—'}</p></div>
         </div>
         <div className="card">
           <p className="eyebrow">Medicines</p>
@@ -256,7 +257,7 @@ export function More() {
     ['/caretaker/family', '👪', 'Family members', `${s.caretakers.length} active${s.invites.length ? ` · ${s.invites.length} invited` : ''}`],
     ['/caretaker/requests', '🤝', 'Help requests', `${s.requests.filter(r => ['open', 'notified', 'confirmed'].includes(r.status)).length} in progress`],
     ['/caretaker/checkins', '😊', 'Check-in history', 'The last 7 days'],
-    ['/caretaker/routine', '⏰', 'Routine & reminders', `${s.assessment.medications.length} medicines · check-in ${s.assessment.checkIn.time}`],
+    ['/caretaker/routine', '⏰', 'Routine & reminders', `${s.assessment.medications.length} medicines · ${s.assessment.checkIn.enabled === false ? 'no daily check-in' : `check-in ${s.assessment.checkIn.time}`}`],
     ['/caretaker/settings', '⚙️', `${nick(s)}’s profile & privacy`, 'Address, emergency contacts, language, sharing'],
   ]
   return (
