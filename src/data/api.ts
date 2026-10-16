@@ -86,9 +86,14 @@ export function createApi(getToken: TokenFn) {
     /** Cost dashboard (app/routers/admin_api.py) — admins only. */
     adminUsage: (days: number) => req<UsageReport>('GET', `/admin/usage?days=${days}`),
     addPushToken: (token: string) => req<void>('POST', '/me/push-token', { token }),
+    savedPlaces: (id: string) => req<SavedPlace[]>('GET', `${e(id)}/places`),
+    saveSavedPlaces: (id: string, list: SavedPlace[]) => req<SavedPlace[]>('PUT', `${e(id)}/places`, list),
     inviteCaretaker: (id: string, email: string) => req<{ status: 'added' | 'invited' }>('POST', `${e(id)}/caretakers`, { email }),
   }
 }
+
+/** app/routers/places_saved_api.py — 'Clinic', 'Temple'… the helper books rides to them by name. */
+export interface SavedPlace { id: string; name: string; address: Address }
 
 /** app/routers/admin_api.py */
 export interface UsageReport {
