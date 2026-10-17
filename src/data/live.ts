@@ -9,6 +9,7 @@
  *   Caretakers only get the family thread over the socket, so approvals/logs arrive by polling.
  */
 import { signInElderWithToken } from '../lib/firebase'
+import type { Here } from '../lib/here'
 import { connectChat, contactIn, createApi, ApiError, type CheckinAnswers, type BackendAction, type Profile, type ServerFrame, type TodayCheckIn } from './api'
 import { addPushedClip, setCloudVoice, setTranscriber } from '../lib/speech'
 import { auth, getToken, isSandboxSigningIn, onUser, sandboxSignIn, signOutUser } from '../lib/firebase'
@@ -405,7 +406,7 @@ export const live = {
   /** Raise an SOS on the backend. Resolves only once the family has really been alerted; throws otherwise. */
   sos: () => api.sos(eid()),
   resolveAlert: (alertId: string) => api.resolveAlert(eid(), alertId).catch(() => { /* family can still resolve it */ }),
-  say: (text: string) => { update(d => { d.messages.forEach(m => { m.quickReplies = [] }) }); if (send(c => c.say(text))) update(d => { d.elderUi.typing = true }) },
+  say: (text: string, here?: Here) => { update(d => { d.messages.forEach(m => { m.quickReplies = [] }) }); if (send(c => c.say(text, here))) update(d => { d.elderUi.typing = true }) },
   confirm: (actionId: string, approve: boolean) => send(c => c.confirm(actionId, approve)),
   startCheckin: (mood: Mood) => { if (send(c => c.startCheckin(mood))) update(d => { d.elderUi.typing = true }) },
   checkinAnswers: (a: CheckinAnswers) => send(c => c.checkinAnswers(a)),
