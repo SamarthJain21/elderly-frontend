@@ -104,7 +104,11 @@ export default function SetupPhone() {
 
         {connected
           ? <button className="btn pri block" style={{ minHeight: 52 }} onClick={finish}>Next: a quick tour of your app →</button>
-          : live && sent ? <button className="btn pri block" style={{ minHeight: 52 }} onClick={finish}>Done — take me to the app →</button>
+          : live ? <>
+              {/* Always there: the link can be sent later (Home → Set up phone, or their phone page → Signing in). */}
+              <button className="btn pri block" style={{ minHeight: 52 }} onClick={finish}>{sent ? 'Done — take me to the app →' : 'Continue to the app →'}</button>
+              {!sent && <p className="small muted center">You can send the link later from Home.</p>}
+            </>
           : <p className="small muted center">You can also do this later from Home.</p>}
       </div></div>
     </>
