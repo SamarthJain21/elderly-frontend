@@ -47,8 +47,7 @@ export default function CaretakerApp({ framed = true }: { framed?: boolean }) {
         <Tab to="" end i="🏠" l="Home" />
         <Tab to="chat" i="💬" l="Chat" badge={s.caretakerUnread} />
         <Tab to="approvals" i="🔐" l="Approvals" badge={pending} />
-        <Tab to="rules" i="🧭" l="Rules" />
-        <Tab to="more" i="☰" l="More" also={['phone', 'places', 'people', 'family', 'requests', 'checkins', 'routine', 'settings', 'plan', 'setup-phone', 'checkout']} />
+        <Tab to="more" i="☰" l="More" also={['rules', 'phone', 'places', 'people', 'family', 'requests', 'checkins', 'routine', 'settings', 'plan', 'setup-phone', 'checkout']} />
       </nav>}
     </div>
   )
@@ -221,8 +220,7 @@ function caretakerTour(nk: string, name: string): TourStep[] {
     { target: 'activity', title: 'Everything is logged', body: <>Each thing the helper does — orders, rides, messages, alerts — appears here, for you and {nk}.</> },
     { target: 'nav-chat', title: 'Chat', body: <>Your messages are <b>read aloud</b> to {nk}, who answers with big buttons. Their replies come with one-tap next steps.</> },
     { target: 'nav-approvals', title: 'Approvals', body: <>Requests your rules say need you first — like a volunteer visit or an order above the limit.</> },
-    { target: 'nav-rules', title: 'Helper rules', body: <>Decide what the helper may do on its own, what {nk} confirms, and what needs you. Set spending limits.</> },
-    { target: 'nav-more', title: 'Everything else', body: <>Family members, help requests, check-in history, {nk}’s routine, profile & privacy, and care credit.</> },
+    { target: 'nav-more', title: 'Everything else', body: <><b>Helper rules</b> (what the helper may do on its own, what needs you, spending limits), {nk}’s routine and medicines, family, profile & privacy.</> },
   ]
 }
 

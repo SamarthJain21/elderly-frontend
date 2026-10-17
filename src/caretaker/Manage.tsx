@@ -91,6 +91,13 @@ export function Approvals() {
 }
 
 // ---------------- Rules ----------------
+/** One line for the More list: what needs you, what's off. */
+function rulesSummary(s: ReturnType<typeof useDemo>): string {
+  const modes = Object.values(s.rules.tools).map(r => r.mode)
+  const ask = modes.filter(m => m === 'caretaker_approve').length, off = modes.filter(m => m === 'blocked').length
+  return [ask ? `${ask} need your OK` : 'Nothing needs your OK', off ? `${off} off` : ''].filter(Boolean).join(' · ') + ' · spending limits'
+}
+
 export function Rules() {
   const s = useDemo()
   const nk = nick(s)
@@ -112,7 +119,7 @@ export function Rules() {
   }
   return (
     <>
-      <CHead title="Helper rules" sub={`What the helper may do when ${nk} asks. Tap one to change it.`} />
+      <CHead title="Helper rules" sub={`What the helper may do when ${nk} asks. Tap one to change it.`} back="/caretaker/more" />
       <div className="scroll"><div className="c-body">
         {tools.map(t => {
           const r = s.rules.tools[t]; const meta = TOOL_META[t]
@@ -288,6 +295,7 @@ export function More() {
   const s = useDemo()
   const plan = planById(s.billing.plan)
   const items: [string, string, string, string][] = [
+    ['/caretaker/rules', '🧭', 'Helper rules', rulesSummary(s)],
     ['/caretaker/routine', '⏰', 'Routine & medicines', `${s.assessment.medications.length} medicines · ${s.assessment.checkIn.enabled === false ? 'no daily check-in' : `check-in ${s.assessment.checkIn.time}`}`],
     ['/caretaker/checkins', '😊', 'Check-in history', 'The last 7 days'],
     ['/caretaker/people', '👥', 'People & volunteers', `${s.contacts.length} contacts`],
