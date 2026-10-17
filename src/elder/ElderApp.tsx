@@ -18,6 +18,7 @@ import type { ActionCard, FamilyMessage, Message, ToolName } from '../lib/types'
 import type { CheckinAnswers } from '../data/api'
 import { PinScreen } from './PinScreen'
 import { MessageFamily } from './MessageFamily'
+import { RidePicker } from './RidePicker'
 
 type Screen = 'home' | 'talk' | 'reminders' | 'pin' | 'message'
 type Item = { kind: 'agent'; m: Message } | { kind: 'fam'; m: FamilyMessage }
@@ -98,6 +99,7 @@ function Home({ s, onMic, listening, say, go }: { s: DemoState; onMic: () => voi
   const date = new Date().toLocaleDateString(t.locale, { weekday: 'long', day: 'numeric', month: 'long' })
   const people = s.contacts.filter(c => c.kind !== 'volunteer').slice(0, 4)
   const care = s.caretaker.name || t.myFamily
+  const [ride, setRide] = useState(false)  // 🚕 "Where to?" (saved places)
   // Live: wait for the elder's profile, so the tour is shown (and read aloud) in their language.
   const loaded = !isLive() || !!s.elder.name
   const on = (tool: ToolName) => s.rules.tools[tool]?.mode !== 'blocked'
@@ -130,7 +132,7 @@ function Home({ s, onMic, listening, say, go }: { s: DemoState; onMic: () => voi
             {/* Features the family switched off (Rules) aren't offered. */}
             {on('order_medicine') && <button className="tile" onClick={() => say(t.sayMedicine)}><span className="ic">💊</span>{t.tileMedicine}</button>}
             {on('order_food') && <button className="tile" onClick={() => say(t.sayFood)}><span className="ic">🍲</span>{t.tileFood}</button>}
-            {on('book_ride') && <button className="tile" onClick={() => say(t.sayRide)}><span className="ic">🚕</span>{t.tileRide}</button>}
+            {on('book_ride') && <button className="tile" onClick={() => isLive() ? setRide(true) : say(t.sayRide)}><span className="ic">🚕</span>{t.tileRide}</button>}
             {on('notify_volunteer') && <button className="tile" onClick={() => say(t.sayFix)}><span className="ic">🔧</span>{t.tileFix}</button>}
             {/* Their own words, straight to the family chat — always there, like calling family. */}
             <button className="tile" onClick={() => go('message')}><span className="ic">💬</span>{t.tileMsg(care)}</button>
@@ -139,6 +141,7 @@ function Home({ s, onMic, listening, say, go }: { s: DemoState; onMic: () => voi
           {!isLive() && <p className="muted center" style={{ marginTop: 18, fontSize: 16 }}>{t.helperVisits} <b>{helperVisitsLeft(s)}</b></p>}
         </div>
       </div>
+      {ride && <RidePicker s={s} onPick={said => { setRide(false); say(said) }} onClose={() => setRide(false)} />}
       <SosBar t={t} aboveTour={!s.tours.elder && loaded} />
       {!s.tours.elder && loaded && <Tour big labels={t.tourUi} steps={elderTour(t, s.caretaker.name || t.yourFamily)} onDone={() => { stopSpeaking(); update(d => { d.tours.elder = true }) }}
         onStep={st => st.say && s.elderUi.voice && speak(`${st.title}. ${st.say}`, s.elder.language)} />}
