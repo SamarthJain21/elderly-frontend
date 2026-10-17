@@ -12,7 +12,7 @@ import { MicIcon, Wave, useToast } from '../components/ui'
 import { Tour, type TourStep } from '../components/Tour'
 import { update } from '../data/store'
 import { finishTour } from '../data/live'
-import { canListen, listen, onSoundBlockedChange, setPlayback, soundBlocked, speak, speakMessage, stopListening, stopSpeaking } from '../lib/speech'
+import { canListen, listen, setPlayback, speak, speakMessage, stopListening, stopSpeaking } from '../lib/speech'
 import { activityLabel } from '../lib/activity'
 import { cardEta, cardLine } from '../lib/cardText'
 import { partOfDay, strings, type Strings } from '../lib/i18n'
@@ -33,10 +33,8 @@ export default function ElderApp({ framed = true }: { framed?: boolean }) {
   const [listening, setListening] = useState(false)
   const lang = s.elder.language
   const t = strings(lang)
-  const [blocked, setBlocked] = useState(soundBlocked)
   // Loudness and speed: the elder's settings, which their family can also set from the Phone page.
   useEffect(() => { setPlayback({ volume: s.device.volume, rate: s.device.rate }) }, [s.device.volume, s.device.rate])
-  useEffect(() => onSoundBlockedChange(setBlocked), [])
 
   // One timeline: assistant conversation + family thread (elder sees both).
   const items: Item[] = useMemo(() => [
@@ -83,8 +81,6 @@ export default function ElderApp({ framed = true }: { framed?: boolean }) {
       {screen === 'pin' && <PinScreen s={s} back={() => setScreen('reminders')} />}
       {screen === 'message' && <MessageFamily s={s} back={() => setScreen('home')} />}
       <Overlay s={s} />
-      {/* Not during the tour: its first tap turns sound on anyway, and the hint would cover its card. */}
-      {blocked && s.elderUi.voice && s.tours.elder && <div className="tap-to-hear" aria-live="polite">{t.tapToHear}</div>}
     </div>
   )
 }
