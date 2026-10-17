@@ -17,6 +17,7 @@ import { Tour, type TourStep } from '../components/Tour'
 import { update } from '../data/store'
 import { Approvals, More, People, Routine, Rules, Settings, ElderPhone } from './Manage'
 import { Checkout, PlanPage } from '../billing/Billing'
+import { EmergencyOverlay } from './EmergencyOverlay'
 
 export default function CaretakerApp({ framed = true }: { framed?: boolean }) {
   const s = useDemo()
@@ -49,6 +50,7 @@ export default function CaretakerApp({ framed = true }: { framed?: boolean }) {
         <Tab to="approvals" i="🔐" l="Approvals" badge={pending} />
         <Tab to="more" i="☰" l="More" also={['rules', 'phone', 'places', 'people', 'family', 'requests', 'checkins', 'routine', 'settings', 'plan', 'setup-phone', 'checkout']} />
       </nav>}
+      <EmergencyOverlay s={s} />
     </div>
   )
 }

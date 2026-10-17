@@ -572,3 +572,17 @@ a { color: inherit }
 /* Family chat across languages */
 .linkish.orig { margin-left: 8px; font-size: 13px; opacity: .7; vertical-align: middle }
 .pm .meta.tr { display: block; margin-top: 4px }
+
+/* Family app: SOS takes over the whole screen (caretaker/EmergencyOverlay.tsx) */
+.sos-overlay { position: absolute; inset: 0; z-index: 200; background: var(--sos); color: #fff; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center; padding: 28px 22px calc(24px + var(--safe-b)); animation: fade .2s; overflow-y: auto }
+.sos-overlay::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 50% 30%, rgba(255,255,255,.18), transparent 60%); animation: sosflash 1.2s ease-in-out infinite; pointer-events: none }
+@keyframes sosflash { 50% { opacity: .2 } }
+.sos-pulse { font-size: 64px; width: 120px; height: 120px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.16); animation: pulse 1.4s infinite; margin-bottom: 14px }
+.sos-overlay h1 { font-size: 34px; line-height: 1.1; margin: 4px 0 10px; color: #fff }
+.sos-what { font-size: 18px; font-weight: 600; max-width: 30ch; margin: 0 0 6px; opacity: .95 }
+.sos-meta, .sos-where { font-size: 15px; opacity: .85; margin: 2px 0 }
+.sos-actions { display: grid; gap: 10px; width: 100%; max-width: 360px; margin-top: 22px; position: relative }
+.sos-btn { min-height: 58px; border-radius: 18px; border: 2px solid rgba(255,255,255,.7); background: transparent; color: #fff; font-size: 19px; font-weight: 800; display: grid; place-items: center; text-decoration: none }
+.sos-btn.primary { background: #fff; color: var(--sos); border-color: #fff }
+.sos-hide { background: none; border: 0; color: #fff; opacity: .8; font-size: 15px; text-decoration: underline; padding: 8px }
