@@ -1,6 +1,8 @@
 /**
- * Speech-to-text via the browser's Web Speech API (best in Chrome/Edge/Safari). Read-aloud uses Google's natural
- * voices (Cloud Text-to-Speech, via the backend) when signed in, else the device's own voices.
+ * Speech-to-text via the browser's Web Speech API (Chrome/Edge/Safari). Where that doesn't work — Brave ships the API
+ * without Google's speech service ("network" error), Firefox has none — the mic is recorded and the backend writes it
+ * down (Gemini, /stt). Read-aloud uses Google's natural voices (Cloud Text-to-Speech, via the backend) when signed in,
+ * else the device's own voices.
  */
 import type { Language } from './types'
 
@@ -11,12 +13,22 @@ type SR = { lang: string; interimResults: boolean; continuous: boolean; maxAlter
 const SRCtor: (new () => SR) | undefined =
   typeof window !== 'undefined' ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition) : undefined
 
-export const canListen = () => !!SRCtor
+// Brave exposes SpeechRecognition but it always fails with "network": go straight to recording there.
+const BRAVE = typeof navigator !== 'undefined' && 'brave' in navigator
+let recordOnly = BRAVE || !SRCtor
+type Transcriber = (wav: Blob, lang: Language) => Promise<string>
+let transcriber: Transcriber | null = null
+/** Live mode: how a recording becomes text (the backend). Without it, only the browser's own recognition is used. */
+export const setTranscriber = (fn: Transcriber | null) => { transcriber = fn }
+const canRecord = () => typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia && typeof MediaRecorder !== 'undefined'
+const useRecording = () => recordOnly && !!transcriber && canRecord()
+
+export const canListen = () => (!!SRCtor && !recordOnly) || useRecording()
 export const canSpeak = () => typeof window !== 'undefined' && 'speechSynthesis' in window
 
 // ---------------- listening ----------------
 
-let active: SR | null = null
+let active: { stop(): void } | null = null
 
 /** Browser speech locale: Hinglish is spoken Hindi (the hi-IN recognizer and voices handle the mix). */
 export const speechLocale = (lang: Language): string => lang === 'hi-Latn' ? 'hi-IN' : lang
@@ -26,6 +38,7 @@ export const SILENCE_MS = 2000
 const MAX_LISTEN_MS = 30_000
 
 export function listen(lang: Language, onText: (t: string) => void, onEnd: (err?: string) => void): () => void {
+  if (useRecording()) return record(lang, onText, onEnd)
   if (!SRCtor) { onEnd('unsupported'); return () => {} }
   const r = new SRCtor()
   // Continuous: the browser's default stops at the first short pause and cuts people off.
@@ -56,12 +69,110 @@ export function listen(lang: Language, onText: (t: string) => void, onEnd: (err?
     clearTimeout(silence)
     silence = setTimeout(() => { try { r.stop() } catch { /* already stopped */ } }, SILENCE_MS)
   }
-  r.onerror = e => finish(e.error)
+  r.onerror = e => {
+    if (e.error === 'network' && !ended && transcriber && canRecord()) {
+      // This browser's recognition has no speech service behind it: record instead, from now on.
+      ended = true; recordOnly = true
+      clearTimeout(silence); clearTimeout(cap)
+      if (active === r) active = null
+      record(lang, onText, onEnd)
+      return
+    }
+    finish(e.error)
+  }
   r.onend = () => finish()
   try { active?.stop() } catch { /* previous already stopped */ }
   stopSpeaking()  // never listen while the helper is talking — the mic would hear it
   try { r.start(); active = r } catch { finish('start-failed') }
   return () => { try { r.stop() } catch { /* already stopped */ } }
+}
+
+/**
+ * Recording fallback: listen on the mic, stop after SILENCE_MS of quiet once they've spoken (or after 8 s of nothing),
+ * then the backend writes it down. Same callbacks and echo guard as the browser's recognition.
+ */
+function record(lang: Language, onText: (t: string) => void, onEnd: (err?: string) => void): () => void {
+  let ended = false, stopping = false
+  let stream: MediaStream | null = null, rec: MediaRecorder | null = null, meter: AudioContext | null = null
+  let tick: ReturnType<typeof setInterval> | undefined, cap: ReturnType<typeof setTimeout> | undefined
+  let heard = false
+  const chunks: Blob[] = []
+  const handle = { stop: () => stop() }
+  const release = () => {
+    clearInterval(tick); clearTimeout(cap)
+    stream?.getTracks().forEach(t => t.stop())
+    void meter?.close().catch(() => { /* already closed */ })
+  }
+  const finish = (err?: string, said?: string) => {
+    if (ended) return
+    ended = true
+    release()
+    if (active === handle) active = null
+    const echo = !!said && isEcho(said)
+    if (said && !echo) onText(said)
+    onEnd(said && !echo ? undefined : echo ? 'echo' : err)
+    const after = afterListening; afterListening = null
+    after?.()
+  }
+  function stop() {
+    if (stopping || ended) return
+    stopping = true
+    if (rec && rec.state !== 'inactive') rec.stop()  // → onstop: transcribe
+    else finish('aborted')
+  }
+  try { active?.stop() } catch { /* previous already stopped */ }
+  active = handle
+  stopSpeaking()
+  navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }).then(s => {
+    stream = s
+    if (stopping || ended) { finish('aborted'); return }
+    meter = new AudioContext()
+    // Made after the tap (getUserMedia answers later), so it may start suspended — and a suspended meter reads silence.
+    void meter.resume().catch(() => { /* still measured once the page has been tapped */ })
+    const an = meter.createAnalyser(); an.fftSize = 1024
+    meter.createMediaStreamSource(s).connect(an)
+    const buf = new Float32Array(an.fftSize)
+    rec = new MediaRecorder(s)
+    rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data) }
+    rec.onstop = () => {
+      release()
+      if (!heard) { finish('no-speech'); return }
+      const blob = new Blob(chunks, { type: rec?.mimeType || 'audio/webm' })
+      toWav(blob)
+        .then(wav => transcriber!(wav, lang))
+        .then(text => finish(text ? undefined : 'no-speech', text || undefined), () => finish('stt-failed'))
+    }
+    rec.start(250)
+    const started = Date.now()
+    let lastLoud = 0
+    tick = setInterval(() => {
+      an.getFloatTimeDomainData(buf)
+      let sum = 0
+      for (const x of buf) sum += x * x
+      if (Math.sqrt(sum / buf.length) > 0.02) { heard = true; lastLoud = Date.now() }
+      if (heard ? Date.now() - lastLoud > SILENCE_MS : Date.now() - started > 8000) stop()
+    }, 100)
+    cap = setTimeout(stop, MAX_LISTEN_MS)
+  }, () => finish('not-allowed'))
+  return () => stop()
+}
+
+/** Any recording the browser can decode → 16 kHz mono 16-bit WAV (small, and every speech model reads it). */
+async function toWav(blob: Blob): Promise<Blob> {
+  const ctx = new AudioContext()
+  const decoded = await ctx.decodeAudioData(await blob.arrayBuffer()).finally(() => { void ctx.close() })
+  const rate = 16_000
+  const off = new OfflineAudioContext(1, Math.max(1, Math.ceil(decoded.duration * rate)), rate)
+  const src = off.createBufferSource(); src.buffer = decoded; src.connect(off.destination); src.start()
+  const pcm = (await off.startRendering()).getChannelData(0)
+  const out = new DataView(new ArrayBuffer(44 + pcm.length * 2))
+  const text = (o: number, t: string) => { for (let i = 0; i < t.length; i++) out.setUint8(o + i, t.charCodeAt(i)) }
+  text(0, 'RIFF'); out.setUint32(4, 36 + pcm.length * 2, true); text(8, 'WAVE')
+  text(12, 'fmt '); out.setUint32(16, 16, true); out.setUint16(20, 1, true); out.setUint16(22, 1, true)
+  out.setUint32(24, rate, true); out.setUint32(28, rate * 2, true); out.setUint16(32, 2, true); out.setUint16(34, 16, true)
+  text(36, 'data'); out.setUint32(40, pcm.length * 2, true)
+  for (let i = 0; i < pcm.length; i++) out.setInt16(44 + i * 2, Math.max(-1, Math.min(1, pcm[i])) * 0x7fff, true)
+  return new Blob([out.buffer], { type: 'audio/wav' })
 }
 
 /**

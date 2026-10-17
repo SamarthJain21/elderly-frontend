@@ -89,6 +89,15 @@ export function createApi(getToken: TokenFn) {
       if (!res.ok) throw new ApiError(res.status, 'Voice unavailable')
       return res.blob()
     },
+    /** Speech-to-text for browsers without working recognition (app/routers/stt_api.py). 16 kHz WAV in. */
+    stt: async (wav: Blob, lang: Language): Promise<string> => {
+      const res = await fetch(`${BASE}/stt?lang=${encodeURIComponent(lang)}`, {
+        method: 'POST', body: wav, signal: AbortSignal.timeout(15_000),
+        headers: { Authorization: `Bearer ${await getToken()}`, 'Content-Type': 'audio/wav' },
+      })
+      if (!res.ok) throw new ApiError(res.status, (await res.json().catch(() => ({}))).detail ?? 'Couldn’t hear that')
+      return ((await res.json()) as { text: string }).text
+    },
     // Address search (app/routers/places_api.py)
     placesSearch: (q: string, country: string, session: string) =>
       req<{ placeId: string; main: string; secondary: string; text: string }[]>('GET', `/places/autocomplete?q=${encodeURIComponent(q)}&country=${country}&session=${session}`),

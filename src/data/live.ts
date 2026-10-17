@@ -10,7 +10,7 @@
  */
 import { signInElderWithToken } from '../lib/firebase'
 import { connectChat, contactIn, createApi, ApiError, type CheckinAnswers, type BackendAction, type Profile, type ServerFrame, type TodayCheckIn } from './api'
-import { addPushedClip, setCloudVoice } from '../lib/speech'
+import { addPushedClip, setCloudVoice, setTranscriber } from '../lib/speech'
 import { auth, getToken, isSandboxSigningIn, onUser, sandboxSignIn, signOutUser } from '../lib/firebase'
 import { emptyLive, getState, medicationReminders, restoreSeen, update, type DemoState } from './store'
 import { formatMoney } from '../lib/money'
@@ -334,6 +334,7 @@ export function bootLive() {
   if (booted) return
   booted = true
   setCloudVoice((text, lang) => api.tts(text, lang))  // natural voice; speak() falls back to the device voice
+  setTranscriber((wav, lang) => api.stt(wav, lang))   // Brave / Firefox: record, and the server writes it down
   // Firebase normally answers in well under a second; if it never does, say so instead of spinning.
   let authAnswered = false
   window.setTimeout(() => {
