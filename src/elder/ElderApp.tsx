@@ -17,8 +17,9 @@ import { partOfDay, strings, type Strings } from '../lib/i18n'
 import type { ActionCard, FamilyMessage, Message, ToolName } from '../lib/types'
 import type { CheckinAnswers } from '../data/api'
 import { PinScreen } from './PinScreen'
+import { MessageFamily } from './MessageFamily'
 
-type Screen = 'home' | 'talk' | 'reminders' | 'pin'
+type Screen = 'home' | 'talk' | 'reminders' | 'pin' | 'message'
 type Item = { kind: 'agent'; m: Message } | { kind: 'fam'; m: FamilyMessage }
 
 export default function ElderApp({ framed = true }: { framed?: boolean }) {
@@ -76,6 +77,7 @@ export default function ElderApp({ framed = true }: { framed?: boolean }) {
       {screen === 'talk' && <Talk s={s} items={items} onMic={mic} listening={listening} say={say} back={() => setScreen('home')} />}
       {screen === 'reminders' && <Reminders s={s} back={() => setScreen('home')} pin={isLive() && !SANDBOX_FRAME ? () => setScreen('pin') : undefined} />}
       {screen === 'pin' && <PinScreen s={s} back={() => setScreen('reminders')} />}
+      {screen === 'message' && <MessageFamily s={s} back={() => setScreen('home')} />}
       <Overlay s={s} />
       {/* Not during the tour: its first tap turns sound on anyway, and the hint would cover its card. */}
       {blocked && s.elderUi.voice && s.tours.elder && <div className="tap-to-hear" aria-live="polite">{t.tapToHear}</div>}
@@ -130,7 +132,8 @@ function Home({ s, onMic, listening, say, go }: { s: DemoState; onMic: () => voi
             {on('order_food') && <button className="tile" onClick={() => say(t.sayFood)}><span className="ic">🍲</span>{t.tileFood}</button>}
             {on('book_ride') && <button className="tile" onClick={() => say(t.sayRide)}><span className="ic">🚕</span>{t.tileRide}</button>}
             {on('notify_volunteer') && <button className="tile" onClick={() => say(t.sayFix)}><span className="ic">🔧</span>{t.tileFix}</button>}
-            {on('send_message_to_caretaker') && <button className="tile" onClick={() => say(t.tileOk(care))}><span className="ic">💬</span>{t.tileOk(care)}</button>}
+            {/* Their own words, straight to the family chat — always there, like calling family. */}
+            <button className="tile" onClick={() => go('message')}><span className="ic">💬</span>{t.tileMsg(care)}</button>
             <button className="tile" onClick={() => go('reminders')}><span className="ic">⏰</span>{t.tileDay}</button>
           </div>
           {!isLive() && <p className="muted center" style={{ marginTop: 18, fontSize: 16 }}>{t.helperVisits} <b>{helperVisitsLeft(s)}</b></p>}
