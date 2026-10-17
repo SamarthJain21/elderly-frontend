@@ -6,7 +6,7 @@
 import { initializeApp } from 'firebase/app'
 import {
   GoogleAuthProvider, browserPopupRedirectResolver, getAuth, inMemoryPersistence, initializeAuth, onAuthStateChanged,
-  signInWithEmailAndPassword, signInWithPopup, signOut, type User,
+  signInWithCustomToken, signInWithEmailAndPassword, signInWithPopup, signOut, type User,
 } from 'firebase/auth'
 import { SANDBOX_FRAME } from '../data/mode'
 
@@ -41,6 +41,8 @@ export const sandboxSignIn: Promise<void> | null = SANDBOX_FRAME ? (() => {
 export const signInCaretaker = () => signInWithPopup(auth, new GoogleAuthProvider())
 /** Elders sign in with the account the caretaker created (POST /elders → email + one-time password). */
 export const signInElder = (email: string, password: string) => signInWithEmailAndPassword(auth, email, password)
+/** Phone + PIN: the server checked the PIN and sent a one-time token (app/routers/elder_access.py). */
+export const signInElderWithToken = (token: string) => signInWithCustomToken(auth, token)
 export const signOutUser = () => signOut(auth)
 export const onUser = (cb: (u: User | null) => void) => onAuthStateChanged(auth, cb)
 /** Fresh ID token for the backend's `Authorization: Bearer` header and the WebSocket `auth` frame. */

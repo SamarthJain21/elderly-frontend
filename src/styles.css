@@ -103,6 +103,15 @@ a { color: inherit }
 .bb { min-height: 66px; border-radius: 20px; border: 0; font-size: 21px; font-weight: 700; padding: 12px 16px; text-align: center; width: 100% }
 .bb.yes { background: var(--accent); color: #fff } .bb.no { background: #fff; border: 2px solid var(--line) }
 .bb.red { background: var(--sos); color: #fff } .bb.white { background: #fff; color: var(--ink) }
+/* Sign-in PIN: elder keypad (elder/ElderApp.tsx PinScreen) and the family's PIN field */
+.pin-pad { display: flex; flex-direction: column; align-items: center; gap: 22px }
+.pin-note { font-size: 24px; font-weight: 700; text-align: center; min-height: 64px; margin: 8px 0 0 }
+.pin-dots { display: flex; gap: 18px } .pin-dots i { width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--ink); transition: background .15s }
+.pin-dots i.on { background: var(--ink) }
+.pin-keys { display: grid; grid-template-columns: repeat(3, 84px); gap: 14px }
+.pin-keys button { height: 84px; border-radius: 50%; border: 2px solid var(--line); background: #fff; font-size: 32px; font-weight: 700; color: var(--ink) }
+.pin-keys button:active { background: var(--accent-soft) }
+.pin-input { letter-spacing: .4em; font-size: 20px } .pin-input:placeholder-shown { letter-spacing: normal; font-size: 16px }
 .bb.dark { background: rgba(0,0,0,.28); color: #fff; border: 2px solid rgba(255,255,255,.5) }
 .micwrap { display: flex; flex-direction: column; align-items: center; margin: 6px 0 18px }
 .mic { width: 150px; height: 150px; border-radius: 50%; background: var(--accent); color: #fff; border: 0; display: grid; place-items: center; box-shadow: 0 14px 34px -8px rgba(30,107,87,.55) }
