@@ -106,7 +106,7 @@ function Overview({ s }: { s: DemoState }) {
     <>
       <CHead title={`Hi ${s.caretaker.name}`} sub={isLive() ? (s.live.connected ? `Live · here’s how ${nk} is doing` : 'Connecting…') : `Here’s how ${nk} is doing`}
         right={<><button className="btn sm" onClick={() => update(d => { d.tours.caretaker = false })} aria-label="Show the tour">❓ Tour</button>
-          <Link to="/caretaker/plan" className={`pill ${plan.id === 'pro' ? 'gold' : plan.id === 'premium' ? 'ok' : 'info'}`} style={{ textDecoration: 'none' }}>{plan.id === 'pro' ? '★ ' : ''}{plan.name}</Link></>} />
+          {!isLive() && <Link to="/caretaker/plan" className={`pill ${plan.id === 'pro' ? 'gold' : plan.id === 'premium' ? 'ok' : 'info'}`} style={{ textDecoration: 'none' }}>{plan.id === 'pro' ? '★ ' : ''}{plan.name}</Link>}</>} />
       <div className="scroll"><div className="c-body">
         <div className="card" data-tour="status" style={alerts.length ? { borderColor: 'var(--sos)', background: 'var(--sos-soft)' } : undefined}>
           <div className="status-hero">
@@ -144,15 +144,12 @@ function Overview({ s }: { s: DemoState }) {
         <InsightsCard s={s} compact />
 
         <div className="metrics">
-          <Link to="/caretaker/checkins" data-tour="checkin" className="card metric" style={{ textDecoration: 'none' }}><p className="k">Check-in today ›</p><p className="v">{s.checkin.stage === 'done' ? (mood === 'bad' ? '😟' : mood === 'okay' ? '😐' : '😊') : s.checkin.stage === 'meds' ? '…' : '—'} <small>{s.checkin.stage === 'done' ? 'done' : s.checkin.stage === 'meds' ? 'in progress' : `due ${s.assessment.checkIn.time}`}</small></p><div className="row" style={{ gap: 2, marginTop: 6 }} aria-label="Last 7 days">{weekCheckins(s).slice(0, 7).reverse().map(c => <span key={c.id} style={{ fontSize: 15 }}>{c.mood ? ({ great: '😄', good: '😊', okay: '😐', low: '😕', bad: '😟' } as const)[c.mood] : '·'}</span>)}</div></Link>
+          <Link to="/caretaker/checkins" data-tour="checkin" className="card metric" style={{ textDecoration: 'none' }}><p className="k">Check-in today ›</p><p className="v">{s.checkin.stage === 'done' ? (mood === 'bad' ? '😟' : mood === 'okay' ? '😐' : '😊') : s.checkin.stage === 'meds' ? '…' : '⏳'} <small>{s.checkin.stage === 'done' ? 'done' : s.checkin.stage === 'meds' ? 'in progress' : `due ${s.assessment.checkIn.time}`}</small></p><div className="row" style={{ gap: 2, marginTop: 6 }} aria-label="Last 7 days">{weekCheckins(s).slice(0, 7).reverse().map(c => <span key={c.id} style={{ fontSize: 15 }}>{c.mood ? ({ great: '😄', good: '😊', okay: '😐', low: '😕', bad: '😟' } as const)[c.mood] : '·'}</span>)}</div></Link>
           <div className="card metric" data-tour="reminder"><p className="k">Next reminder</p><p className="v">{next ? next.time : '—'}</p><p className="small muted" style={{ marginTop: 2 }}>{next ? next.title : 'Nothing left today'}</p></div>
         </div>
 
-        {isLive() ? (
-          <div data-tour="credit"><ComingSoon card title="Care credit & plans">
-            Free volunteer calls, top-ups and plans aren’t connected to payments yet. Until then, volunteer requests simply wait for your approval.
-          </ComingSoon></div>
-        ) : <Link to="/caretaker/plan" data-tour="credit" className="card" style={{ textDecoration: 'none', ...(s.billing.balance < 0 ? { borderColor: 'var(--sos)', background: 'var(--sos-soft)' } : {}) }}>
+        {/* Live: payments aren't connected yet, so no credit card on home (More → Plan explains it). */}
+        {!isLive() && <Link to="/caretaker/plan" data-tour="credit" className="card" style={{ textDecoration: 'none', ...(s.billing.balance < 0 ? { borderColor: 'var(--sos)', background: 'var(--sos-soft)' } : {}) }}>
           <div className="row"><p className="k eyebrow grow">Care credit</p><span className="small muted">{plan.name} plan ›</span></div>
           <div className="row" style={{ margin: '8px 0', alignItems: 'baseline' }}>
             <div className="quota grow"><b style={{ color: s.billing.balance < 0 ? 'var(--sos)' : undefined }}>{formatBalance(s.billing.balance)}</b><span>prepaid</span></div>
@@ -220,7 +217,7 @@ function caretakerTour(nk: string, name: string): TourStep[] {
     { target: 'actions', title: 'Act in one tap', body: <>Call {nk}, send a message, or <b>send someone</b> (a neighbour, a volunteer or an ambulance) in an emergency.</> },
     { target: 'checkin', title: 'Daily check-in', body: <>The helper asks {name} how they feel, how they slept, what they ate and about medicines. Tap for the last 7 days.</> },
     { target: 'reminder', title: 'Reminders', body: <>Medicines and appointments from {nk}’s routine. The helper reminds {nk} out loud.</> },
-    { target: 'credit', title: 'Care credit & free calls', body: <>Every month includes free volunteer calls. Extra calls use care credit. <b>Emergencies are never blocked.</b></> },
+    ...(isLive() ? [] : [{ target: 'credit', title: 'Care credit & free calls', body: <>Every month includes free volunteer calls. Extra calls use care credit. <b>Emergencies are never blocked.</b></> }]),
     { target: 'activity', title: 'Everything is logged', body: <>Each thing the helper does — orders, rides, messages, alerts — appears here, for you and {nk}.</> },
     { target: 'nav-chat', title: 'Chat', body: <>Your messages are <b>read aloud</b> to {nk}, who answers with big buttons. Their replies come with one-tap next steps.</> },
     { target: 'nav-approvals', title: 'Approvals', body: <>Requests your rules say need you first — like a volunteer visit or an order above the limit.</> },

@@ -54,8 +54,9 @@ export function InsightsCard({ s, compact = false }: { s: DemoState; compact?: b
     <>
       <div className="row" style={{ gap: 8 }}>
         <p className="eyebrow grow">This week</p>
-        <span className={`pill ${st.cls}`}>{st.ic} {st.label}</span>
-        {compact && <span className="chev" aria-hidden>›</span>}
+        {/* On home the status already heads the page; here it would just repeat it. */}
+        {!compact && <span className={`pill ${st.cls}`}>{st.ic} {st.label}</span>}
+        {compact && <span className="small muted">Details ›</span>}
       </div>
       {ins.drifts.length > 0 && (
         <ul style={{ listStyle: 'none', padding: 0, margin: '10px 0 0', display: 'grid', gap: 6 }}>
