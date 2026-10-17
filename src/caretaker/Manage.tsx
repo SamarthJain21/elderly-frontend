@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { PhoneField } from '../components/PhoneField'
-import { COUNTRY_NAME, countryForTimezone, phoneError } from '../lib/phone'
+import { countryForTimezone, phoneError } from '../lib/phone'
 import { Link, useNavigate } from 'react-router-dom'
 import { nick, resetDemo, update, useDemo } from '../data/store'
 import { addContact, addReminder, saveMedications, caretakerDecide, deleteReminder, helperVisitsLeft, quotaLeft, setElderLanguage, setNickname, setRuleLimit, setRuleMode, setSharingTier, setTrustedOnly, toggleTrusted } from '../data/actions'
@@ -263,8 +263,7 @@ export function Routine() {
       <Sheet open={meds !== null} onClose={() => setMeds(null)} label="Edit medicines">
         <h2 style={{ fontSize: 24, marginBottom: 12 }}>{nk}’s medicines</h2>
         {meds && <div className="stack" style={{ gap: 12 }}>
-          <MedEditor meds={meds} setMeds={v => setMeds(m => typeof v === 'function' ? v(m ?? []) : v)} live={isLive()}
-            country={COUNTRY_NAME[countryForTimezone(a.timezone)] ?? 'India'} meals={a.meals} />
+          <MedEditor meds={meds} setMeds={v => setMeds(m => typeof v === 'function' ? v(m ?? []) : v)} live={isLive()} meals={a.meals} />
           <button className="btn pri block" disabled={meds.some(m => m.name.trim() && !m.times.length)}
             onClick={() => { saveMedications(meds); setMeds(null); if (!isLive()) toast('Medicines saved — reminders updated') }}>Save medicines</button>
         </div>}

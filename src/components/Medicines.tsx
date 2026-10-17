@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
+import { useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { api } from '../data/live'
 import { uid } from '../data/store'
 import type { Medication } from '../lib/types'
@@ -8,11 +8,11 @@ import type { ScannedMedicine } from '../data/api'
 type Meals = { breakfast: string | null; lunch: string | null; dinner: string | null }
 
 /**
- * The medicines list the family edits — in setup and later in Routine. With `live`, a typed name gets a
- * "Did you mean…?" check and a prescription photo can fill the list (both Gemini, both reviewed by the family).
+ * The medicines list the family edits — in setup and later in Routine. With `live`, a prescription photo can fill
+ * the list (Gemini reads it; the family reviews every line).
  */
-export function MedEditor({ meds, setMeds, country, meals, live }: {
-  meds: Medication[]; setMeds: Dispatch<SetStateAction<Medication[]>>; country: string; meals: Meals; live: boolean
+export function MedEditor({ meds, setMeds, meals, live }: {
+  meds: Medication[]; setMeds: Dispatch<SetStateAction<Medication[]>>; meals: Meals; live: boolean
 }) {
   const edit = (i: number, patch: Partial<Medication>) => setMeds(ms => ms.map((x, j) => j === i ? { ...x, ...patch } : x))
   return (
@@ -21,7 +21,7 @@ export function MedEditor({ meds, setMeds, country, meals, live }: {
       {meds.map((m, i) => (
         <div key={m.id} className="card stack medcard" style={{ gap: 8 }}>
           <div className="row"><div className="grow"><label className="field">💊 Medicine<input value={m.name} maxLength={100} onChange={e => edit(i, { name: e.target.value })} /></label>
-            {live && <MedicineHint name={m.name} country={country} onUse={v => edit(i, { name: v })} />}</div>
+            </div>
             <label className="field" style={{ width: 100 }}>Dose<input value={m.dose} maxLength={60} onChange={e => edit(i, { dose: e.target.value })} /></label></div>
           <div className="field">Times each day
             <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
@@ -43,22 +43,6 @@ export function MedEditor({ meds, setMeds, country, meals, live }: {
       <button className="btn" onClick={() => setMeds(ms => [...ms, { id: uid('m'), name: '', dose: '', times: ['20:00'], withFood: true, notes: '' }])}>＋ Add a medicine</button>
     </>
   )
-}
-
-/** Checks a typed medicine name once typing pauses: "Did you mean…?", or its generic name. Name only — no advice. */
-export function MedicineHint({ name, country, onUse }: { name: string; country: string; onUse: (v: string) => void }) {
-  const [res, setRes] = useState<{ for: string; recognised: boolean; suggestion: string | null; generic: string | null } | null>(null)
-  useEffect(() => {
-    const n = name.trim()
-    if (n.length < 3) { setRes(null); return }
-    const t = setTimeout(() => { api.checkMedicine(n, country).then(r => setRes({ ...r, for: n }), () => setRes(null)) }, 700)
-    return () => clearTimeout(t)
-  }, [name, country])
-  if (!res || res.for !== name.trim()) return null
-  if (res.suggestion) return <p className="med-hint">Did you mean <b>{res.suggestion}</b>? <button className="linkish" onClick={() => onUse(res.suggestion!)}>Use it</button></p>
-  if (res.generic) return <p className="med-hint ok">✓ {res.generic}</p>
-  if (!res.recognised) return <p className="med-hint warn">We don’t recognise this name — check the spelling on the box.</p>
-  return <p className="med-hint ok">✓ Recognised</p>
 }
 
 /** Photos are shrunk before upload: a phone photo is 3–12 MB, ~1600 px is plenty to read a prescription. */

@@ -1,7 +1,7 @@
 import { Splash } from '../components/Splash'
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { PhoneField } from '../components/PhoneField'
-import { COUNTRY_NAME, countryForTimezone, phoneError } from '../lib/phone'
+import { countryForTimezone, phoneError } from '../lib/phone'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { isLive } from '../data/mode'
 import { api, loadSession } from '../data/live'
@@ -363,7 +363,7 @@ export function CaretakerOnboarding() {
     { body: <>
       <h1>{Nk}’s medicines</h1>
       <p className="lead">We’ll remind them at each time and let you know if one is missed.</p>
-      <MedEditor meds={meds} setMeds={setMeds} live={L} country={COUNTRY_NAME[countryForTimezone(them.timezone)] ?? 'India'}
+      <MedEditor meds={meds} setMeds={setMeds} live={L}
         meals={{ breakfast: skip.breakfast ? null : rhythm.breakfast, lunch: skip.lunch ? null : rhythm.lunch, dinner: skip.dinner ? null : rhythm.dinner }} />
       <Warnings items={warnings} />
     </> },

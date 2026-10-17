@@ -47,5 +47,3 @@ export function phoneError(value: string): string | null {
   return null
 }
 
-/** Country names for Gemini prompts (medicine names are checked against what's sold there). */
-export const COUNTRY_NAME: Record<string, string> = { IN: 'India', TH: 'Thailand', SG: 'Singapore', MY: 'Malaysia', AE: 'UAE' }
