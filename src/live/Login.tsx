@@ -3,7 +3,8 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useDemo } from '../data/store'
 import { isLive, switchMode } from '../data/mode'
-import { loadSession, signOut } from '../data/live'
+import { loadSession, pinSignIn, signOut } from '../data/live'
+import { PhoneField } from '../components/PhoneField'
 import { signInCaretaker, signInElder } from '../lib/firebase'
 import { WaveHand } from '../onboarding/Scenes'
 
@@ -24,6 +25,9 @@ export function Login() {
   const [who, setWho] = useState<'family' | 'elder'>(q.get('as') === 'elder' ? 'elder' : 'family')
   const [email, setEmail] = useState('')
   const [pw, setPw] = useState('')
+  const [how, setHow] = useState<'pin' | 'email'>('pin')
+  const [phone, setPhone] = useState('')
+  const [pin, setPin] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const next = q.get('next')
@@ -57,12 +61,24 @@ export function Login() {
           </button>
         </>
       ) : (
-        <form className="stack" onSubmit={e => { e.preventDefault(); void go(() => signInElder(email.trim(), pw.trim())) }}>
-          <p className="muted">Easiest: open the setup link your family sent you. Or type the details from their message:</p>
-          <label className="field">Email<input type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} /></label>
-          <label className="field">One-time password<input type="password" autoComplete="current-password" value={pw} onChange={e => setPw(e.target.value)} /></label>
-          <button className="btn pri block" disabled={busy || !email || !pw}>{busy ? 'Signing in…' : 'Sign in'}</button>
-        </form>
+        how === 'pin' ? (
+          <form className="stack" onSubmit={e => { e.preventDefault(); void go(() => pinSignIn(phone, pin)) }}>
+            <p className="muted">Easiest: open the setup link your family sent you. Already have a PIN? Sign in with it:</p>
+            <PhoneField label="Your phone number" value={phone} onChange={setPhone} />
+            <label className="field">PIN<input className="pin-input" type="password" inputMode="numeric" autoComplete="current-password" maxLength={6}
+              value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, ''))} /></label>
+            <button className="btn pri block" disabled={busy || !phone || pin.length < 4}>{busy ? 'Signing in…' : 'Sign in'}</button>
+            <button type="button" className="linkish" onClick={() => { setHow('email'); setErr('') }}>Use the email and password from the setup message instead</button>
+          </form>
+        ) : (
+          <form className="stack" onSubmit={e => { e.preventDefault(); void go(() => signInElder(email.trim(), pw.trim())) }}>
+            <p className="muted">Type the details from your family’s setup message:</p>
+            <label className="field">Email<input type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} /></label>
+            <label className="field">One-time password<input type="password" autoComplete="current-password" value={pw} onChange={e => setPw(e.target.value)} /></label>
+            <button className="btn pri block" disabled={busy || !email || !pw}>{busy ? 'Signing in…' : 'Sign in'}</button>
+            <button type="button" className="linkish" onClick={() => { setHow('pin'); setErr('') }}>Sign in with my phone number and PIN</button>
+          </form>
+        )
       )}
       {(err || s.live.status === 'error') && <p className="err" role="alert">{err || s.live.error}</p>}
       {s.live.status === 'error' && <button className="btn" onClick={() => void loadSession()}>Try again</button>}

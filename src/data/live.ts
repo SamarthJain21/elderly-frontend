@@ -8,13 +8,15 @@
  *   WebSocket /ws/{elderId}: agent chat (elders only), family thread, today's check-in, typing, action updates.
  *   Caretakers only get the family thread over the socket, so approvals/logs arrive by polling.
  */
+import { signInElderWithToken } from '../lib/firebase'
 import { connectChat, contactIn, createApi, ApiError, type CheckinAnswers, type BackendAction, type Profile, type ServerFrame, type TodayCheckIn } from './api'
-import { addPushedClip, setCloudVoice } from '../lib/speech'
+import { addPushedClip, setCloudVoice, setTranscriber } from '../lib/speech'
 import { auth, getToken, isSandboxSigningIn, onUser, sandboxSignIn, signOutUser } from '../lib/firebase'
-import { emptyLive, getState, restoreSeen, update, type DemoState } from './store'
+import { emptyLive, getState, medicationReminders, restoreSeen, update, type DemoState } from './store'
 import { formatMoney } from '../lib/money'
+import { isLive } from './mode'
 import { notify } from '../components/ui'
-import type { ActionCard, Contact, Message, Mood, DeviceSettings } from '../lib/types'
+import type { ActionCard, Contact, Message, Mood, DeviceSettings, Medication } from '../lib/types'
 
 export const api = createApi(getToken)
 let chat: ReturnType<typeof connectChat> | null = null
@@ -292,6 +294,12 @@ export async function selectElder(elderId: string) {
   if (getState().live.role === 'caretaker') pollTimer = window.setInterval(() => { if (!document.hidden) void refresh(false) }, 15_000)
 }
 
+/** The app tour was finished or closed: remembered for the account (server), not just this browser. */
+export function finishTour(role: 'elder' | 'caretaker') {
+  update(d => { d.tours[role] = true })
+  if (isLive()) void api.tourDone().catch(() => { /* remembered on this device anyway */ })
+}
+
 /** Re-read /me and the elders list (after sign-in, onboarding, or adding an elder). */
 export async function loadSession() {
   const u = auth.currentUser
@@ -303,7 +311,8 @@ export async function loadSession() {
       if (e instanceof ApiError && e.status === 404) { update(d => { d.live.status = 'needsOnboarding'; d.live.role = 'caretaker' }); return }
       throw e
     }
-    update(d => { d.live.role = me.role; d.live.admin = me.admin })
+    // Finished the tour on another phone or browser: don't start it again here.
+    update(d => { d.live.role = me.role; d.live.admin = me.admin; if (me.tourDone) d.tours[me.role] = true })
     if (me.role === 'elder') return selectElder(u.uid)  // elderId == the elder's auth uid
     const elders = await api.myElders()
     update(d => {
@@ -325,6 +334,7 @@ export function bootLive() {
   if (booted) return
   booted = true
   setCloudVoice((text, lang) => api.tts(text, lang))  // natural voice; speak() falls back to the device voice
+  setTranscriber((wav, lang) => api.stt(wav, lang))   // Brave / Firefox: record, and the server writes it down
   // Firebase normally answers in well under a second; if it never does, say so instead of spinning.
   let authAnswered = false
   window.setTimeout(() => {
@@ -353,6 +363,18 @@ export function bootLive() {
 export async function signOut() {
   stopAll()
   await signOutUser()
+}
+
+/** Phone + PIN sign-in: the server checks the PIN; Firebase then signs in with its one-time token. */
+export async function pinSignIn(phone: string, pin: string) {
+  const { token } = await api.pinLogin(phone, pin)
+  await signInElderWithToken(token)
+}
+
+/** A fresh setup link for the elder (the old one stops working). Puts the new sign-in where Set up phone reads it. */
+export async function newSetupLink(signOutOthers: boolean) {
+  const c = await api.newSetupLink(getState().live.elderId!, signOutOthers)
+  update(d => { d.elder.credentials = { email: c.email, tempPassword: c.tempPassword }; d.setup = { sentVia: null, sentAt: null } })
 }
 
 // ---------- writes used by actions.ts ----------
@@ -427,6 +449,14 @@ export const live = {
   addReminder: async (title: string, time: string) => {
     try { const r = await api.addReminder(eid(), { title, time, kind: 'custom', days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] }); update(d => { d.reminders.push(r) }) }
     catch (e) { soft("Couldn't add the reminder")(e) }
+  },
+  /** PUT the whole assessment with the new list; the server rebuilds the medicine reminders. */
+  saveMedications: async (meds: Medication[]) => {
+    const assessment = { ...getState().assessment, medications: meds }
+    update(d => { d.assessment = assessment; d.reminders = [...d.reminders.filter(r => r.kind !== 'medication'), ...medicationReminders(d.elder.elderId, assessment)] })
+    try { await api.saveAssessment(eid(), assessment); notify('Medicines saved — reminders updated') }
+    catch (e) { soft("Couldn't save the medicines")(e) }
+    void refresh(false)
   },
   deleteReminder: async (id: string) => {
     update(d => { d.reminders = d.reminders.filter(x => x.id !== id) })

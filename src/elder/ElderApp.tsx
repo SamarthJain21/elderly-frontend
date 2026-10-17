@@ -1,7 +1,7 @@
 import { Splash } from '../components/Splash'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { isLive } from '../data/mode'
+import { isLive, SANDBOX_FRAME } from '../data/mode'
 import { useDemo, type DemoState } from '../data/store'
 import {
   answerCall, checkinAnswers, closeEmergency, isPretendNumber, retrySos, declineCall, elderCallContact, elderConfirm, elderSay, emergencyCancel, emergencyFire, emergencyNumber, isAnswered, tapChip,
@@ -11,13 +11,18 @@ import { Face } from '../components/Face'
 import { MicIcon, Wave, useToast } from '../components/ui'
 import { Tour, type TourStep } from '../components/Tour'
 import { update } from '../data/store'
+import { finishTour } from '../data/live'
 import { canListen, listen, onSoundBlockedChange, setPlayback, soundBlocked, speak, speakMessage, stopListening, stopSpeaking } from '../lib/speech'
 import { activityLabel } from '../lib/activity'
+import { cardEta, cardLine } from '../lib/cardText'
 import { partOfDay, strings, type Strings } from '../lib/i18n'
 import type { ActionCard, FamilyMessage, Message, ToolName } from '../lib/types'
 import type { CheckinAnswers } from '../data/api'
+import { PinScreen } from './PinScreen'
+import { MessageFamily } from './MessageFamily'
+import { RidePicker } from './RidePicker'
 
-type Screen = 'home' | 'talk' | 'reminders'
+type Screen = 'home' | 'talk' | 'reminders' | 'pin' | 'message'
 type Item = { kind: 'agent'; m: Message } | { kind: 'fam'; m: FamilyMessage }
 
 export default function ElderApp({ framed = true }: { framed?: boolean }) {
@@ -50,7 +55,7 @@ export default function ElderApp({ framed = true }: { framed?: boolean }) {
     // Live: the server pushes the reply's voice as soon as it's ready (falls back to fetching it).
     if (last.kind === 'agent' && last.m.sender === 'agent') { if (isLive()) speakMessage(last.m.id, last.m.text, lang); else speak(last.m.text, lang) }
     if (last.kind === 'fam' && last.m.sender === 'caretaker') {
-      speak(`${t.messageFrom(last.m.senderName)} ${last.m.text}`, lang)  // the answer buttons are shown, not read
+      speak(`${t.messageFrom(last.m.senderName)} ${shownText(last.m)}`, lang)  // the answer buttons are shown, not read
     }
   }, [items, s.elderUi.voice, lang]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -73,7 +78,9 @@ export default function ElderApp({ framed = true }: { framed?: boolean }) {
     <div className={`shell ${framed ? 'framed' : ''} text-${s.device.textSize}`}>
       {screen === 'home' && <Home s={s} onMic={mic} listening={listening} say={say} go={setScreen} />}
       {screen === 'talk' && <Talk s={s} items={items} onMic={mic} listening={listening} say={say} back={() => setScreen('home')} />}
-      {screen === 'reminders' && <Reminders s={s} back={() => setScreen('home')} />}
+      {screen === 'reminders' && <Reminders s={s} back={() => setScreen('home')} pin={isLive() && !SANDBOX_FRAME ? () => setScreen('pin') : undefined} />}
+      {screen === 'pin' && <PinScreen s={s} back={() => setScreen('reminders')} />}
+      {screen === 'message' && <MessageFamily s={s} back={() => setScreen('home')} />}
       <Overlay s={s} />
       {/* Not during the tour: its first tap turns sound on anyway, and the hint would cover its card. */}
       {blocked && s.elderUi.voice && s.tours.elder && <div className="tap-to-hear" aria-live="polite">{t.tapToHear}</div>}
@@ -94,6 +101,7 @@ function Home({ s, onMic, listening, say, go }: { s: DemoState; onMic: () => voi
   const date = new Date().toLocaleDateString(t.locale, { weekday: 'long', day: 'numeric', month: 'long' })
   const people = s.contacts.filter(c => c.kind !== 'volunteer').slice(0, 4)
   const care = s.caretaker.name || t.myFamily
+  const [ride, setRide] = useState(false)  // 🚕 "Where to?" (saved places)
   // Live: wait for the elder's profile, so the tour is shown (and read aloud) in their language.
   const loaded = !isLive() || !!s.elder.name
   const on = (tool: ToolName) => s.rules.tools[tool]?.mode !== 'blocked'
@@ -126,16 +134,18 @@ function Home({ s, onMic, listening, say, go }: { s: DemoState; onMic: () => voi
             {/* Features the family switched off (Rules) aren't offered. */}
             {on('order_medicine') && <button className="tile" onClick={() => say(t.sayMedicine)}><span className="ic">💊</span>{t.tileMedicine}</button>}
             {on('order_food') && <button className="tile" onClick={() => say(t.sayFood)}><span className="ic">🍲</span>{t.tileFood}</button>}
-            {on('book_ride') && <button className="tile" onClick={() => say(t.sayRide)}><span className="ic">🚕</span>{t.tileRide}</button>}
+            {on('book_ride') && <button className="tile" onClick={() => isLive() ? setRide(true) : say(t.sayRide)}><span className="ic">🚕</span>{t.tileRide}</button>}
             {on('notify_volunteer') && <button className="tile" onClick={() => say(t.sayFix)}><span className="ic">🔧</span>{t.tileFix}</button>}
-            {on('send_message_to_caretaker') && <button className="tile" onClick={() => say(t.tileOk(care))}><span className="ic">💬</span>{t.tileOk(care)}</button>}
+            {/* Their own words, straight to the family chat — always there, like calling family. */}
+            <button className="tile" onClick={() => go('message')}><span className="ic">💬</span>{t.tileMsg(care)}</button>
             <button className="tile" onClick={() => go('reminders')}><span className="ic">⏰</span>{t.tileDay}</button>
           </div>
           {!isLive() && <p className="muted center" style={{ marginTop: 18, fontSize: 16 }}>{t.helperVisits} <b>{helperVisitsLeft(s)}</b></p>}
         </div>
       </div>
+      {ride && <RidePicker s={s} onPick={said => { setRide(false); say(said) }} onClose={() => setRide(false)} />}
       <SosBar t={t} aboveTour={!s.tours.elder && loaded} />
-      {!s.tours.elder && loaded && <Tour big labels={t.tourUi} steps={elderTour(t, s.caretaker.name || t.yourFamily)} onDone={() => { stopSpeaking(); update(d => { d.tours.elder = true }) }}
+      {!s.tours.elder && loaded && <Tour big labels={t.tourUi} steps={elderTour(t, s.caretaker.name || t.yourFamily)} onDone={() => { stopSpeaking(); finishTour('elder') }}
         onStep={st => st.say && s.elderUi.voice && speak(`${st.title}. ${st.say}`, s.elder.language)} />}
     </>
   )
@@ -153,12 +163,12 @@ function FamilyQuestion({ s }: { s: DemoState }) {
   if (!m) return null
   const t = strings(s.elder.language)
   const sender = s.contacts.find(c => c.name === m.senderName)
-  const play = () => { setPlaying(true); speak(m.text, s.elder.language); setTimeout(() => setPlaying(false), 4000) }
+  const play = () => { setPlaying(true); speak(shownText(m), s.elder.language); setTimeout(() => setPlaying(false), 4000) }
   return (
     <div className="fam-q" data-tour="e-family">
       <div className="who"><Face k={sender?.face ?? (isLive() ? undefined : 'emma')} src={photoOf(s, m.senderName)} name={m.senderName} size={88} /><div><b>{m.senderName}</b><span>{t.sentYou}</span></div></div>
       {<button className={`vplay ${playing ? 'playing' : ''}`} onClick={play} aria-label={t.playFrom(m.senderName)}><span className="pb">▶</span><Wave /><b>0:0{Math.max(2, Math.min(9, Math.round(m.text.split(' ').length / 2.5)))}</b></button>}
-      <p className="q">{m.text}</p>
+      <p className="q"><Translated m={m} /></p>
       <div className="bigbtns">
         <ChipButtons m={m} t={t} />
       </div>
@@ -290,7 +300,8 @@ function AgentBubble({ m, last, t }: { m: Message; last: boolean; t: Strings }) 
     <div className="msg agent">
       <span className="tag">{t.helper}</span>{m.text}
       {m.action && <ActionCardView a={m.action} t={t} />}
-      {last && m.quickReplies.length > 0 && (
+      {/* A card waiting for yes/no has its own big buttons: suggested replies would only repeat them. */}
+      {last && m.quickReplies.length > 0 && m.action?.status !== 'awaiting_elder' && (
         <div className="qr" style={{ marginTop: 12 }}>{m.quickReplies.map(r => <button key={r} onClick={() => elderSay(r)}>{r}</button>)}</div>
       )}
     </div>
@@ -308,9 +319,9 @@ function ActionCardView({ a, t }: { a: ActionCard; t: Strings }) {
   return (
     <div className="acard">
       <div className="h"><span>{t.tool[a.tool] ?? a.title}</span><span className={`pill ${cls}`}>{label}</span></div>
-      {a.lines.length > 0 && <ul>{a.lines.map(l => <li key={l}>{l}</li>)}</ul>}
+      {a.lines.length > 0 && <ul>{a.lines.map(l => <li key={l}>{cardLine(l, t)}</li>)}</ul>}
       {a.amount && <p className="amt">{a.estimate ? '≈ ' : ''}{a.amount}{a.discountMinor ? <span className="pill gold" style={{ marginLeft: 8, fontSize: 13 }}>Pro −10%</span> : null}</p>}
-      {(a.provider || a.eta) && <p className="muted" style={{ fontSize: 16 }}>{[a.provider, a.eta].filter(Boolean).join(' · ')}</p>}
+      {(a.provider || a.eta) && <p className="muted" style={{ fontSize: 16 }}>{[a.provider, a.eta && cardEta(a.eta, t)].filter(Boolean).join(' · ')}</p>}
       {a.status === 'awaiting_elder' && (
         <div className="bigbtns">
           <button className="bb yes" onClick={() => elderConfirm(a.id, true)}>{t.yesPlease}</button>
@@ -329,11 +340,19 @@ function FamilyBubble({ m, s, t }: { m: FamilyMessage; s: DemoState; t: Strings 
   return (
     <div className="msg fam">
       <span className="who-face"><Face k={sender?.face ?? (isLive() ? undefined : 'emma')} src={photoOf(s, m.senderName)} name={m.senderName} size={64} /><span><b>{m.senderName}</b><small>{sender?.relationship ? t.yourRel(sender.relationship) : t.family}</small></span></span>
-      <button className="vplay" onClick={() => speak(m.text, s.elder.language)} aria-label={t.listenMsg}><span className="pb">▶</span><Wave /></button>
-      {m.text}
+      <button className="vplay" onClick={() => speak(shownText(m), s.elder.language)} aria-label={t.listenMsg}><span className="pb">▶</span><Wave /></button>
+      <Translated m={m} />
       {!isAnswered(s.family, m.id) && m.chips.length > 0 && <ChipButtons m={m} t={t} />}
     </div>
   )
+}
+
+/** A family message in the elder's language (translated by the server), with a small way to see the original. */
+const shownText = (m: FamilyMessage) => (m.sender === 'caretaker' && m.translated) || m.text
+function Translated({ m }: { m: FamilyMessage }) {
+  const [orig, setOrig] = useState(false)
+  if (m.sender !== 'caretaker' || !m.translated) return <>{m.text}</>
+  return <>{orig ? m.text : m.translated}<button className="linkish orig" onClick={() => setOrig(o => !o)} aria-pressed={orig}>{orig ? '↺' : 'Aa'}</button></>
 }
 
 /** Chips from the backend (app/agent/chips.py): message → reply; ⏰ remind → sets a reminder once; 📞 call → phone. */
@@ -352,7 +371,7 @@ function ChipButtons({ m, t }: { m: FamilyMessage; t: Strings }) {
 }
 
 // ---------------- Reminders ("My day") ----------------
-function Reminders({ s, back }: { s: DemoState; back: () => void }) {
+function Reminders({ s, back, pin }: { s: DemoState; back: () => void; pin?: () => void }) {
   const today = new Date().toISOString().slice(0, 10)
   const wd = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][new Date().getDay()]
   const nowHM = new Date().toTimeString().slice(0, 5)
@@ -369,6 +388,7 @@ function Reminders({ s, back }: { s: DemoState; back: () => void }) {
           </div>
         ))}
         <button className="bb no" style={{ marginTop: 10 }} onClick={() => speak(due.map(r => t.atTime(r.time, r.title)).join('. ') || t.nothingTodaySay, s.elder.language)}>{t.readDay}</button>
+        {pin && <button className="btn block" style={{ marginTop: 24 }} onClick={pin}>{t.pinLink}</button>}
       </div></div>
     </>
   )

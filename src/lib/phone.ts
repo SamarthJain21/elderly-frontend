@@ -46,3 +46,6 @@ export function phoneError(value: string): string | null {
   if (!c.digits.includes(national.length)) return `${c.name} numbers have ${c.digits.join(' or ')} digits after ${c.dial}`
   return null
 }
+
+/** Country names for Gemini prompts (medicine names are checked against what's sold there). */
+export const COUNTRY_NAME: Record<string, string> = { IN: 'India', TH: 'Thailand', SG: 'Singapore', MY: 'Malaysia', AE: 'UAE' }

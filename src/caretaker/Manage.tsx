@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { PhoneField } from '../components/PhoneField'
-import { countryForTimezone, phoneError } from '../lib/phone'
+import { COUNTRY_NAME, countryForTimezone, phoneError } from '../lib/phone'
 import { Link, useNavigate } from 'react-router-dom'
 import { nick, resetDemo, update, useDemo } from '../data/store'
-import { addContact, addReminder, caretakerDecide, deleteReminder, helperVisitsLeft, quotaLeft, setElderLanguage, setNickname, setRuleLimit, setRuleMode, setSharingTier, setTrustedOnly, toggleTrusted } from '../data/actions'
+import { addContact, addReminder, saveMedications, caretakerDecide, deleteReminder, helperVisitsLeft, quotaLeft, setElderLanguage, setNickname, setRuleLimit, setRuleMode, setSharingTier, setTrustedOnly, toggleTrusted } from '../data/actions'
 import { EMBEDDED, isLive } from '../data/mode'
 import { deviceOf, saveDevice, selectElder, signOut } from '../data/live'
 import { ComingSoon } from '../components/ui'
@@ -12,10 +12,13 @@ import { MockQR, Sheet, Switch, timeAgo, useToast } from '../components/ui'
 import { formatMoney, minorToInput, parseToMinor } from '../lib/money'
 import { MODE_LABEL, SPENDING_TOOLS, TOOL_META } from '../lib/policy'
 import { CREDIT, formatBalance, formatUsd, planById } from '../lib/plans'
-import type { ContactKind, Currency, Mode, SharingTier, ToolName, DeviceSettings } from '../lib/types'
+import type { ContactKind, Currency, Mode, SharingTier, ToolName, DeviceSettings, Medication } from '../lib/types'
+import { MedEditor } from '../components/Medicines'
 import { CHead } from './CaretakerApp'
 import { ProfileExtras } from './Screens'
 import { addressLine } from '../lib/types'
+import { SignInCard } from './SignInCard'
+import { newSetupLink } from '../data/live'
 
 // ---------------- Approvals ----------------
 export function Approvals() {
@@ -100,17 +103,30 @@ export function Rules() {
     const prev = before[t]
     setRuleMode(t, prev && prev !== 'blocked' ? prev : 'elder_confirm')
   }
+  const [open, setOpen] = useState<ToolName | null>(null)
+  const summary = (t: ToolName) => {
+    const r = s.rules.tools[t]
+    if (r.mode === 'blocked') return 'Off'
+    const limit = SPENDING_TOOLS.has(t) && r.limitMinor ? ` · up to ${formatMoney(r.limitMinor, cur)}` : ''
+    return MODE_LABEL[r.mode].l.replace('{nick}', nk) + limit
+  }
   return (
     <>
-      <CHead title="Helper rules" sub={`What the helper may do when ${nk} asks — switch off anything you don’t want`} />
+      <CHead title="Helper rules" sub={`What the helper may do when ${nk} asks. Tap one to change it.`} />
       <div className="scroll"><div className="c-body">
         {tools.map(t => {
           const r = s.rules.tools[t]; const meta = TOOL_META[t]
           return (
-            <div key={t} className="card stack" style={{ gap: 10 }}>
-              <div className="row"><span style={{ fontSize: 24 }}>{meta.ic}</span><div className="grow"><b>{meta.label}</b><p className="small muted">{nk} says: {meta.ex}</p></div>
+            <div key={t} className="card stack rule" style={{ gap: 10 }}>
+              <div className="row">
+                <button className="rule-head grow" aria-expanded={open === t} onClick={() => setOpen(o => o === t ? null : t)}>
+                  <span style={{ fontSize: 24 }}>{meta.ic}</span>
+                  <span className="grow"><b>{meta.label}</b><span className={`small ${r.mode === 'blocked' ? 'muted' : 'acc'}`}>{summary(t)}</span></span>
+                  <span className="chev" aria-hidden>{open === t ? '⌃' : '⌄'}</span>
+                </button>
                 <Switch checked={r.mode !== 'blocked'} onChange={on => toggle(t, on)} label={`${meta.label}: ${r.mode === 'blocked' ? 'off' : 'on'}`} /></div>
-              {r.mode === 'blocked' ? <p className="small muted">Off — the helper won’t do this, and its button is hidden on {nk}’s phone. If {nk} asks, you’re told.</p> : <>
+              {open === t && (r.mode === 'blocked' ? <p className="small muted">Off — the helper won’t do this, and its button is hidden on {nk}’s phone. If {nk} asks, you’re told.</p> : <>
+              <p className="small muted">When {nk} says {meta.ex}:</p>
               <div className="seg" role="radiogroup" aria-label={meta.label}>
                 {(Object.keys(MODE_LABEL) as Mode[]).filter(m => m !== 'blocked').map(m => (
                   <button key={m} role="radio" aria-checked={r.mode === m} className={r.mode === m ? 'on' : ''} onClick={() => setRuleMode(t, m)}>
@@ -123,7 +139,7 @@ export function Rules() {
                   <div className="row"><span style={{ fontWeight: 700 }}>{cur}</span>
                     <LimitInput minor={r.limitMinor ?? 0} currency={cur} onValid={m => setRuleLimit(t, m)} /></div>
                 </label>
-              )}</>}
+              )}</>)}
             </div>
           )
         })}
@@ -212,6 +228,8 @@ export function Routine() {
   const [adding, setAdding] = useState(false)
   const [title, setTitle] = useState(''), [time, setTime] = useState('17:00')
   const custom = s.reminders.filter(r => r.kind !== 'medication')
+  const toast = useToast()
+  const [meds, setMeds] = useState<Medication[] | null>(null)  // editing when set
   return (
     <>
       <CHead title={`${nk}’s routine`} sub="Drives reminders and the daily check-in" back="/caretaker/more" />
@@ -224,10 +242,11 @@ export function Routine() {
           <div className="metric"><p className="k">Meals</p><p className="v" style={{ fontSize: 18 }}>{[a.meals.breakfast, a.meals.lunch, a.meals.dinner].filter(Boolean).join(' · ') || '—'}</p></div>
         </div>
         <div className="card">
-          <p className="eyebrow">Medicines</p>
+          <div className="row"><p className="eyebrow grow">Medicines</p><button className="btn sm" onClick={() => setMeds(a.medications.map(m => ({ ...m })))}>{a.medications.length ? 'Edit' : '＋ Add'}</button></div>
+          {a.medications.length === 0 && <p className="small muted" style={{ marginTop: 8 }}>None yet — add them by hand or scan a prescription.</p>}
           {a.medications.map(m => (
             <div key={m.id} className="list-row"><span style={{ fontSize: 22 }}>💊</span>
-              <div className="grow"><p className="t">{m.name} {m.dose}</p><p className="s">{m.times.join(', ')}{m.withFood ? ' · with food' : ''}{m.notes ? ` · ${m.notes}` : ''}</p></div></div>
+              <div className="grow"><p className="t">{[m.name, m.dose].filter(Boolean).join(" ")}</p><p className="s">{m.times.join(', ')}{m.withFood ? ' · with food' : ''}{m.notes ? ` · ${m.notes}` : ''}</p></div></div>
           ))}
         </div>
         <div className="card">
@@ -241,6 +260,15 @@ export function Routine() {
         </div>
         {a.healthNotes && <div className="card"><p className="eyebrow">Health notes for the helper</p><p style={{ marginTop: 6 }}>{a.healthNotes}</p></div>}
       </div></div>
+      <Sheet open={meds !== null} onClose={() => setMeds(null)} label="Edit medicines">
+        <h2 style={{ fontSize: 24, marginBottom: 12 }}>{nk}’s medicines</h2>
+        {meds && <div className="stack" style={{ gap: 12 }}>
+          <MedEditor meds={meds} setMeds={v => setMeds(m => typeof v === 'function' ? v(m ?? []) : v)} live={isLive()}
+            country={COUNTRY_NAME[countryForTimezone(a.timezone)] ?? 'India'} meals={a.meals} />
+          <button className="btn pri block" disabled={meds.some(m => m.name.trim() && !m.times.length)}
+            onClick={() => { saveMedications(meds); setMeds(null); if (!isLive()) toast('Medicines saved — reminders updated') }}>Save medicines</button>
+        </div>}
+      </Sheet>
       <Sheet open={adding} onClose={() => setAdding(false)} label="Add reminder">
         <h2 style={{ fontSize: 24, marginBottom: 12 }}>New reminder</h2>
         <div className="stack">
@@ -261,15 +289,15 @@ export function More() {
   const s = useDemo()
   const plan = planById(s.billing.plan)
   const items: [string, string, string, string][] = [
-    ['/caretaker/plan', '💳', 'Care credit & plan', isLive() ? 'Free · credit & plans coming soon' : `${formatBalance(s.billing.balance)} credit · ${plan.name} · ${helperVisitsLeft(s)} calls available`],
+    ['/caretaker/routine', '⏰', 'Routine & medicines', `${s.assessment.medications.length} medicines · ${s.assessment.checkIn.enabled === false ? 'no daily check-in' : `check-in ${s.assessment.checkIn.time}`}`],
+    ['/caretaker/checkins', '😊', 'Check-in history', 'The last 7 days'],
     ['/caretaker/people', '👥', 'People & volunteers', `${s.contacts.length} contacts`],
     ['/caretaker/family', '👪', 'Family members', `${s.caretakers.length} active${s.invites.length ? ` · ${s.invites.length} invited` : ''}`],
-    ['/caretaker/requests', '🤝', 'Help requests', `${s.requests.filter(r => ['open', 'notified', 'confirmed'].includes(r.status)).length} in progress`],
-    ['/caretaker/checkins', '😊', 'Check-in history', 'The last 7 days'],
-    ['/caretaker/places', '📍', 'Saved places', 'Clinic, temple, family homes — for rides'],
     ['/caretaker/phone', '📱', `${nick(s)}’s phone`, 'Voice, loudness, speed, text size'],
-    ['/caretaker/routine', '⏰', 'Routine & reminders', `${s.assessment.medications.length} medicines · ${s.assessment.checkIn.enabled === false ? 'no daily check-in' : `check-in ${s.assessment.checkIn.time}`}`],
+    ['/caretaker/places', '📍', 'Saved places', 'Clinic, temple, family homes — for rides'],
+    ['/caretaker/requests', '🤝', 'Help requests', `${s.requests.filter(r => ['open', 'notified', 'confirmed'].includes(r.status)).length} in progress`],
     ['/caretaker/settings', '⚙️', `${nick(s)}’s profile & privacy`, 'Address, emergency contacts, language, sharing'],
+    ['/caretaker/plan', '💳', 'Care credit & plan', isLive() ? 'Free · credit & plans coming soon' : `${formatBalance(s.billing.balance)} credit · ${plan.name} · ${helperVisitsLeft(s)} calls available`],
   ]
   return (
     <>
@@ -336,7 +364,14 @@ export function Settings() {
           <p className="small muted" style={{ marginTop: 8 }}>{nk} is told when this changes. Location is only shared in an emergency.</p>
         </div>
         {isLive() && !s.elder.credentials.tempPassword ? (
-          <ComingSoon card title={`Re-send ${nk}’s sign-in`}>The one-time password is shown only once, when the account is created. Resetting it from here is on the way.</ComingSoon>
+          <div className="card stack">
+            <p className="eyebrow">{nk}’s phone sign-in</p>
+            <p className="small muted">For a new phone, or if {nk} got signed out: a new link signs them in (the old one stops working). Or set a PIN on {nk}’s phone page.</p>
+            <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+              <button className="btn pri" onClick={() => newSetupLink(false).catch((e: unknown) => toast(e instanceof Error ? e.message : 'Couldn’t make a new link'))}>🔗 Make a new setup link</button>
+              <Link className="btn" to="/caretaker/phone">🔢 Sign-in PIN</Link>
+            </div>
+          </div>
         ) : (
           <div className="card stack" style={{ alignItems: 'center', textAlign: 'center' }}>
             <p className="eyebrow">{nk}’s phone sign-in</p>
@@ -425,6 +460,7 @@ export function ElderPhone() {
         </div>
         <p className="small muted">The phone’s own volume, brightness and other settings can only be changed on the phone itself — a web app isn’t allowed to.
           These settings control the Elderly app on {nk}’s phone.</p>
+        {isLive() && <SignInCard />}
       </div></div>
     </>
   )

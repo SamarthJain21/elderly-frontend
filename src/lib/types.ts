@@ -74,6 +74,8 @@ export interface FamilyMessage {
   /** "system" = a note about something that happened ("⏰ Reminder set for 10:30"). */
   sender: 'elder' | 'caretaker' | 'system'
   senderUid: string; senderName: string; text: string
+  /** The message in the receiver's language (family chat across languages), when it differs. */
+  translated?: string | null; translatedTo?: string | null
   chips: Chip[]
   /** Indexes of action chips already carried out (claimed atomically by the backend). */
   usedChips: number[]

@@ -71,6 +71,12 @@ a { color: inherit }
 .typing.with-label { align-items: center; gap: 12px }
 .typing .activity { font-size: 1.05rem; color: var(--ink2); opacity: .85 }
 @keyframes blink { 50% { opacity: 1 } }
+/* Ask about {nick} (caretaker/AskAbout.tsx) */
+.ask { border-color: var(--accent) }
+.ask-qa { margin-bottom: 12px }
+.ask-q { margin: 0 0 6px auto; width: fit-content; max-width: 85%; background: var(--ink); color: #fff; padding: 8px 12px; border-radius: 14px 14px 4px 14px; font-weight: 600 }
+.ask-a { margin: 0; max-width: 92%; background: var(--accent-soft); padding: 10px 12px; border-radius: 14px 14px 14px 4px; line-height: 1.45 }
+.ask-a.typing { display: inline-flex }
 
 /* ================= ELDER ================= */
 .e-top { display: flex; align-items: center; justify-content: space-between; padding: calc(10px + var(--safe-t)) 16px 10px; border-bottom: 1px solid var(--line); flex: none; background: var(--paper) }
@@ -103,6 +109,16 @@ a { color: inherit }
 .bb { min-height: 66px; border-radius: 20px; border: 0; font-size: 21px; font-weight: 700; padding: 12px 16px; text-align: center; width: 100% }
 .bb.yes { background: var(--accent); color: #fff } .bb.no { background: #fff; border: 2px solid var(--line) }
 .bb.red { background: var(--sos); color: #fff } .bb.white { background: #fff; color: var(--ink) }
+/* Sign-in PIN: elder keypad (elder/ElderApp.tsx PinScreen) and the family's PIN field */
+.pin-pad { display: flex; flex-direction: column; align-items: center; gap: 22px }
+.pin-note { font-size: 24px; font-weight: 700; text-align: center; min-height: 64px; margin: 8px 0 0 }
+.pin-dots { display: flex; gap: 18px } .pin-dots i { width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--ink); transition: background .15s }
+.pin-dots i.on { background: var(--ink) }
+.pin-keys { display: grid; grid-template-columns: repeat(3, 84px); gap: 14px }
+.pin-keys button { height: 84px; border-radius: 50%; border: 2px solid var(--line); background: #fff; font-size: 32px; font-weight: 700; color: var(--ink) }
+.pin-keys button:active { background: var(--accent-soft) }
+.pin-input { letter-spacing: .4em; font-size: 20px } .pin-input:placeholder-shown { letter-spacing: normal; font-size: 16px }
+.msg-sent { font-size: 26px; font-weight: 800; text-align: center; margin: 30px 0 10px }
 .bb.dark { background: rgba(0,0,0,.28); color: #fff; border: 2px solid rgba(255,255,255,.5) }
 .micwrap { display: flex; flex-direction: column; align-items: center; margin: 6px 0 18px }
 .mic { width: 150px; height: 150px; border-radius: 50%; background: var(--accent); color: #fff; border: 0; display: grid; place-items: center; box-shadow: 0 14px 34px -8px rgba(30,107,87,.55) }
@@ -179,6 +195,11 @@ a { color: inherit }
 .list-row .t { font-weight: 700 } .list-row .s { font-size: 13.5px; color: var(--muted) }
 .chev { margin-left: auto; color: var(--muted); font-size: 20px }
 .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px }
+/* Helper rules accordion (caretaker/Manage.tsx Rules) */
+.rule-head { display: flex; align-items: center; gap: 12px; background: none; border: 0; padding: 0; text-align: left; font: inherit; color: inherit; cursor: pointer; min-width: 0 }
+.rule-head .grow { display: flex; flex-direction: column; min-width: 0 }
+.rule-head .acc { color: var(--accent); font-weight: 700 }
+.rule-head .chev { color: var(--muted); font-size: 18px; margin-right: 6px }
 .seg button { border: 1.5px solid var(--line); background: #fff; border-radius: 12px; padding: 10px; font-size: 13.5px; font-weight: 700; text-align: left; line-height: 1.2; min-height: 54px }
 .seg button small { display: block; font-weight: 400; font-size: 11.5px; opacity: .75; margin-top: 2px }
 .seg button.on { border-color: var(--ink); background: var(--ink); color: #fff }
@@ -477,7 +498,8 @@ a { color: inherit }
 .field-err { display: block; color: var(--sos); font-size: 13px; font-weight: 600; margin-top: 4px }
 
 /* Elder: shown until the first tap lets the browser play sound */
-.tap-to-hear { position: absolute; left: 16px; right: 16px; top: calc(12px + var(--safe-t)); z-index: 90; background: var(--ink); color: #fff;
+/* Sits just above "Hold for help", so the greeting and the Help button stay visible. */
+.tap-to-hear { position: absolute; left: 16px; right: 16px; bottom: calc(112px + var(--safe-b)); z-index: 90; background: var(--ink); color: #fff;
   border-radius: 16px; padding: 14px 16px; font-size: 20px; font-weight: 700; text-align: center; box-shadow: 0 12px 30px -12px rgba(0,0,0,.5);
   animation: pop .4s both; pointer-events: none }
 
@@ -504,6 +526,14 @@ a { color: inherit }
 .med-hint { font-size: 13.5px; margin: 4px 0 0; color: var(--ink2) }
 .med-hint.ok { color: var(--accent); font-weight: 600 }
 .med-hint.warn { color: var(--amber) }
+/* Prescription scan (components/Medicines.tsx) */
+.rx { border: 1.5px dashed var(--accent); box-shadow: none; background: var(--accent-soft) }
+.rx-reading { display: flex; align-items: center; gap: 10px; font-weight: 700; margin: 4px 0 }
+.rx .spin { width: 18px; height: 18px; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--accent); animation: spin .8s linear infinite; flex: none }
+.rx-row { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-top: 1px solid var(--line); cursor: pointer }
+.rx-row:first-of-type { border-top: 0 }
+.rx-row input { margin-top: 4px; width: 20px; height: 20px; accent-color: var(--accent) }
+.rx-row.unsure b { color: var(--amber) }
 
 /* Elder app text size (set by the elder's family on the Phone page) */
 .shell.text-large :is(.scroll, .e-top, .e-input) { zoom: 1.12 }
@@ -545,3 +575,7 @@ a { color: inherit }
 .splash { margin: auto; display: grid; justify-items: center; gap: 22px; animation: fadeIn .3s both .15s }
 .splash-logo { width: 72px; height: 72px; border-radius: 22px; font-size: 36px; display: grid; place-items: center }
 @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+
+/* Family chat across languages */
+.linkish.orig { margin-left: 8px; font-size: 13px; opacity: .7; vertical-align: middle }
+.pm .meta.tr { display: block; margin-top: 4px }

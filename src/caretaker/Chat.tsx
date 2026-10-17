@@ -4,6 +4,7 @@ import { caretakerCall, caretakerSend, isAnswered, isFollowedUp, markCaretakerRe
 import { Face } from '../components/Face'
 import { clock, useToast } from '../components/ui'
 import { CHead } from './CaretakerApp'
+import type { FamilyMessage } from '../lib/types'
 
 /**
  * Family chat — exactly the backend's WebSocket protocol (app/routers/chat.py):
@@ -44,7 +45,7 @@ export default function Chat() {
             <div key={m.id}>
               <div className="pm mom">
                 <span className="who"><Face k={s.elder.face} name={s.elder.name} size={26} />{nk}{m.viaAgent ? ' · via helper' : ''}</span>
-                {m.text}<span className="meta">{clock(m.createdAt)}</span>
+                <ElderText m={m} /><span className="meta">{clock(m.createdAt)}</span>
               </div>
               {showChips && (
                 <div className="row" style={{ flexWrap: 'wrap', gap: 6, margin: '2px 0 12px' }}>
@@ -74,6 +75,20 @@ export default function Chat() {
           <button className="btn pri" type="submit">Send</button>
         </form>
       </div>
+    </>
+  )
+}
+
+const LANG_NAME: Record<string, string> = { 'hi-IN': 'Hindi', 'hi-Latn': 'Hinglish', 'th-TH': 'Thai', 'ja-JP': 'Japanese', 'ko-KR': 'Korean' }
+
+/** The elder's message in English (translated by the server), with "Translated from Hindi · show original". */
+function ElderText({ m }: { m: FamilyMessage }) {
+  const s = useDemo()
+  const [orig, setOrig] = useState(false)
+  if (!m.translated) return <>{m.text}</>
+  return (
+    <>{orig ? m.text : m.translated}
+      <span className="meta tr">Translated from {LANG_NAME[s.elder.language] ?? 'their language'} · <button className="linkish" onClick={() => setOrig(o => !o)}>{orig ? 'show English' : 'show original'}</button></span>
     </>
   )
 }

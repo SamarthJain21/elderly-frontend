@@ -1,3 +1,4 @@
+import { errorText } from '../lib/apiError'
 import { API_URL } from './mode'
 /**
  * Typed client for the FastAPI backend (elderly-backend, app/routers/*.py). Used in live mode only;
@@ -24,9 +25,22 @@ export function createApi(getToken: TokenFn) {
     return res.status === 204 ? (undefined as T) : res.json()
   }
   const e = (id: string) => `/elders/${encodeURIComponent(id)}`
+  /** Before sign-in (phone + PIN): no token to send. */
+  async function pub<T>(path: string, body: unknown): Promise<T> {
+    const res = await fetch(BASE + path, { method: 'POST', body: JSON.stringify(body), signal: AbortSignal.timeout(20_000), headers: { 'Content-Type': 'application/json' } })
+      .catch(() => { throw new ApiError(0, 'No internet connection — try again') })
+    if (!res.ok) throw new ApiError(res.status, (await res.json().catch(() => ({}))).detail ?? res.statusText)
+    return res.json()
+  }
   return {
+    // Elder access (app/routers/elder_access.py)
+    newSetupLink: (id: string, signOutOthers: boolean) => req<{ elderId: string; email: string; tempPassword: string }>('POST', `${e(id)}/setup-link`, { signOutOthers }),
+    pinStatus: (id: string) => req<{ set: boolean }>('GET', `${e(id)}/pin`),
+    setPin: (id: string, pin: string) => req<{ set: boolean }>('PUT', `${e(id)}/pin`, { pin }),
+    pinLogin: (phone: string, pin: string) => pub<{ token: string }>('/auth/pin', { phone, pin }),
     // auth & onboarding (app/routers/me.py) — /me 404 means "signed in but not onboarded"
-    me: () => req<{ uid: string; email: string | null; role: 'elder' | 'caretaker'; admin?: boolean }>('GET', '/me'),
+    me: () => req<{ uid: string; email: string | null; role: 'elder' | 'caretaker'; admin?: boolean; tourDone?: boolean }>('GET', '/me'),
+    tourDone: () => req<void>('POST', '/me/tour-done'),
     onboardCaretaker: (name: string) => req('POST', '/onboarding/caretaker', { name }),
     // elders (app/routers/elders.py)
     createElder: (b: { name: string; phone: string; language: Language }) =>
@@ -47,6 +61,8 @@ export function createApi(getToken: TokenFn) {
     checkinToday: (id: string) => req<TodayCheckIn>('GET', `${e(id)}/checkins/today`),
     checkins: (id: string, days = 7) => req<CheckInRecord[]>('GET', `${e(id)}/checkins?days=${days}`),
     insights: (id: string) => req<Insights>('GET', `${e(id)}/insights`),
+    /** "Ask about Mum" — answered from two weeks of check-ins + activity (app/routers/ask_api.py). */
+    ask: (id: string, question: string) => req<{ answer: string; days: number }>('POST', `${e(id)}/ask`, { question }),
     logs: (id: string, limit = 20) => req<LogEntry[]>('GET', `${e(id)}/logs?limit=${limit}`),
     family: (id: string, limit = 30) => req<FamilyMessage[]>('GET', `${e(id)}/family?limit=${limit}`),
     // reminders (app/routers/reminders.py)
@@ -74,6 +90,15 @@ export function createApi(getToken: TokenFn) {
       if (!res.ok) throw new ApiError(res.status, 'Voice unavailable')
       return res.blob()
     },
+    /** Speech-to-text for browsers without working recognition (app/routers/stt_api.py). 16 kHz WAV in. */
+    stt: async (wav: Blob, lang: Language): Promise<string> => {
+      const res = await fetch(`${BASE}/stt?lang=${encodeURIComponent(lang)}`, {
+        method: 'POST', body: wav, signal: AbortSignal.timeout(15_000),
+        headers: { Authorization: `Bearer ${await getToken()}`, 'Content-Type': 'audio/wav' },
+      })
+      if (!res.ok) throw new ApiError(res.status, (await res.json().catch(() => ({}))).detail ?? 'Couldn’t hear that')
+      return ((await res.json()) as { text: string }).text
+    },
     // Address search (app/routers/places_api.py)
     placesSearch: (q: string, country: string, session: string) =>
       req<{ placeId: string; main: string; secondary: string; text: string }[]>('GET', `/places/autocomplete?q=${encodeURIComponent(q)}&country=${country}&session=${session}`),
@@ -81,6 +106,9 @@ export function createApi(getToken: TokenFn) {
     /** Spelling + generic name of a typed medicine (app/medicines.py) — no dose or use advice. */
     checkMedicine: (name: string, country: string) =>
       req<{ input: string; recognised: boolean; suggestion: string | null; generic: string | null }>('POST', '/medicines/check', { name, country }),
+    /** Prescription / strip photo → draft medicines for the family to tick (app/rx_scan.py). base64 without the data: prefix. */
+    scanPrescription: (image: string, mimeType: string, meals: { breakfast: string | null; lunch: string | null; dinner: string | null }, existing: string[]) =>
+      req<{ medicines: ScannedMedicine[]; unreadable: boolean }>('POST', '/medicines/scan', { image, mimeType, meals, existing }),
     deviceSettings: (id: string) => req<DeviceSettings>('GET', `${e(id)}/device-settings`),
     saveDeviceSettings: (id: string, s: DeviceSettings) => req<DeviceSettings>('PUT', `${e(id)}/device-settings`, s),
     /** Cost dashboard (app/routers/admin_api.py) — admins only. */
@@ -92,6 +120,9 @@ export function createApi(getToken: TokenFn) {
     inviteCaretaker: (id: string, email: string) => req<{ status: 'added' | 'invited' }>('POST', `${e(id)}/caretakers`, { email }),
   }
 }
+
+/** app/rx_scan.py DraftMedicine — shaped like Medication, plus how sure Gemini was. */
+export interface ScannedMedicine { name: string; dose: string; times: string[]; withFood: boolean; notes: string; unsure: boolean; asNeeded: boolean; sameAs: string | null }
 
 /** app/routers/places_saved_api.py — 'Clinic', 'Temple'… the helper books rides to them by name. */
 export interface SavedPlace { id: string; name: string; address: Address }
@@ -125,7 +156,8 @@ export interface BackendAction {
 export interface CheckinAnswers { mood: Mood; sleepQuality: 'well' | 'okay' | 'poorly' | null; ate: boolean | null; medicationTaken: boolean | null }
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) { super(message) }
+  /** `detail`: the server's message — a string, or FastAPI's list of validation errors. */
+  constructor(public status: number, detail: unknown) { super(errorText(detail)) }
 }
 
 // ---------- WebSocket (app/routers/chat.py) ----------

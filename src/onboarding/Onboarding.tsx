@@ -1,7 +1,7 @@
 import { Splash } from '../components/Splash'
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { PhoneField } from '../components/PhoneField'
-import { countryForTimezone, phoneError } from '../lib/phone'
+import { COUNTRY_NAME, countryForTimezone, phoneError } from '../lib/phone'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { isLive } from '../data/mode'
 import { api, loadSession } from '../data/live'
@@ -22,6 +22,7 @@ import { CREDIT, formatUsd, planById } from '../lib/plans'
 import type { Billing, PlanId } from '../lib/plans'
 import { Confetti, WaveHand } from './Scenes'
 import { AddressFields, addressComplete } from '../caretaker/Screens'
+import { MedEditor } from '../components/Medicines'
 
 function Frame({ step, total, onBack, children, foot }: { step: number; total: number; onBack?: () => void; children: ReactNode; foot: ReactNode }) {
   return (
@@ -79,23 +80,6 @@ function PrivacyConsent() {
 }
 
 /** The required agreement — sits at the bottom, right above the button it unlocks. */
-const COUNTRY_NAME: Record<string, string> = { IN: 'India', TH: 'Thailand', SG: 'Singapore', MY: 'Malaysia', AE: 'UAE' }
-
-/** Checks a typed medicine name once typing pauses: "Did you mean…?", or its generic name. Name only — no advice. */
-function MedicineHint({ name, country, onUse }: { name: string; country: string; onUse: (v: string) => void }) {
-  const [res, setRes] = useState<{ for: string; recognised: boolean; suggestion: string | null; generic: string | null } | null>(null)
-  useEffect(() => {
-    const n = name.trim()
-    if (n.length < 3) { setRes(null); return }
-    const t = setTimeout(() => { api.checkMedicine(n, country).then(r => setRes({ ...r, for: n }), () => setRes(null)) }, 700)
-    return () => clearTimeout(t)
-  }, [name, country])
-  if (!res || res.for !== name.trim()) return null
-  if (res.suggestion) return <p className="med-hint">Did you mean <b>{res.suggestion}</b>? <button className="linkish" onClick={() => onUse(res.suggestion!)}>Use it</button></p>
-  if (res.generic) return <p className="med-hint ok">✓ {res.generic}</p>
-  if (!res.recognised) return <p className="med-hint warn">We don’t recognise this name — check the spelling on the box.</p>
-  return <p className="med-hint ok">✓ Recognised</p>
-}
 
 /** "This might be wrong" notes (lib/sanity.ts) — they never block Continue. */
 function Warnings({ items }: { items: string[] }) {
@@ -379,29 +363,9 @@ export function CaretakerOnboarding() {
     { body: <>
       <h1>{Nk}’s medicines</h1>
       <p className="lead">We’ll remind them at each time and let you know if one is missed.</p>
-      {meds.map((m, i) => (
-        <div key={m.id} className="card stack medcard" style={{ gap: 8 }}>
-          <div className="row"><div className="grow"><label className="field">💊 Medicine<input value={m.name} onChange={e => setMeds(ms => ms.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} /></label>
-            {L && <MedicineHint name={m.name} country={COUNTRY_NAME[countryForTimezone(them.timezone)] ?? 'India'} onUse={v => setMeds(ms => ms.map((x, j) => j === i ? { ...x, name: v } : x))} />}</div>
-            <label className="field" style={{ width: 100 }}>Dose<input value={m.dose} onChange={e => setMeds(ms => ms.map((x, j) => j === i ? { ...x, dose: e.target.value } : x))} /></label></div>
-          <div className="field">Times each day
-            <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
-              {m.times.map((t, ti) => (
-                <span key={ti} className="row" style={{ gap: 2 }}>
-                  <input type="time" style={{ width: 120 }} value={t} aria-label={`Time ${ti + 1}`}
-                    onChange={e => setMeds(ms => ms.map((x, j) => j === i ? { ...x, times: x.times.map((y, yi) => yi === ti ? e.target.value : y) } : x))} />
-                  {m.times.length > 1 && <button className="btn sm ghost" aria-label="Remove time" onClick={() => setMeds(ms => ms.map((x, j) => j === i ? { ...x, times: x.times.filter((_, yi) => yi !== ti) } : x))}>✕</button>}
-                </span>
-              ))}
-              {m.times.length < 8 && <button className="btn sm" onClick={() => setMeds(ms => ms.map((x, j) => j === i ? { ...x, times: [...x.times, '20:00'] } : x))}>＋ time</button>}
-            </div>
-          </div>
-          <div className="row"><label className="row small grow" style={{ fontWeight: 700 }}><input type="checkbox" checked={m.withFood} onChange={e => setMeds(ms => ms.map((x, j) => j === i ? { ...x, withFood: e.target.checked } : x))} /> Take with food</label>
-            <button className="btn sm ghost" onClick={() => setMeds(ms => ms.filter((_, j) => j !== i))}>Remove medicine</button></div>
-        </div>
-      ))}
+      <MedEditor meds={meds} setMeds={setMeds} live={L} country={COUNTRY_NAME[countryForTimezone(them.timezone)] ?? 'India'}
+        meals={{ breakfast: skip.breakfast ? null : rhythm.breakfast, lunch: skip.lunch ? null : rhythm.lunch, dinner: skip.dinner ? null : rhythm.dinner }} />
       <Warnings items={warnings} />
-      <button className="btn" onClick={() => setMeds(ms => [...ms, { id: uid('m'), name: '', dose: '', times: ['20:00'], withFood: true, notes: '' }])}>＋ Add a medicine</button>
     </> },
     // 5 — faces (a person with a name needs a valid number, or they can't be called)
     { ok: people.every(p => !p.name.trim() || !phoneError(p.phone)), body: <>
