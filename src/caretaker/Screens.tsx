@@ -2,6 +2,7 @@
  * Caretaker screens for features the backend already has (app/routers/people.py, settings.py, checkins.py).
  */
 import { InsightsCard } from './InsightsCard'
+import { AskAbout } from './AskAbout'
 import { PhoneField } from '../components/PhoneField'
 import { countryForTimezone, phoneError } from '../lib/phone'
 import { useEffect, useRef, useState } from 'react'
@@ -207,6 +208,7 @@ export function CheckinHistory() {
       <CHead title="Check-ins" sub="The last 7 days" back="/caretaker" />
       <div className="scroll"><div className="c-body">
         <InsightsCard s={s} />
+        {isLive() && <AskAbout s={s} />}
         <div className="card row" style={{ justifyContent: 'space-between' }}>
           {[...rows].reverse().map(c => (
             <div key={c.id} className="center" style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>

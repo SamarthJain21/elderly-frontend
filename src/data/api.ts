@@ -47,6 +47,8 @@ export function createApi(getToken: TokenFn) {
     checkinToday: (id: string) => req<TodayCheckIn>('GET', `${e(id)}/checkins/today`),
     checkins: (id: string, days = 7) => req<CheckInRecord[]>('GET', `${e(id)}/checkins?days=${days}`),
     insights: (id: string) => req<Insights>('GET', `${e(id)}/insights`),
+    /** "Ask about Mum" — answered from two weeks of check-ins + activity (app/routers/ask_api.py). */
+    ask: (id: string, question: string) => req<{ answer: string; days: number }>('POST', `${e(id)}/ask`, { question }),
     logs: (id: string, limit = 20) => req<LogEntry[]>('GET', `${e(id)}/logs?limit=${limit}`),
     family: (id: string, limit = 30) => req<FamilyMessage[]>('GET', `${e(id)}/family?limit=${limit}`),
     // reminders (app/routers/reminders.py)

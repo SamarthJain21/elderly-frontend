@@ -71,6 +71,12 @@ a { color: inherit }
 .typing.with-label { align-items: center; gap: 12px }
 .typing .activity { font-size: 1.05rem; color: var(--ink2); opacity: .85 }
 @keyframes blink { 50% { opacity: 1 } }
+/* Ask about {nick} (caretaker/AskAbout.tsx) */
+.ask { border-color: var(--accent) }
+.ask-qa { margin-bottom: 12px }
+.ask-q { margin: 0 0 6px auto; width: fit-content; max-width: 85%; background: var(--ink); color: #fff; padding: 8px 12px; border-radius: 14px 14px 4px 14px; font-weight: 600 }
+.ask-a { margin: 0; max-width: 92%; background: var(--accent-soft); padding: 10px 12px; border-radius: 14px 14px 14px 4px; line-height: 1.45 }
+.ask-a.typing { display: inline-flex }
 
 /* ================= ELDER ================= */
 .e-top { display: flex; align-items: center; justify-content: space-between; padding: calc(10px + var(--safe-t)) 16px 10px; border-bottom: 1px solid var(--line); flex: none; background: var(--paper) }
