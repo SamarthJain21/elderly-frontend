@@ -24,7 +24,19 @@ export function createApi(getToken: TokenFn) {
     return res.status === 204 ? (undefined as T) : res.json()
   }
   const e = (id: string) => `/elders/${encodeURIComponent(id)}`
+  /** Before sign-in (phone + PIN): no token to send. */
+  async function pub<T>(path: string, body: unknown): Promise<T> {
+    const res = await fetch(BASE + path, { method: 'POST', body: JSON.stringify(body), signal: AbortSignal.timeout(20_000), headers: { 'Content-Type': 'application/json' } })
+      .catch(() => { throw new ApiError(0, 'No internet connection — try again') })
+    if (!res.ok) throw new ApiError(res.status, (await res.json().catch(() => ({}))).detail ?? res.statusText)
+    return res.json()
+  }
   return {
+    // Elder access (app/routers/elder_access.py)
+    newSetupLink: (id: string, signOutOthers: boolean) => req<{ elderId: string; email: string; tempPassword: string }>('POST', `${e(id)}/setup-link`, { signOutOthers }),
+    pinStatus: (id: string) => req<{ set: boolean }>('GET', `${e(id)}/pin`),
+    setPin: (id: string, pin: string) => req<{ set: boolean }>('PUT', `${e(id)}/pin`, { pin }),
+    pinLogin: (phone: string, pin: string) => pub<{ token: string }>('/auth/pin', { phone, pin }),
     // auth & onboarding (app/routers/me.py) — /me 404 means "signed in but not onboarded"
     me: () => req<{ uid: string; email: string | null; role: 'elder' | 'caretaker'; admin?: boolean; tourDone?: boolean }>('GET', '/me'),
     tourDone: () => req<void>('POST', '/me/tour-done'),

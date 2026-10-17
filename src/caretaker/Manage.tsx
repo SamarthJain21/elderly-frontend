@@ -17,6 +17,8 @@ import { MedEditor } from '../components/Medicines'
 import { CHead } from './CaretakerApp'
 import { ProfileExtras } from './Screens'
 import { addressLine } from '../lib/types'
+import { SignInCard } from './SignInCard'
+import { newSetupLink } from '../data/live'
 
 // ---------------- Approvals ----------------
 export function Approvals() {
@@ -362,7 +364,14 @@ export function Settings() {
           <p className="small muted" style={{ marginTop: 8 }}>{nk} is told when this changes. Location is only shared in an emergency.</p>
         </div>
         {isLive() && !s.elder.credentials.tempPassword ? (
-          <ComingSoon card title={`Re-send ${nk}’s sign-in`}>The one-time password is shown only once, when the account is created. Resetting it from here is on the way.</ComingSoon>
+          <div className="card stack">
+            <p className="eyebrow">{nk}’s phone sign-in</p>
+            <p className="small muted">For a new phone, or if {nk} got signed out: a new link signs them in (the old one stops working). Or set a PIN on {nk}’s phone page.</p>
+            <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+              <button className="btn pri" onClick={() => newSetupLink(false).catch((e: unknown) => toast(e instanceof Error ? e.message : 'Couldn’t make a new link'))}>🔗 Make a new setup link</button>
+              <Link className="btn" to="/caretaker/phone">🔢 Sign-in PIN</Link>
+            </div>
+          </div>
         ) : (
           <div className="card stack" style={{ alignItems: 'center', textAlign: 'center' }}>
             <p className="eyebrow">{nk}’s phone sign-in</p>
@@ -451,6 +460,7 @@ export function ElderPhone() {
         </div>
         <p className="small muted">The phone’s own volume, brightness and other settings can only be changed on the phone itself — a web app isn’t allowed to.
           These settings control the Elderly app on {nk}’s phone.</p>
+        {isLive() && <SignInCard />}
       </div></div>
     </>
   )

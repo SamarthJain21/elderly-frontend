@@ -8,6 +8,7 @@
  *   WebSocket /ws/{elderId}: agent chat (elders only), family thread, today's check-in, typing, action updates.
  *   Caretakers only get the family thread over the socket, so approvals/logs arrive by polling.
  */
+import { signInElderWithToken } from '../lib/firebase'
 import { connectChat, contactIn, createApi, ApiError, type CheckinAnswers, type BackendAction, type Profile, type ServerFrame, type TodayCheckIn } from './api'
 import { addPushedClip, setCloudVoice } from '../lib/speech'
 import { auth, getToken, isSandboxSigningIn, onUser, sandboxSignIn, signOutUser } from '../lib/firebase'
@@ -361,6 +362,18 @@ export function bootLive() {
 export async function signOut() {
   stopAll()
   await signOutUser()
+}
+
+/** Phone + PIN sign-in: the server checks the PIN; Firebase then signs in with its one-time token. */
+export async function pinSignIn(phone: string, pin: string) {
+  const { token } = await api.pinLogin(phone, pin)
+  await signInElderWithToken(token)
+}
+
+/** A fresh setup link for the elder (the old one stops working). Puts the new sign-in where Set up phone reads it. */
+export async function newSetupLink(signOutOthers: boolean) {
+  const c = await api.newSetupLink(getState().live.elderId!, signOutOthers)
+  update(d => { d.elder.credentials = { email: c.email, tempPassword: c.tempPassword }; d.setup = { sentVia: null, sentAt: null } })
 }
 
 // ---------- writes used by actions.ts ----------

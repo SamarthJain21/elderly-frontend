@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { nick, update, useDemo } from '../data/store'
 import { ComingSoon, useToast } from '../components/ui'
 import { isLive } from '../data/mode'
+import { newSetupLink } from '../data/live'
 import { LinkPhonesScene } from '../onboarding/Scenes'
 
 /**
@@ -75,7 +76,7 @@ export default function SetupPhone() {
               <p className="small muted">It already has {nk}’s account, routine, medicines and your faces. It works once and expires in 7 days.</p></div></div>
           <div className="sms-bubble">Hi {nk}, it’s {s.caretaker.name}! I’ve set up Elderly for you — just tap this link and it will help you get started: <a href={link} onClick={e => e.preventDefault()}>{link}</a></div>
           <p className="small muted">To {s.elder.phone}</p>
-          {!canSend ? <ComingSoon card title="Send the link again">This setup link can only be made right after the account is created — re-creating it later is on the way.</ComingSoon>
+          {!canSend ? <button className="btn pri" onClick={() => newSetupLink(false).catch((e: unknown) => toast(e instanceof Error ? e.message : 'Couldn’t make a new link'))}>🔗 Make a new setup link</button>
             : sent
             ? <p className="small" style={{ fontWeight: 700, color: 'var(--accent)' }}>✓ Sent by {s.setup.sentVia} · <button className="btn ghost sm" style={{ padding: 0, minHeight: 0, color: 'var(--accent)' }} onClick={() => send(s.setup.sentVia!)}>Send again</button></p>
             : <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>

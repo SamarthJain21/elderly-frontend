@@ -1,7 +1,7 @@
 import { Splash } from '../components/Splash'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { isLive } from '../data/mode'
+import { isLive, SANDBOX_FRAME } from '../data/mode'
 import { useDemo, type DemoState } from '../data/store'
 import {
   answerCall, checkinAnswers, closeEmergency, isPretendNumber, retrySos, declineCall, elderCallContact, elderConfirm, elderSay, emergencyCancel, emergencyFire, emergencyNumber, isAnswered, tapChip,
@@ -17,8 +17,9 @@ import { activityLabel } from '../lib/activity'
 import { partOfDay, strings, type Strings } from '../lib/i18n'
 import type { ActionCard, FamilyMessage, Message, ToolName } from '../lib/types'
 import type { CheckinAnswers } from '../data/api'
+import { PinScreen } from './PinScreen'
 
-type Screen = 'home' | 'talk' | 'reminders'
+type Screen = 'home' | 'talk' | 'reminders' | 'pin'
 type Item = { kind: 'agent'; m: Message } | { kind: 'fam'; m: FamilyMessage }
 
 export default function ElderApp({ framed = true }: { framed?: boolean }) {
@@ -74,7 +75,8 @@ export default function ElderApp({ framed = true }: { framed?: boolean }) {
     <div className={`shell ${framed ? 'framed' : ''} text-${s.device.textSize}`}>
       {screen === 'home' && <Home s={s} onMic={mic} listening={listening} say={say} go={setScreen} />}
       {screen === 'talk' && <Talk s={s} items={items} onMic={mic} listening={listening} say={say} back={() => setScreen('home')} />}
-      {screen === 'reminders' && <Reminders s={s} back={() => setScreen('home')} />}
+      {screen === 'reminders' && <Reminders s={s} back={() => setScreen('home')} pin={isLive() && !SANDBOX_FRAME ? () => setScreen('pin') : undefined} />}
+      {screen === 'pin' && <PinScreen s={s} back={() => setScreen('reminders')} />}
       <Overlay s={s} />
       {/* Not during the tour: its first tap turns sound on anyway, and the hint would cover its card. */}
       {blocked && s.elderUi.voice && s.tours.elder && <div className="tap-to-hear" aria-live="polite">{t.tapToHear}</div>}
@@ -361,7 +363,7 @@ function ChipButtons({ m, t }: { m: FamilyMessage; t: Strings }) {
 }
 
 // ---------------- Reminders ("My day") ----------------
-function Reminders({ s, back }: { s: DemoState; back: () => void }) {
+function Reminders({ s, back, pin }: { s: DemoState; back: () => void; pin?: () => void }) {
   const today = new Date().toISOString().slice(0, 10)
   const wd = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][new Date().getDay()]
   const nowHM = new Date().toTimeString().slice(0, 5)
@@ -378,6 +380,7 @@ function Reminders({ s, back }: { s: DemoState; back: () => void }) {
           </div>
         ))}
         <button className="bb no" style={{ marginTop: 10 }} onClick={() => speak(due.map(r => t.atTime(r.time, r.title)).join('. ') || t.nothingTodaySay, s.elder.language)}>{t.readDay}</button>
+        {pin && <button className="btn block" style={{ marginTop: 24 }} onClick={pin}>{t.pinLink}</button>}
       </div></div>
     </>
   )
