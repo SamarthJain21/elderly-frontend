@@ -120,6 +120,8 @@ function Home({ s, onMic, listening, say, go }: { s: DemoState; onMic: () => voi
           <div className="micwrap" data-tour="e-mic">
             <button className={`mic ${listening ? 'on' : ''}`} onClick={onMic} aria-label={t.micAria}><MicIcon /></button>
             <p className="mic-l">{listening ? t.listening : <>{t.tapAndTell[0]}<br />{t.tapAndTell[1]}</>}</p>
+            {/* For anyone who'd rather type, or wants to see the conversation, without the mic. */}
+            <button className="open-chat" onClick={() => go('talk')}>{t.openChat}</button>
           </div>
           <h2 className="e-sec" style={{ marginTop: 4 }}>{t.tapFace}</h2>
           {people.length === 0 && <p className="muted" style={{ fontSize: 18 }}>{t.noFaces}</p>}
@@ -179,7 +181,7 @@ function FamilyQuestion({ s }: { s: DemoState }) {
 
 /**
  * The daily check-in as big taps: mood (the faces), then sleep, food and medicines — one question at a time, read
- * aloud. Recorded directly (no chat needed); "Tell me more" opens the chat for anything else.
+ * aloud. Recorded directly (no chat needed).
  */
 function CheckInCard({ s, onDone }: { s: DemoState; onDone: () => void }) {
   const t = strings(s.elder.language)
@@ -198,8 +200,7 @@ function CheckInCard({ s, onDone }: { s: DemoState; onDone: () => void }) {
     ask(steps[n.step] === 'sleep' ? t.ci.sleepQ : steps[n.step] === 'ate' ? t.ci.ateQ : t.ci.medsQ)
   }
   if (s.checkin.stage === 'done' || s.checkin.status === 'done') return (
-    <div className="done-note row" style={{ justifyContent: 'space-between' }}>{t.checkedIn}
-      <button className="linkish" onClick={onDone}>{t.ci.tellMore}</button></div>
+    <div className="done-note">{t.checkedIn}</div>
   )
   if (s.checkin.stage === 'meds') return <button className="done-note" style={{ border: 0, width: '100%' }} onClick={onDone}>{t.finishCheckin}</button>
   if (!['due', 'upcoming', 'missed'].includes(s.checkin.status)) return null
