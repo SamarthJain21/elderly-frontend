@@ -8,9 +8,10 @@
  *   WebSocket /ws/{elderId}: agent chat (elders only), family thread, today's check-in, typing, action updates.
  *   Caretakers only get the family thread over the socket, so approvals/logs arrive by polling.
  */
+import { signInElderWithToken } from '../lib/firebase'
 import { connectChat, contactIn, createApi, ApiError, type CheckinAnswers, type BackendAction, type Profile, type ServerFrame, type TodayCheckIn } from './api'
 import { addPushedClip, setCloudVoice } from '../lib/speech'
-import { auth, getToken, isSandboxSigningIn, onUser, sandboxSignIn, signInElderWithToken, signOutUser } from '../lib/firebase'
+import { auth, getToken, isSandboxSigningIn, onUser, sandboxSignIn, signOutUser } from '../lib/firebase'
 import { emptyLive, getState, restoreSeen, update, type DemoState } from './store'
 import { formatMoney } from '../lib/money'
 import { notify } from '../components/ui'
