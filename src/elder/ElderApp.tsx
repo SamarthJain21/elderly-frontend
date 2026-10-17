@@ -13,10 +13,10 @@ import { Tour, type TourStep } from '../components/Tour'
 import { update } from '../data/store'
 import { canListen, listen, onSoundBlockedChange, setPlayback, soundBlocked, speak, speakMessage, stopListening, stopSpeaking } from '../lib/speech'
 import { activityLabel } from '../lib/activity'
+import { cardEta, cardLine } from '../lib/cardText'
 import { partOfDay, strings, type Strings } from '../lib/i18n'
 import type { ActionCard, FamilyMessage, Message, ToolName } from '../lib/types'
 import type { CheckinAnswers } from '../data/api'
-import { cardEta, cardLine } from '../lib/cardText'
 
 type Screen = 'home' | 'talk' | 'reminders'
 type Item = { kind: 'agent'; m: Message } | { kind: 'fam'; m: FamilyMessage }
