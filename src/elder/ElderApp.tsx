@@ -11,6 +11,7 @@ import { Face } from '../components/Face'
 import { MicIcon, Wave, useToast } from '../components/ui'
 import { Tour, type TourStep } from '../components/Tour'
 import { update } from '../data/store'
+import { finishTour } from '../data/live'
 import { canListen, listen, onSoundBlockedChange, setPlayback, soundBlocked, speak, speakMessage, stopListening, stopSpeaking } from '../lib/speech'
 import { activityLabel } from '../lib/activity'
 import { partOfDay, strings, type Strings } from '../lib/i18n'
@@ -135,7 +136,7 @@ function Home({ s, onMic, listening, say, go }: { s: DemoState; onMic: () => voi
         </div>
       </div>
       <SosBar t={t} aboveTour={!s.tours.elder && loaded} />
-      {!s.tours.elder && loaded && <Tour big labels={t.tourUi} steps={elderTour(t, s.caretaker.name || t.yourFamily)} onDone={() => { stopSpeaking(); update(d => { d.tours.elder = true }) }}
+      {!s.tours.elder && loaded && <Tour big labels={t.tourUi} steps={elderTour(t, s.caretaker.name || t.yourFamily)} onDone={() => { stopSpeaking(); finishTour('elder') }}
         onStep={st => st.say && s.elderUi.voice && speak(`${st.title}. ${st.say}`, s.elder.language)} />}
     </>
   )

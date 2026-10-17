@@ -13,6 +13,7 @@ import { addPushedClip, setCloudVoice } from '../lib/speech'
 import { auth, getToken, isSandboxSigningIn, onUser, sandboxSignIn, signOutUser } from '../lib/firebase'
 import { emptyLive, getState, restoreSeen, update, type DemoState } from './store'
 import { formatMoney } from '../lib/money'
+import { isLive } from './mode'
 import { notify } from '../components/ui'
 import type { ActionCard, Contact, Message, Mood, DeviceSettings } from '../lib/types'
 
@@ -292,6 +293,12 @@ export async function selectElder(elderId: string) {
   if (getState().live.role === 'caretaker') pollTimer = window.setInterval(() => { if (!document.hidden) void refresh(false) }, 15_000)
 }
 
+/** The app tour was finished or closed: remembered for the account (server), not just this browser. */
+export function finishTour(role: 'elder' | 'caretaker') {
+  update(d => { d.tours[role] = true })
+  if (isLive()) void api.tourDone().catch(() => { /* remembered on this device anyway */ })
+}
+
 /** Re-read /me and the elders list (after sign-in, onboarding, or adding an elder). */
 export async function loadSession() {
   const u = auth.currentUser
@@ -303,7 +310,8 @@ export async function loadSession() {
       if (e instanceof ApiError && e.status === 404) { update(d => { d.live.status = 'needsOnboarding'; d.live.role = 'caretaker' }); return }
       throw e
     }
-    update(d => { d.live.role = me.role; d.live.admin = me.admin })
+    // Finished the tour on another phone or browser: don't start it again here.
+    update(d => { d.live.role = me.role; d.live.admin = me.admin; if (me.tourDone) d.tours[me.role] = true })
     if (me.role === 'elder') return selectElder(u.uid)  // elderId == the elder's auth uid
     const elders = await api.myElders()
     update(d => {
