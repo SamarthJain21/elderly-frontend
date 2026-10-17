@@ -361,7 +361,7 @@ export function Settings() {
               <div className="grow"><b>{t}</b><p className="small muted">{d}</p></div>{s.elder.sharingTier === v && <span>✓</span>}
             </button>
           ))}
-          <p className="small muted" style={{ marginTop: 8 }}>{nk} is told when this changes. Location is only shared in an emergency.</p>
+          <p className="small muted" style={{ marginTop: 8 }}>{nk} is told when this changes. {nk}’s location is only used when they ask for a ride (as the pickup point) and in an emergency — never tracked.</p>
         </div>
         {isLive() && !s.elder.credentials.tempPassword ? (
           <div className="card stack">

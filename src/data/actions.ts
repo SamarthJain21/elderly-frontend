@@ -15,6 +15,7 @@ import { decide } from '../lib/policy'
 import { formatMoney } from '../lib/money'
 import { CREDIT, formatBalance, formatUsd, planById, priceFor, type Billing, type PlanId } from '../lib/plans'
 import { isLive } from './mode'
+import { getHere, isRideRequest } from '../lib/here'
 import { deviceOf, live, saveDevice } from './live'
 import type { CheckinAnswers } from './api'
 import type { Contact, Medication } from '../lib/types'
@@ -297,6 +298,12 @@ export function elderSay(raw: string) {
     // Everything goes to the agent, which understands context ("I fell asleep" is not "I fell") and raises a real
     // emergency itself (escalate_emergency → SOS path). No keyword guessing here: it caused false alarms and
     // swallowed the elder's actual request. The red SOS bar is the deliberate, always-available path.
+    // A ride: take the pickup from where they are now (asked only for rides; home if not shared).
+    if (isRideRequest(text)) {
+      update(d => { d.elderUi.typing = true })
+      void getHere().then(here => live.say(shown, here ?? undefined))
+      return
+    }
     return live.say(shown)
   }
   update(d => { d.messages.forEach(m => { m.quickReplies = [] }); elderMsg(d, shown) })

@@ -1,4 +1,5 @@
 import { errorText } from '../lib/apiError'
+import type { Here } from '../lib/here'
 import { API_URL } from './mode'
 /**
  * Typed client for the FastAPI backend (elderly-backend, app/routers/*.py). Used in live mode only;
@@ -205,7 +206,7 @@ export function connectChat(elderId: string, getToken: TokenFn, onFrame: (f: Ser
   const send = (f: object) => { if (ws.readyState !== WebSocket.OPEN) return false; ws.send(JSON.stringify(f)); return true }
   return {
     close: () => ws.close(),
-    say: (text: string) => send({ type: 'message', text }),                          // elder → helper
+    say: (text: string, here?: Here) => send({ type: 'message', text, ...(here ? { here } : {}) }),  // elder → helper (+ location for rides)
     startCheckin: (mood: Mood | null) => send({ type: 'start_checkin', mood }),
     checkinAnswers: (a: CheckinAnswers) => send({ type: 'checkin_answers', ...a }),   // the tap check-in
     confirm: (actionId: string, approve: boolean) => send({ type: 'confirm', actionId, approve }),

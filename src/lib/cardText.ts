@@ -6,7 +6,10 @@ import type { Strings } from './i18n'
  */
 export function cardLine(line: string, t: Strings): string {
   const ride = line.match(/^Ride to (.+) \(~(\d+) km\)$/)
-  return ride ? t.rideLine(ride[1], ride[2]) : line
+  if (ride) return t.rideLine(ride[1], ride[2])
+  if (line === 'From where you are now') return t.rideFromHere
+  if (line === 'From home') return t.rideFromHome
+  return line
 }
 
 export function cardEta(eta: string, t: Strings): string {
