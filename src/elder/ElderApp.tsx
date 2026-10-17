@@ -20,6 +20,7 @@ import type { ActionCard, FamilyMessage, Message, ToolName } from '../lib/types'
 import type { CheckinAnswers } from '../data/api'
 import { PinScreen } from './PinScreen'
 import { MessageFamily } from './MessageFamily'
+import { nextThing } from '../lib/nextThing'
 import { RidePicker } from './RidePicker'
 
 type Screen = 'home' | 'talk' | 'reminders' | 'pin' | 'message'
@@ -77,7 +78,7 @@ export default function ElderApp({ framed = true }: { framed?: boolean }) {
   return (
     <div className={`shell ${framed ? 'framed' : ''} text-${s.device.textSize}`}>
       {screen === 'home' && <Home s={s} onMic={mic} listening={listening} say={say} go={setScreen} />}
-      {screen === 'talk' && <Talk s={s} items={items} onMic={mic} listening={listening} say={say} back={() => setScreen('home')} />}
+      {screen === 'talk' && <Talk s={s} items={items} onMic={mic} listening={listening} say={say} back={() => setScreen('home')} message={() => setScreen('message')} />}
       {screen === 'reminders' && <Reminders s={s} back={() => setScreen('home')} pin={isLive() && !SANDBOX_FRAME ? () => setScreen('pin') : undefined} />}
       {screen === 'pin' && <PinScreen s={s} back={() => setScreen('reminders')} />}
       {screen === 'message' && <MessageFamily s={s} back={() => setScreen('home')} />}
@@ -247,12 +248,14 @@ function SosBar({ t, aboveTour = false }: { t: Strings; aboveTour?: boolean }) {
 }
 
 // ---------------- Talk ----------------
-function Talk({ s, items, onMic, listening, say, back }: { s: DemoState; items: Item[]; onMic: () => void; listening: boolean; say: (t: string) => void; back: () => void }) {
+function Talk({ s, items, onMic, listening, say, back, message }: { s: DemoState; items: Item[]; onMic: () => void; listening: boolean; say: (t: string) => void; back: () => void; message: () => void }) {
   const [text, setText] = useState('')
   const end = useRef<HTMLDivElement>(null)
   useEffect(() => { end.current?.scrollIntoView({ block: 'end' }) }, [items.length, s.elderUi.typing])
   const t = strings(s.elder.language)
   const care = s.caretaker.name || t.myFamily
+  const pending = [...s.messages].reverse().find(m => m.action)?.action?.status === 'awaiting_elder'
+  const next = pending ? null : nextThing(s.family, s.reminders)
   return (
     <>
       <div className="e-top">
@@ -269,12 +272,13 @@ function Talk({ s, items, onMic, listening, say, back }: { s: DemoState; items: 
         </div>
       </div>
       <div className="e-input">
-        <div className="e-quick">
-          {([['📞', t.callAria(care), t.sayCall(care), null], ['💬', t.tileOk(care), t.tileOk(care), 'send_message_to_caretaker'], ['💊', t.tileMedicine, t.sayMedicine, 'order_medicine'],
-            ['🔧', t.tileFix, t.sayFix, 'notify_volunteer']] as const).filter(([, , , tool]) => !tool || s.rules.tools[tool]?.mode !== 'blocked').map(([i, l, said]) => (
-            <button key={l} onClick={() => say(said)}><span>{i}</span>{l}</button>
-          ))}
-        </div>
+        {/* No copy of the home tiles here: Gemini's suggestions under each reply are the buttons. At most one more,
+            and only when something is waiting (lib/nextThing.ts). */}
+        {next && <div className="e-quick one">
+          {next.kind === 'reply'
+            ? <button onClick={message}><span>💬</span>{t.replyTo(care)}</button>
+            : <button onClick={() => say(t.tookMeds)}><span>✅</span>{t.tookMeds}</button>}
+        </div>}
         <form className="e-form" onSubmit={e => { e.preventDefault(); if (text.trim()) { say(text); setText('') } }}>
           <input value={text} maxLength={1000} onChange={e => setText(e.target.value)} placeholder={t.typeHere} aria-label={t.typeAria} />
           <button type="button" className={`mic sm ${listening ? 'on' : ''}`} onClick={onMic} aria-label={t.speak}><MicIcon /></button>
