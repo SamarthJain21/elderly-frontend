@@ -524,9 +524,6 @@ a { color: inherit }
 .warn-card ul { margin: 6px 0 4px; padding-left: 18px; font-size: 14.5px; line-height: 1.5 }
 
 /* Setup: medicine-name check */
-.med-hint { font-size: 13.5px; margin: 4px 0 0; color: var(--ink2) }
-.med-hint.ok { color: var(--accent); font-weight: 600 }
-.med-hint.warn { color: var(--amber) }
 /* Prescription scan (components/Medicines.tsx) */
 .rx { border: 1.5px dashed var(--accent); box-shadow: none; background: var(--accent-soft) }
 .rx-reading { display: flex; align-items: center; gap: 10px; font-weight: 700; margin: 4px 0 }

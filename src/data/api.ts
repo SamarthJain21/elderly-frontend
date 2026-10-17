@@ -104,9 +104,6 @@ export function createApi(getToken: TokenFn) {
     placesSearch: (q: string, country: string, session: string) =>
       req<{ placeId: string; main: string; secondary: string; text: string }[]>('GET', `/places/autocomplete?q=${encodeURIComponent(q)}&country=${country}&session=${session}`),
     place: (placeId: string, session: string) => req<Address>('GET', `/places/${encodeURIComponent(placeId)}?session=${session}`),
-    /** Spelling + generic name of a typed medicine (app/medicines.py) — no dose or use advice. */
-    checkMedicine: (name: string, country: string) =>
-      req<{ input: string; recognised: boolean; suggestion: string | null; generic: string | null }>('POST', '/medicines/check', { name, country }),
     /** Prescription / strip photo → draft medicines for the family to tick (app/rx_scan.py). base64 without the data: prefix. */
     scanPrescription: (image: string, mimeType: string, meals: { breakfast: string | null; lunch: string | null; dinner: string | null }, existing: string[]) =>
       req<{ medicines: ScannedMedicine[]; unreadable: boolean }>('POST', '/medicines/scan', { image, mimeType, meals, existing }),
