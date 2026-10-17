@@ -1,3 +1,4 @@
+import { errorText } from '../lib/apiError'
 import { API_URL } from './mode'
 /**
  * Typed client for the FastAPI backend (elderly-backend, app/routers/*.py). Used in live mode only;
@@ -125,7 +126,8 @@ export interface BackendAction {
 export interface CheckinAnswers { mood: Mood; sleepQuality: 'well' | 'okay' | 'poorly' | null; ate: boolean | null; medicationTaken: boolean | null }
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) { super(message) }
+  /** `detail`: the server's message — a string, or FastAPI's list of validation errors. */
+  constructor(public status: number, detail: unknown) { super(errorText(detail)) }
 }
 
 // ---------- WebSocket (app/routers/chat.py) ----------
