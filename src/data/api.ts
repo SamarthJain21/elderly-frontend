@@ -26,7 +26,8 @@ export function createApi(getToken: TokenFn) {
   const e = (id: string) => `/elders/${encodeURIComponent(id)}`
   return {
     // auth & onboarding (app/routers/me.py) — /me 404 means "signed in but not onboarded"
-    me: () => req<{ uid: string; email: string | null; role: 'elder' | 'caretaker'; admin?: boolean }>('GET', '/me'),
+    me: () => req<{ uid: string; email: string | null; role: 'elder' | 'caretaker'; admin?: boolean; tourDone?: boolean }>('GET', '/me'),
+    tourDone: () => req<void>('POST', '/me/tour-done'),
     onboardCaretaker: (name: string) => req('POST', '/onboarding/caretaker', { name }),
     // elders (app/routers/elders.py)
     createElder: (b: { name: string; phone: string; language: Language }) =>

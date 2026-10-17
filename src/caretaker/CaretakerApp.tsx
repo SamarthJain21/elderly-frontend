@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { enablePush, pushState, type PushState } from '../lib/push'
-import { api } from '../data/live'
+import { api, finishTour } from '../data/live'
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { nick, useDemo, type DemoState } from '../data/store'
 import { ackAlerts, caretakerCall, dispatchHelp, emergencyNumber, quotaLeft, quotaTotal } from '../data/actions'
@@ -174,7 +174,7 @@ function Overview({ s }: { s: DemoState }) {
         </div>
       </div></div>
       <SosSheet open={sos} onClose={() => setSos(false)} s={s} />
-      {!s.tours.caretaker && <Tour steps={caretakerTour(nk, s.elder.name)} onDone={() => update(d => { d.tours.caretaker = true })} />}
+      {!s.tours.caretaker && <Tour steps={caretakerTour(nk, s.elder.name)} onDone={() => finishTour('caretaker')} />}
     </>
   )
 }
