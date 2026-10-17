@@ -504,6 +504,14 @@ a { color: inherit }
 .med-hint { font-size: 13.5px; margin: 4px 0 0; color: var(--ink2) }
 .med-hint.ok { color: var(--accent); font-weight: 600 }
 .med-hint.warn { color: var(--amber) }
+/* Prescription scan (components/Medicines.tsx) */
+.rx { border: 1.5px dashed var(--accent); box-shadow: none; background: var(--accent-soft) }
+.rx-reading { display: flex; align-items: center; gap: 10px; font-weight: 700; margin: 4px 0 }
+.rx .spin { width: 18px; height: 18px; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--accent); animation: spin .8s linear infinite; flex: none }
+.rx-row { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-top: 1px solid var(--line); cursor: pointer }
+.rx-row:first-of-type { border-top: 0 }
+.rx-row input { margin-top: 4px; width: 20px; height: 20px; accent-color: var(--accent) }
+.rx-row.unsure b { color: var(--amber) }
 
 /* Elder app text size (set by the elder's family on the Phone page) */
 .shell.text-large :is(.scroll, .e-top, .e-input) { zoom: 1.12 }

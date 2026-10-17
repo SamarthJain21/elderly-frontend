@@ -9,7 +9,7 @@
  *   setRule…           → PUT /elders/{id}/rules          contacts → /elders/{id}/contacts
  * The "agent" here is a keyword stand-in for Gemini; the decision step is the same code as app/autonomy.py.
  */
-import { getState, nick, nowIso, uid, update, type DemoState } from './store'
+import { getState, medicationReminders, nick, nowIso, uid, update, type DemoState } from './store'
 import { addressLine, type ActionCard, type Address, type Chip, type Currency, type EmergencyContact, type FamilyMessage, type HelpRequest, type Mood, type ToolName } from '../lib/types'
 import { decide } from '../lib/policy'
 import { formatMoney } from '../lib/money'
@@ -17,7 +17,7 @@ import { CREDIT, formatBalance, formatUsd, planById, priceFor, type Billing, typ
 import { isLive } from './mode'
 import { deviceOf, live, saveDevice } from './live'
 import type { CheckinAnswers } from './api'
-import type { Contact } from '../lib/types'
+import type { Contact, Medication } from '../lib/types'
 
 /** Open the phone dialler (live mode: real calls go through the phone, not the app). */
 /** Sandbox numbers (+000…) are never dialled or texted (backend app/sms.py). */
@@ -643,6 +643,14 @@ export function removeContact(id: string) {
 export function addReminder(title: string, time: string) {
   if (isLive()) return void live.addReminder(title, time)
   update(d => { d.reminders.push({ id: uid('rem_'), elderId: d.elder.elderId, title, kind: 'custom', time, days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'], date: null, medicationId: null, active: true }) })
+}
+export function saveMedications(meds: Medication[]) {
+  const clean = meds.filter(m => m.name.trim()).map(m => ({ ...m, name: m.name.trim(), times: [...new Set(m.times)].sort() }))
+  if (isLive()) return void live.saveMedications(clean)
+  update(d => {
+    d.assessment.medications = clean
+    d.reminders = [...d.reminders.filter(r => r.kind !== 'medication'), ...medicationReminders(d.elder.elderId, d.assessment)]
+  })
 }
 export function deleteReminder(id: string) {
   if (isLive()) return void live.deleteReminder(id)

@@ -11,10 +11,10 @@
 import { connectChat, contactIn, createApi, ApiError, type CheckinAnswers, type BackendAction, type Profile, type ServerFrame, type TodayCheckIn } from './api'
 import { addPushedClip, setCloudVoice } from '../lib/speech'
 import { auth, getToken, isSandboxSigningIn, onUser, sandboxSignIn, signOutUser } from '../lib/firebase'
-import { emptyLive, getState, restoreSeen, update, type DemoState } from './store'
+import { emptyLive, getState, medicationReminders, restoreSeen, update, type DemoState } from './store'
 import { formatMoney } from '../lib/money'
 import { notify } from '../components/ui'
-import type { ActionCard, Contact, Message, Mood, DeviceSettings } from '../lib/types'
+import type { ActionCard, Contact, Message, Mood, DeviceSettings, Medication } from '../lib/types'
 
 export const api = createApi(getToken)
 let chat: ReturnType<typeof connectChat> | null = null
@@ -427,6 +427,14 @@ export const live = {
   addReminder: async (title: string, time: string) => {
     try { const r = await api.addReminder(eid(), { title, time, kind: 'custom', days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] }); update(d => { d.reminders.push(r) }) }
     catch (e) { soft("Couldn't add the reminder")(e) }
+  },
+  /** PUT the whole assessment with the new list; the server rebuilds the medicine reminders. */
+  saveMedications: async (meds: Medication[]) => {
+    const assessment = { ...getState().assessment, medications: meds }
+    update(d => { d.assessment = assessment; d.reminders = [...d.reminders.filter(r => r.kind !== 'medication'), ...medicationReminders(d.elder.elderId, assessment)] })
+    try { await api.saveAssessment(eid(), assessment); notify('Medicines saved — reminders updated') }
+    catch (e) { soft("Couldn't save the medicines")(e) }
+    void refresh(false)
   },
   deleteReminder: async (id: string) => {
     update(d => { d.reminders = d.reminders.filter(x => x.id !== id) })
