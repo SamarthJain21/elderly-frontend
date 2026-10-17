@@ -16,6 +16,7 @@ import { activityLabel } from '../lib/activity'
 import { partOfDay, strings, type Strings } from '../lib/i18n'
 import type { ActionCard, FamilyMessage, Message, ToolName } from '../lib/types'
 import type { CheckinAnswers } from '../data/api'
+import { cardEta, cardLine } from '../lib/cardText'
 
 type Screen = 'home' | 'talk' | 'reminders'
 type Item = { kind: 'agent'; m: Message } | { kind: 'fam'; m: FamilyMessage }
@@ -290,7 +291,8 @@ function AgentBubble({ m, last, t }: { m: Message; last: boolean; t: Strings }) 
     <div className="msg agent">
       <span className="tag">{t.helper}</span>{m.text}
       {m.action && <ActionCardView a={m.action} t={t} />}
-      {last && m.quickReplies.length > 0 && (
+      {/* A card waiting for yes/no has its own big buttons: suggested replies would only repeat them. */}
+      {last && m.quickReplies.length > 0 && m.action?.status !== 'awaiting_elder' && (
         <div className="qr" style={{ marginTop: 12 }}>{m.quickReplies.map(r => <button key={r} onClick={() => elderSay(r)}>{r}</button>)}</div>
       )}
     </div>
@@ -308,9 +310,9 @@ function ActionCardView({ a, t }: { a: ActionCard; t: Strings }) {
   return (
     <div className="acard">
       <div className="h"><span>{t.tool[a.tool] ?? a.title}</span><span className={`pill ${cls}`}>{label}</span></div>
-      {a.lines.length > 0 && <ul>{a.lines.map(l => <li key={l}>{l}</li>)}</ul>}
+      {a.lines.length > 0 && <ul>{a.lines.map(l => <li key={l}>{cardLine(l, t)}</li>)}</ul>}
       {a.amount && <p className="amt">{a.estimate ? '≈ ' : ''}{a.amount}{a.discountMinor ? <span className="pill gold" style={{ marginLeft: 8, fontSize: 13 }}>Pro −10%</span> : null}</p>}
-      {(a.provider || a.eta) && <p className="muted" style={{ fontSize: 16 }}>{[a.provider, a.eta].filter(Boolean).join(' · ')}</p>}
+      {(a.provider || a.eta) && <p className="muted" style={{ fontSize: 16 }}>{[a.provider, a.eta && cardEta(a.eta, t)].filter(Boolean).join(' · ')}</p>}
       {a.status === 'awaiting_elder' && (
         <div className="bigbtns">
           <button className="bb yes" onClick={() => elderConfirm(a.id, true)}>{t.yesPlease}</button>
