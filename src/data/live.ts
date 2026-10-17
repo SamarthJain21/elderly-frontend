@@ -292,18 +292,6 @@ export async function selectElder(elderId: string) {
   if (getState().live.role === 'caretaker') pollTimer = window.setInterval(() => { if (!document.hidden) void refresh(false) }, 15_000)
 }
 
-/** Phone + PIN sign-in: the server checks the PIN; Firebase then signs in with its one-time token. */
-export async function pinSignIn(phone: string, pin: string) {
-  const { token } = await api.pinLogin(phone, pin)
-  await signInElderWithToken(token)
-}
-
-/** A fresh setup link for the elder (the old one stops working). Puts the new sign-in where Set up phone reads it. */
-export async function newSetupLink(signOutOthers: boolean) {
-  const c = await api.newSetupLink(getState().live.elderId!, signOutOthers)
-  update(d => { d.elder.credentials = { email: c.email, tempPassword: c.tempPassword }; d.setup = { sentVia: null, sentAt: null } })
-}
-
 /** Re-read /me and the elders list (after sign-in, onboarding, or adding an elder). */
 export async function loadSession() {
   const u = auth.currentUser
@@ -365,6 +353,18 @@ export function bootLive() {
 export async function signOut() {
   stopAll()
   await signOutUser()
+}
+
+/** Phone + PIN sign-in: the server checks the PIN; Firebase then signs in with its one-time token. */
+export async function pinSignIn(phone: string, pin: string) {
+  const { token } = await api.pinLogin(phone, pin)
+  await signInElderWithToken(token)
+}
+
+/** A fresh setup link for the elder (the old one stops working). Puts the new sign-in where Set up phone reads it. */
+export async function newSetupLink(signOutOthers: boolean) {
+  const c = await api.newSetupLink(getState().live.elderId!, signOutOthers)
+  update(d => { d.elder.credentials = { email: c.email, tempPassword: c.tempPassword }; d.setup = { sentVia: null, sentAt: null } })
 }
 
 // ---------- writes used by actions.ts ----------
