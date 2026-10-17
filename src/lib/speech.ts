@@ -178,8 +178,24 @@ function speakCloud(fetchClip: CloudVoice, clean: string, lang: Language, rate: 
 let held: (() => void) | null = null
 const listeners = new Set<(blocked: boolean) => void>()
 export const soundBlocked = () => typeof navigator !== 'undefined' && !!navigator.userActivation && !navigator.userActivation.hasBeenActive
-/** For the "Tap anywhere to hear me" hint. */
-export function onSoundBlockedChange(fn: (blocked: boolean) => void) { listeners.add(fn); return () => { listeners.delete(fn) } }
+/** For the "Tap anywhere to hear me" hint: told when the first tap unlocks sound, whether or not a line was held. */
+export function onSoundBlockedChange(fn: (blocked: boolean) => void) {
+  listeners.add(fn)
+  if (soundBlocked()) armUnblock()
+  else fn(false)
+  return () => { listeners.delete(fn) }
+}
+let armed = false
+function armUnblock() {
+  if (armed) return
+  armed = true
+  const go = () => {
+    document.removeEventListener('pointerdown', go, true); document.removeEventListener('keydown', go, true)
+    armed = false
+    listeners.forEach(f => f(false))
+  }
+  document.addEventListener('pointerdown', go, true); document.addEventListener('keydown', go, true)
+}
 function holdUntilTap(say: () => void) {
   if (!held) {
     const go = () => {
